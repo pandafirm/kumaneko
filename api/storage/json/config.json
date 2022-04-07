@@ -1,0 +1,407 @@
+{
+    "apps": {
+        "user": {
+        },
+        "sort": [],
+        "system": {
+            "project": {
+                "id": "project",
+                "name": "project",
+                "fields": {
+                    "name": {
+                        "id": "name",
+                        "type": "text",
+                        "caption": "Project Name",
+                        "required": true,
+                        "nocaption": false,
+                        "format": "text"
+                    },
+                    "apikey": {
+                        "id": "apikey",
+                        "type": "text",
+                        "caption": "API Key",
+                        "required": false,
+                        "nocaption": false,
+                        "format": "alphanum"
+                    },
+                    "service_account_key": {
+                        "id": "service_account_key",
+                        "type": "file",
+                        "caption": "Service Account Key",
+                        "accept": "application\/json",
+                        "dir": "google",
+                        "required": false,
+                        "nocaption": false
+                    },
+                    "customize": {
+                        "id": "customize",
+                        "type": "file",
+                        "caption": "Javascript files for customize",
+                        "accept": "text\/javascript",
+                        "dir": "customize",
+                        "required": false,
+                        "nocaption": false
+                    },
+                    "smtp_host": {
+                        "id": "smtp_host",
+                        "type": "text",
+                        "caption": "Server Name",
+                        "required": false,
+                        "nocaption": false,
+                        "format": "alphanum"
+                    },
+                    "smtp_port": {
+                        "id": "smtp_port",
+                        "type": "number",
+                        "caption": "Port",
+                        "required": false,
+                        "nocaption": false,
+                        "demiliter": false,
+                        "decimals": "0",
+                        "unit": "",
+                        "unitposition": "suffix"
+                    },
+                    "smtp_user": {
+                        "id": "smtp_user",
+                        "type": "text",
+                        "caption": "User Name",
+                        "required": false,
+                        "nocaption": false,
+                        "format": "alphanum"
+                    },
+                    "smtp_pwd": {
+                        "id": "smtp_pwd",
+                        "type": "text",
+                        "caption": "Password",
+                        "required": false,
+                        "nocaption": false,
+                        "format": "password"
+                    },
+                    "smtp_secure": {
+                        "id": "smtp_secure",
+                        "type": "dropdown",
+                        "caption": "Connection Security",
+                        "required": false,
+                        "nocaption": false,
+                        "options": [
+                            {
+                                "option": {
+                                    "value": ""
+                                }
+                            },
+                            {
+                                "option": {
+                                    "value": "STARTTLS"
+                                }
+                            },
+                            {
+                                "option": {
+                                    "value": "SSL\/TLS"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "styles": {},
+                "layout": [
+                    {
+                        "type": "box",
+                        "id": "projectarea",
+                        "caption": "Project Settings",
+                        "rows": [
+                            {
+                                "type": "row",
+                                "fields": [
+                                    "name"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "id": "googlearea",
+                        "caption": "Google Settings",
+                        "rows": [
+                            {
+                                "type": "row",
+                                "fields": [
+                                    "apikey",
+                                    "service_account_key"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "id": "customizearea",
+                        "caption": "Customize Settings",
+                        "rows": [
+                            {
+                                "type": "row",
+                                "fields": [
+                                    "customize"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "box",
+                        "id": "mailarea",
+                        "caption": "EMail Settings",
+                        "rows": [
+                            {
+                                "type": "row",
+                                "fields": [
+                                    "smtp_host",
+                                    "smtp_port",
+                                    "smtp_user",
+                                    "smtp_pwd",
+                                    "smtp_secure"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "views": [],
+                "linkages": [],
+                "permissions": {
+                    "owner": [
+                        "1"
+                    ],
+                    "admin": [],
+                    "denied": []
+                },
+                "customize": [],
+                "actions": []
+            },
+            "users": {
+                "id": "users",
+                "name": "users",
+                "fields": {
+                    "account": {
+                        "id": "account",
+                        "type": "text",
+                        "caption": "account",
+                        "required": true,
+                        "nocaption": false,
+                        "format": "alphanum"
+                    },
+                    "name": {
+                        "id": "name",
+                        "type": "text",
+                        "caption": "name",
+                        "required": true,
+                        "nocaption": false,
+                        "format": "text"
+                    },
+                    "pwd": {
+                        "id": "pwd",
+                        "type": "text",
+                        "caption": "password",
+                        "required": true,
+                        "nocaption": false,
+                        "format": "password"
+                    },
+                    "organization": {
+                        "id": "organization",
+                        "type": "organization",
+                        "caption": "organization",
+                        "required": false,
+                        "nocaption": false
+                    },
+                    "group": {
+                        "id": "group",
+                        "type": "group",
+                        "caption": "group",
+                        "required": false,
+                        "nocaption": false
+                    },
+                    "authority": {
+                        "id": "authority",
+                        "type": "dropdown",
+                        "caption": "authority",
+                        "required": true,
+                        "nocaption": false,
+                        "options": [
+                            {
+                                "option": {
+                                    "value": "Administrator"
+                                }
+                            },
+                            {
+                                "option": {
+                                    "value": "Manager"
+                                }
+                            },
+                            {
+                                "option": {
+                                    "value": "Staff"
+                                }
+                            }
+                        ]
+                    },
+                    "available": {
+                        "id": "available",
+                        "type": "radio",
+                        "caption": "available",
+                        "required": true,
+                        "nocaption": false,
+                        "options": [
+                            {
+                                "option": {
+                                    "value": "available"
+                                }
+                            },
+                            {
+                                "option": {
+                                    "value": "unavailable"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "styles": {},
+                "layout": [
+                    {
+                        "type": "row",
+                        "fields": [
+                            "account",
+                            "name",
+                            "pwd"
+                        ]
+                    },
+                    {
+                        "type": "row",
+                        "fields": [
+                            "organization",
+                            "group"
+                        ]
+                    },
+                    {
+                        "type": "row",
+                        "fields": [
+                            "authority",
+                            "available"
+                        ]
+                    }
+                ],
+                "views": [
+                    {
+                        "id": "0",
+                        "name": "all",
+                        "type": "edit",
+                        "fields": [],
+                        "query": "",
+                        "sort": ""
+                    }
+                ],
+                "linkages": [],
+                "permissions": {
+                    "owner": [
+                        "1"
+                    ],
+                    "admin": [],
+                    "denied": []
+                },
+                "customize": [],
+                "actions": []
+            },
+            "organizations": {
+                "id": "organizations",
+                "name": "organizations",
+                "fields": {
+                    "name": {
+                        "id": "name",
+                        "type": "text",
+                        "caption": "name",
+                        "required": true,
+                        "nocaption": false,
+                        "format": "text"
+                    }
+                },
+                "styles": {},
+                "layout": [
+                    {
+                        "type": "row",
+                        "fields": [
+                            "name"
+                        ]
+                    }
+                ],
+                "views": [
+                    {
+                        "id": "0",
+                        "name": "all",
+                        "type": "edit",
+                        "fields": [],
+                        "query": "",
+                        "sort": ""
+                    }
+                ],
+                "linkages": [],
+                "permissions": {
+                    "owner": [
+                        "1"
+                    ],
+                    "admin": [],
+                    "denied": []
+                },
+                "customize": [],
+                "actions": []
+            },
+            "groups": {
+                "id": "groups",
+                "name": "groups",
+                "fields": {
+                    "name": {
+                        "id": "name",
+                        "type": "text",
+                        "caption": "name",
+                        "required": true,
+                        "nocaption": false,
+                        "format": "text"
+                    }
+                },
+                "styles": {},
+                "layout": [
+                    {
+                        "type": "row",
+                        "fields": [
+                            "name"
+                        ]
+                    }
+                ],
+                "views": [
+                    {
+                        "id": "0",
+                        "name": "all",
+                        "type": "edit",
+                        "fields": [],
+                        "query": "",
+                        "sort": ""
+                    }
+                ],
+                "linkages": [],
+                "permissions": {
+                    "owner": [
+                        "1"
+                    ],
+                    "admin": [],
+                    "denied": []
+                },
+                "customize": [],
+                "actions": []
+            }
+        }
+    },
+    "dashboard": {
+        "frames": []
+    },
+    "increments": {
+        "app": 0,
+        "action": 0,
+        "field": 0,
+        "linkage": 0,
+        "view": 0
+    }
+}
