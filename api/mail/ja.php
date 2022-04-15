@@ -11,8 +11,8 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 require_once(dirname(__DIR__)."/lib/base.php");
 require_once(dirname(__DIR__)."/lib/driver.php");
-require_once(dirname(__FILE__)."/mailer/vendor/autoload.php");
-require_once(dirname(__FILE__)."/mailer/vendor/phpmailer/phpmailer/language/phpmailer.lang-ja.php");
+require_once(dirname(__FILE__)."/mailer/autoload.php");
+require_once(dirname(__FILE__)."/mailer/phpmailer/phpmailer/language/phpmailer.lang-ja.php");
 mb_language("japanese");
 mb_internal_encoding("UTF-8");
 class clsRequest extends clsBase
@@ -52,7 +52,7 @@ class clsRequest extends clsBase
 			$mailer=new PHPMailer(true);
 			$mailer->CharSet="iso-2022-jp";
 			$mailer->Encoding="7bit";
-			$mailer->setLanguage("ja",dirname(__FILE__)."/mailer/vendor/phpmailer/phpmailer/language/");
+			$mailer->setLanguage("ja",dirname(__FILE__)."/mailer/phpmailer/phpmailer/language/");
 			$mailer->isSMTP();
 			$mailer->Host=$this->project["smtp_host"]["value"];
 			$mailer->SMTPAuth=true;
