@@ -220,6 +220,8 @@ class panda_kumaneko{
 						this.dashboardmanager=new pd.modules.manager.dashboard();
 						/* build importmanager */
 						this.importmanager=new pd.modules.manager.import();
+						/* build notificationmanager */
+						this.notificationmanager=new pd.modules.manager.notification();
 						/* event */
 						apps.map((item) => item.id).each((id,index) => {
 							pd.event.on(id,'pd.app.activate',(e) => {
@@ -320,7 +322,7 @@ class panda_kumaneko{
 															pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
 																window.location.reload(true);
 															});
-															pd.event.call('0','pd.queue.socket',{source:'config'});
+															pd.event.call('0','pd.queue.notify',{source:'config'});
 														}
 														else setTimeout(() => verify(),1000);
 													})
@@ -381,7 +383,7 @@ class panda_kumaneko{
 															pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
 																window.location.reload(true);
 															});
-															pd.event.call('0','pd.queue.socket',{source:'config'});
+															pd.event.call('0','pd.queue.notify',{source:'config'});
 														}
 														else setTimeout(() => verify(),1000);
 													})
@@ -415,7 +417,7 @@ class panda_kumaneko{
 												pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
 													window.location.reload(true);
 												});
-												pd.event.call('0','pd.queue.socket',{source:'config'});
+												pd.event.call('0','pd.queue.notify',{source:'config'});
 											}
 											else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
 										})
@@ -449,7 +451,7 @@ class panda_kumaneko{
 												pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
 													window.location.reload(true);
 												});
-												pd.event.call('0','pd.queue.socket',{source:'config'});
+												pd.event.call('0','pd.queue.notify',{source:'config'});
 											}
 											else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
 										})
@@ -484,12 +486,49 @@ class panda_kumaneko{
 									})(this.config.apps.user[key],this.config.apps.user[key].linkages.filter((item) => item.app==e.app));
 							return e;
 						});
-						pd.event.on('0','pd.queue.socket',(e) => {
-							if (pd.socket)
+						pd.event.on('0','pd.queue.notify',(e) => {
+							if (this.notificationmanager.enabled)
 							{
 								sessionStorage.setItem(this.project.name+'_notifier','yes');
-								pd.socket.send(JSON.stringify(e));
+								this.notificationmanager.push('{\\"source\\":\\"'+e.source+'\\",\\"id\\":\\"'+(('id' in e)?e.id:'')+'\\"}');
 							}
+							return e;
+						});
+						pd.event.on('0','pd.queue.notify.pushed',(e) => {
+							if (this.notificationmanager.enabled)
+								if (e.data)
+								{
+									var resp=JSON.parse(e.data);
+									switch (resp.source)
+									{
+										case 'app':
+											if (sessionStorage.getItem(this.project.name+'_notifier')) sessionStorage.removeItem(this.project.name+'_notifier');
+											else
+											{
+												if (resp.id in this.apps) this.apps[resp.id].notify();
+											}
+											switch (resp.id)
+											{
+												case 'users':
+													pd.filter.record.load().then(() => {
+														((user) => {
+															if (user.length!=0) pd.operator=user.first();
+														})(pd.filter.record.user.filter((item) => item['__id'].value==pd.operator['__id'].value));
+													});
+													break;
+											}
+											break;
+										case 'config':
+											if (sessionStorage.getItem(this.project.name+'_notifier')) sessionStorage.removeItem(this.project.name+'_notifier');
+											else
+											{
+												pd.confirm(pd.constants.common.message.confirm.forced[pd.lang],() => {
+													window.location.reload(true);
+												});
+											}
+											break;
+									}
+								}
 							return e;
 						});
 						pd.event.on('0','pd.queue.sort',(e) => {
@@ -591,54 +630,6 @@ class panda_kumaneko{
 								})
 							);
 						});
-						/* setup socket */
-						pd.request(pd.ui.baseuri()+'/ws.php','POST',{'X-Requested-By':'panda'},{},true)
-						.then((resp) => {
-							if (resp.result=='ok')
-							{
-								pd.socket=new WebSocket(((location.protocol=='https:')?'wss:':'ws:')+location.host.replace(/\/$/,'')+':8025'+location.pathname.replace(/\/[^\/]*$/,'')+'/api/socket/');
-								pd.socket.onmessage=(e) => {
-									if (e.data)
-									{
-										var resp=JSON.parse(e.data);
-										switch (resp.source)
-										{
-											case 'app':
-												if (sessionStorage.getItem(this.project.name+'_notifier')) sessionStorage.removeItem(this.project.name+'_notifier');
-												else
-												{
-													if (resp.id in this.apps) this.apps[resp.id].notify();
-												}
-												switch (resp.id)
-												{
-													case 'users':
-														pd.filter.record.load().then(() => {
-															((user) => {
-																if (user.length!=0) pd.operator=user.first();
-															})(pd.filter.record.user.filter((item) => item['__id'].value==pd.operator['__id'].value));
-														});
-														break;
-												}
-												break;
-											case 'config':
-												if (sessionStorage.getItem(this.project.name+'_notifier')) sessionStorage.removeItem(this.project.name+'_notifier');
-												else
-												{
-													pd.confirm(pd.constants.common.message.confirm.forced[pd.lang],() => {
-														window.location.reload(true);
-													});
-												}
-												break;
-										}
-									}
-								};
-								window.on('beforeunload',(e) => {
-									if (pd.socket) pd.socket.close();
-								});
-							}
-							else pd.alert(resp.result);
-						})
-						.catch((error) => pd.alert(error.message));
 						/* load scripts */
 						load(0,() => {
 							((contents,tab,nav) => {
@@ -1143,7 +1134,7 @@ pd.modules={
 																										this.view.load(viewid).then(() => {
 																											if (reload) this.record.load(this.record.id,true);
 																										}).catch(() => {});
-																										pd.event.call('0','pd.queue.socket',{source:'app',id:this.app.id});
+																										pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 																									});
 																								});
 																							}
@@ -1861,7 +1852,7 @@ pd.modules={
 																{
 																	if (action.transfer.app in pd.kumaneko.apps)
 																		pd.kumaneko.apps[action.transfer.app].notify().then(() => {
-																			pd.event.call('0','pd.queue.socket',{source:'app',id:action.transfer.app});
+																			pd.event.call('0','pd.queue.notify',{source:'app',id:action.transfer.app});
 																			resolve();
 																		});
 																}
@@ -2384,7 +2375,7 @@ pd.modules={
 															window.location.reload(true);
 														});
 													}
-													pd.event.call('0','pd.queue.socket',{source:'app',id:this.app.id});
+													pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 												});
 										});
 									})
@@ -2406,7 +2397,7 @@ pd.modules={
 									for (var key in this.view.ui)
 										if (this.view.ui[key].tab.active) this.view.load(key).catch(() => {});
 								}
-								pd.event.call('0','pd.queue.socket',{source:'app',id:this.app.id});
+								pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 								resolve({});
 							});
 						})
@@ -2761,7 +2752,7 @@ pd.modules={
 														this.notify().then(() => {
 															this.record.clear();
 															this.record.ui.tab.close.click();
-															pd.event.call('0','pd.queue.socket',{source:'app',id:this.app.id});
+															pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 														});
 													});
 											});
@@ -3055,7 +3046,7 @@ pd.modules={
 																	this.view.load(viewid).then(() => {
 																		if (reload) this.record.load(this.record.id,true);
 																	}).catch(() => {});
-																	pd.event.call('0','pd.queue.socket',{source:'app',id:this.app.id});
+																	pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 																});
 														});
 													})
@@ -3098,7 +3089,7 @@ pd.modules={
 				return this.record.delete(e.recordid).then(() => {
 					this.notify().then(() => {
 						if (e.recordid==this.record.id) this.record.clear();
-						pd.event.call('0','pd.queue.socket',{source:'app',id:this.app.id});
+						pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 					});
 				});
 			});
@@ -3122,7 +3113,7 @@ pd.modules={
 								pd.event.call(this.app.id,'pd.app.activate',{viewid:'0'}).then((param) => resolve({}));
 							})
 							.catch((error) => resolve({}));
-							pd.event.call('0','pd.queue.socket',{source:'app',id:this.app.id});
+							pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 						})(this.view.ui['0']);
 					});
 				});
@@ -11903,6 +11894,69 @@ pd.modules={
 					})(readData.target.result.parseCSV());
 				});
 				reader.readAsText(file);
+			}
+		},
+		notification:class{
+			/* constructor */
+			constructor(){
+				this.enabled=(() => {
+					var res=false;
+					if ('serviceWorker' in navigator)
+						if (location.protocol=='https:' || location.hostname=='localhost' || location.hostname=='127.0.0.1') res=true;
+					return res;
+				})();
+				if (this.enabled)
+				{
+					navigator.serviceWorker.register('./sw.js')
+					.then((registration) => {
+						navigator.serviceWorker.ready
+						.then((registration) => {
+							registration.pushManager.getSubscription()
+							.then((subscription) => {
+								var handler=(subscription) => {
+									pd.request(pd.ui.baseuri()+'/notify.php','POST',{'X-Requested-By':'panda'},{
+										endpoint:subscription.endpoint,
+										publicKey:window.btoa(String.fromCharCode.apply(null,new Uint8Array(subscription.getKey('p256dh')))).replace(/\+/g, '-').replace(/\//g, '_'),
+										authToken:window.btoa(String.fromCharCode.apply(null,new Uint8Array(subscription.getKey('auth')))).replace(/\+/g, '-').replace(/\//g, '_')
+									},true)
+									.then((resp) => {})
+									.catch((error) => pd.alert(error.message));
+								};
+								if (!subscription)
+								{
+									pd.request(pd.ui.baseuri()+'/notify.php','GET',{'X-Requested-By':'panda'},{},true)
+									.then((resp) => {
+										registration.pushManager.subscribe({
+											userVisibleOnly:true,
+											applicationServerKey:((key) => {
+												var datas=window.atob((key+'='.repeat((4-key.length%4)%4)).replace(/\-/g,'+').replace(/_/g,'/'));
+												var buffer=new Uint8Array(datas.length);
+												datas.length.each((index) => buffer[index]=datas.charCodeAt(index));
+												return buffer;
+											})(resp.key)
+										})
+										.then((subscription) => handler(subscription))
+										.catch((error) => console.log('Failed to subscribe: ',error));
+									})
+									.catch((error) => pd.alert(error.message));
+								}
+								else handler(subscription);
+							});
+						});
+					})
+					.catch((error) => console.log('Failed to register: ',error));
+					/* event */
+					navigator.serviceWorker.addEventListener('message',(e) => {
+						pd.event.call('0','pd.queue.notify.pushed',{data:e.data});
+					});
+				}
+			}
+			/* push */
+			push(data){
+				if (this.enabled)
+					pd.request(pd.ui.baseuri()+'/notify.php','PUT',{'X-Requested-By':'panda'},{payload:data,subject:location.href.replace(/\/[^\/]*$/g,'')+'/'},true)
+					.then((resp) => {})
+					.catch((error) => pd.alert(error.message));
 			}
 		}
 	},
