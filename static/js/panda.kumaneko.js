@@ -11902,7 +11902,8 @@ pd.modules={
 				this.enabled=(() => {
 					var res=false;
 					if ('serviceWorker' in navigator)
-						if (location.protocol=='https:' || location.hostname=='localhost' || location.hostname=='127.0.0.1') res=true;
+						if ('PushManager' in window)
+							if (location.protocol=='https:' || location.hostname=='localhost' || location.hostname=='127.0.0.1') res=true;
 					return res;
 				})();
 				if (this.enabled)
