@@ -553,8 +553,8 @@ class panda_kumaneko{
 								})
 							)
 							.append(
-								pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.organizations[pd.lang]).on('click',(e) => {
-									pd.event.call(this.config.apps.system.organizations.id,'pd.app.activate',{viewid:'0'});
+								pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.departments[pd.lang]).on('click',(e) => {
+									pd.event.call(this.config.apps.system.departments.id,'pd.app.activate',{viewid:'0'});
 								})
 							)
 							.append(
@@ -629,6 +629,11 @@ class panda_kumaneko{
 									.catch((error) => pd.alert(error.message));
 								})
 							);
+						});
+						pd.event.on(this.config.apps.system.users.id,['pd.change.account','pd.change.pwd'],(e) => {
+							e.record.account.value=e.record.account.value.replace(/["']+/g,'');
+							e.record.pwd.value=e.record.pwd.value.replace(/["']+/g,'');
+							return e;
 						});
 						/* load scripts */
 						load(0,() => {
@@ -745,26 +750,26 @@ class panda_kumaneko{
 		var calculate=(searches) => {
 			var res=0;
 			var values={
+				department:[],
 				group:[],
-				organization:[],
 				user:[]
 			};
 			searches.each((search,index) => {
 				switch (search.charAt(0))
 				{
+					case 'd':
+						values.department.push(search.slice(1));
+						break;
 					case 'g':
 						values.group.push(search.slice(1));
-						break;
-					case 'o':
-						values.organization.push(search.slice(1));
 						break;
 					default:
 						values.user.push(search);
 						break;
 				}
 			});
+			res+=pd.operator.department.value.filter((item) => values.department.includes(item)).length;
 			res+=pd.operator.group.value.filter((item) => values.group.includes(item)).length;
-			res+=pd.operator.organization.value.filter((item) => values.organization.includes(item)).length;
 			if (values.user.includes(pd.operator.__id.value.toString())) res++;
 			return res;
 		}
@@ -820,6 +825,18 @@ pd.modules={
 						ok:null,
 						cancel:null,
 						add:null
+					},
+					init:(attr) => {
+						switch (attr)
+						{
+							case 'copied':
+								res.header.attr('copied','copied');
+								break;
+							default:
+								res.header.removeattr('copied');
+								break;
+						}
+						return res.body.removeattr('unsaved');
 					}
 				};
 				res.contents=(() => {
@@ -852,7 +869,7 @@ pd.modules={
 													.then((param) => {
 														if (!param.error)
 														{
-															pd.record.set(this.record.ui.body.removeattr('unsaved'),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
+															pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
 															if (typeof viewid!=='undefined') pd.event.call(this.app.id,'pd.app.activate',{});
 														}
 													});
@@ -1369,7 +1386,7 @@ pd.modules={
 							if (res.body.elm('.pd-view')) res.body.elm('.pd-view').elms('[form-id=form_'+this.app.id+']').each((element,index) => element.removeattr('unsaved').closest('tr').removeclass('pd-view-unsaved'));
 							if (reload) this.view.ui[viewid].loaded=false;
 						}
-						else res.body.removeattr('unsaved');
+						else res.init();
 						res.tab.container.parentNode.removeChild(res.tab.container);
 						pd.event.call(this.app.id,'pd.app.deactivate',pd.extend({active:res.tab.active},param));
 					},viewid);
@@ -1430,8 +1447,8 @@ pd.modules={
 												if (action.mail.to in fieldinfos)
 												{
 													var systems={
+														department:[],
 														group:[],
-														organization:[],
 														user:[]
 													}
 													var assign=(target,record,row) => {
@@ -1458,6 +1475,15 @@ pd.modules={
 																			return (res.length!=0)?res.first().name.value:PD_THROW;
 																		}).join(',');
 																		break;
+																	case 'department':
+																		res=value.shape((item) => {
+																			var id=item;
+																			var res=systems.department.filter((item) => {
+																				return item.__id.value=id;
+																			});
+																			return (res.length!=0)?res.first().name.value:PD_THROW;
+																		}).join(',');
+																		break;
 																	case 'file':
 																		res=value.shape((item) => {
 																			return (item.name)?item.name:PD_THROW;
@@ -1475,15 +1501,6 @@ pd.modules={
 																			return (res.length!=0)?res.first().name.value:PD_THROW;
 																		}).join(',');
 																		break;
-																	case 'organization':
-																		res=value.shape((item) => {
-																			var id=item;
-																			var res=systems.organization.filter((item) => {
-																				return item.__id.value=id;
-																			});
-																			return (res.length!=0)?res.first().name.value:PD_THROW;
-																		}).join(',');
-																		break;
 																	default:
 																		res=value;
 																		break;
@@ -1493,12 +1510,12 @@ pd.modules={
 														return target;
 													};
 													pd.loadstart();
-													pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'groups',query:'',offset:0,limit:0},true)
+													pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'departments',query:'',offset:0,limit:0},true)
 													.then((resp) => {
-														systems.group=resp.records;
-														pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'organizations',query:'',offset:0,limit:0},true)
+														systems.department=resp.records;
+														pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'groups',query:'',offset:0,limit:0},true)
 														.then((resp) => {
-															systems.organization=resp.records;
+															systems.group=resp.records;
 															pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'users',query:'available = "available"',offset:0,limit:0},true)
 															.then((resp) => {
 																systems.user=resp.records;
@@ -1763,10 +1780,10 @@ pd.modules={
 																			{
 																				case 'checkbox':
 																				case 'creator':
+																				case 'department':
 																				case 'file':
 																				case 'group':
 																				case 'modifier':
-																				case 'organization':
 																				case 'user':
 																					res={value:[]};
 																					break;
@@ -2297,7 +2314,7 @@ pd.modules={
 						if (body.elm('[data-type=modifiedtime]')) body.elm('[data-type=modifiedtime]').val('');
 						this.record.ui.body.focus();
 						return '';
-					})(this.record.ui.body.removeattr('unsaved'));
+					})(this.record.ui.init());
 				},
 				delete:(recordid) => {
 					return new Promise((resolve,reject) => {
@@ -2320,7 +2337,7 @@ pd.modules={
 								.then((param) => {
 									if (!param.error)
 									{
-										pd.record.set(this.record.ui.body.removeattr('unsaved'),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
+										pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
 										if (!issilent) pd.event.call(this.app.id,'pd.app.activate',{}).then((param) => resolve({recordid:recordid}));
 										else resolve({recordid:recordid});
 									}
@@ -2506,7 +2523,7 @@ pd.modules={
 																			.then((param) => {
 																				if (!param.error)
 																				{
-																					pd.record.set(this.record.ui.body.removeattr('unsaved'),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
+																					pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
 																					pd.event.call(this.app.id,'pd.app.activate',{});
 																				}
 																			});
@@ -2728,7 +2745,7 @@ pd.modules={
 											})(pd.record.get(this.record.ui.body,this.app,true).record)
 										})
 										.then((param) => {
-											if (!param.error) pd.record.set(this.record.ui.body.removeattr('unsaved'),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
+											if (!param.error) pd.record.set(this.record.ui.init('copied'),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
 										});
 									});
 								})
@@ -2760,7 +2777,7 @@ pd.modules={
 									}
 									else
 									{
-										this.record.ui.body.removeattr('unsaved');
+										this.record.ui.init();
 										this.record.ui.tab.close.click();
 									}
 								})
@@ -2881,7 +2898,7 @@ pd.modules={
 													});
 												};
 												this.record.clear();
-												pd.record.set(this.record.ui.body.removeattr('unsaved'),this.app,(() => {
+												pd.record.set(this.record.ui.init(),this.app,(() => {
 													var res={};
 													if (view.fields.lat in this.app.fields) res[view.fields.lat]={value:latlng.lat()};
 													if (view.fields.lng in this.app.fields) res[view.fields.lng]={value:latlng.lng()};
@@ -2945,9 +2962,9 @@ pd.modules={
 																	{
 																		case 'checkbox':
 																		case 'creator':
+																		case 'department':
 																		case 'group':
 																		case 'modifier':
-																		case 'organization':
 																		case 'user':
 																			res='"'+record[item].value.join(':')+'"';
 																			break;
@@ -4120,7 +4137,7 @@ pd.modules={
 												{type:'checkbox',icon:'checkbox'},
 												{type:'file',icon:'file'},
 												{type:'user',icon:'user'},
-												{type:'organization',icon:'organization'},
+												{type:'department',icon:'department'},
 												{type:'group',icon:'group'},
 												{type:'lookup',icon:'lookup'},
 												{type:'postalcode',icon:'postalcode'},
@@ -5814,20 +5831,8 @@ pd.modules={
 															})
 														);
 														break;
-													case 'dropdown':
-													case 'radio':
-														field.addclass('pd-lookup').append(
-															pd.create('button').addclass('pd-icon pd-icon-lookup pd-search').on('click',(e) => {
-																pd.pickupsingle(
-																	fieldinfo.options.map((item) => ({option:{value:item.option.value}})),
-																	{option:{align:'left',text:'option'}},
-																	(resp) => field.elm('input').val('"'+resp.option.value+'"')
-																);
-															})
-														);
-														break;
+													case 'department':
 													case 'group':
-													case 'organization':
 													case 'user':
 														((picker) => {
 															field.addclass('pd-lookup').append(
@@ -5852,6 +5857,18 @@ pd.modules={
 																})
 															);
 														})(new panda_recordpicker(true));
+														break;
+													case 'dropdown':
+													case 'radio':
+														field.addclass('pd-lookup').append(
+															pd.create('button').addclass('pd-icon pd-icon-lookup pd-search').on('click',(e) => {
+																pd.pickupsingle(
+																	fieldinfo.options.map((item) => ({option:{value:item.option.value}})),
+																	{option:{align:'left',text:'option'}},
+																	(resp) => field.elm('input').val('"'+resp.option.value+'"')
+																);
+															})
+														);
 														break;
 													case 'lookup':
 														((fieldinfo,picker) => {
@@ -7788,11 +7805,11 @@ pd.modules={
 																						case 'checkbox':
 																						case 'creator':
 																						case 'createdtime':
+																						case 'department':
 																						case 'group':
 																						case 'lookup':
 																						case 'modifier':
 																						case 'modifiedtime':
-																						case 'organization':
 																						case 'textarea':
 																						case 'user':
 																							break;
@@ -11693,8 +11710,8 @@ pd.modules={
 																	else except(fields[key]);
 																}
 																break;
+															case 'department':
 															case 'group':
-															case 'organization':
 															case 'user':
 																if (value)
 																{
@@ -12102,13 +12119,13 @@ pd.constants=pd.extend({
 						en:'Dashboard Mgmt',
 						ja:'ダッシュボード管理'
 					},
+					departments:{
+						en:'Department Mgmt',
+						ja:'組織管理'
+					},
 					groups:{
 						en:'Group Mgmt',
 						ja:'グループ管理'
-					},
-					organizations:{
-						en:'Organization Mgmt',
-						ja:'組織管理'
 					},
 					storage:{
 						en:'Storage Mgmt',

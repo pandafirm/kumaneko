@@ -79,9 +79,9 @@ class panda_filter extends panda_dialog{
 				{
 					case 'checkbox':
 					case 'creator':
+					case 'department':
 					case 'group':
 					case 'modifier':
-					case 'organization':
 					case 'user':
 						res=(rhs.value)?'('+rhs.value.shape((item) => (item)?'"'+item+'"':PD_THROW).join(',')+')':'()';
 						break;
@@ -122,10 +122,10 @@ class panda_filter extends panda_dialog{
 							break;
 						case 'checkbox':
 						case 'creator':
+						case 'department':
 						case 'dropdown':
 						case 'group':
 						case 'modifier':
-						case 'organization':
 						case 'radio':
 						case 'user':
 							res.push({id:{value:'in'},caption:{value:pd.constants.filter.operator.in[pd.lang]}});
@@ -308,9 +308,9 @@ class panda_filter extends panda_dialog{
 														res='('+res.join(',')+')';
 														break;
 													case 'creator':
+													case 'department':
 													case 'group':
 													case 'modifier':
-													case 'organization':
 													case 'user':
 														res='('+field.elm('input').val().replace(/^\[/g,'').replace(/\]$/g,'')+')';
 														break;
@@ -388,9 +388,9 @@ class panda_filter extends panda_dialog{
 														field.elms('input').each((element,index) => element.checked=values.includes(element.val()));
 														break;
 													case 'creator':
+													case 'department':
 													case 'group':
 													case 'modifier':
-													case 'organization':
 													case 'user':
 														var values=value.replace(/^\(/g,'').replace(/\)$/g,'').replace(/^\"/g,'').replace(/\"$/g,'').split('","').filter((item) => item);
 														field.elm('input').val(JSON.stringify(values));
@@ -785,18 +785,18 @@ class panda_filter extends panda_dialog{
 				var calculate=() => {
 					var res=0;
 					var values={
+						department:[],
 						group:[],
-						organization:[],
 						user:[]
 					};
 					rhs.each((value,index) => {
 						switch (value.charAt(0))
 						{
+							case 'd':
+								values.department.push(value.slice(1));
+								break;
 							case 'g':
 								values.group.push(value.slice(1));
-								break;
-							case 'o':
-								values.organization.push(value.slice(1));
 								break;
 							default:
 								values.user.push(value);
@@ -807,8 +807,8 @@ class panda_filter extends panda_dialog{
 						((user) => {
 							if (user.length!=0)
 							{
+								res+=user.first()['department'].value.filter((item) => values.department.includes(item)).length;
 								res+=user.first()['group'].value.filter((item) => values.group.includes(item)).length;
-								res+=user.first()['organization'].value.filter((item) => values.organization.includes(item)).length;
 								if (values.user.includes(value)) res++;
 							}
 						})(this.record.user.filter((item) => item['__id'].value==value));
@@ -852,9 +852,9 @@ class panda_filter extends panda_dialog{
 			{
 				case 'checkbox':
 				case 'creator':
+				case 'department':
 				case 'group':
 				case 'modifier':
-				case 'organization':
 					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').replace(/^\"/g,'').replace(/\"$/g,'').split('","').filter((item) => item);
 					formula='CONTAIN_MULTIPLE()';
 					break;
@@ -1185,10 +1185,10 @@ class panda_formula{
 				{
 					case 'checkbox':
 					case 'creator':
+					case 'department':
 					case 'file':
 					case 'group':
 					case 'modifier':
-					case 'organization':
 					case 'user':
 						res=(answer)?(((Array.isArray(answer))?answer:answer.toString().split(',')).shape((item) => (item=='LOGIN_USER')?pd.operator.__id.value.toString():((item)?item:PD_THROW))):[];
 						break;
@@ -1240,9 +1240,9 @@ class panda_record{
 				switch (fieldinfo.type)
 				{
 					case 'checkbox':
+					case 'department':
 					case 'file':
 					case 'group':
-					case 'organization':
 					case 'user':
 						res[key]={value:[]};;
 						break;
@@ -1295,9 +1295,9 @@ class panda_record{
 										res.error=true;
 									}
 								break;
+							case 'department':
 							case 'file':
 							case 'group':
-							case 'organization':
 							case 'user':
 								if (fieldinfo.required)
 									((value) => {
@@ -1355,17 +1355,17 @@ class panda_record{
 									})()
 								};
 								break;
-							case 'dropdown':
-								res.record[fieldinfo.id]={
-									value:field.elm('select').val()
-								};
-								break;
+							case 'department':
 							case 'file':
 							case 'group':
-							case 'organization':
 							case 'user':
 								res.record[fieldinfo.id]={
 									value:((field.elm('input').val())?JSON.parse(field.elm('input').val()):[])
+								};
+								break;
+							case 'dropdown':
+								res.record[fieldinfo.id]={
+									value:field.elm('select').val()
 								};
 								break;
 							case 'lookup':
@@ -1489,12 +1489,12 @@ class panda_record{
 							case 'checkbox':
 							case 'creator':
 							case 'createdtime':
+							case 'department':
 							case 'file':
 							case 'group':
 							case 'id':
 							case 'modifier':
 							case 'modifiedtime':
-							case 'organization':
 							case 'radio':
 							case 'user':
 								field.css({
@@ -1551,13 +1551,9 @@ class panda_record{
 								field.elm('.pd-guide').html('');
 							}
 							break;
-						case 'dropdown':
-							field.elm('select').val(value.value);
-							field.elm('.pd-guide').html(field.elm('select').selectedtext());
-							break;
+						case 'department':
 						case 'file':
 						case 'group':
-						case 'organization':
 						case 'user':
 							field.elm('.pd-guide').empty();
 							if (value.value)
@@ -1566,6 +1562,10 @@ class panda_record{
 								value.value.each((value,index) => field.guide(value));
 							}
 							else field.elm('input').val('[]');
+							break;
+						case 'dropdown':
+							field.elm('select').val(value.value);
+							field.elm('.pd-guide').html(field.elm('select').selectedtext());
 							break;
 						case 'lookup':
 							if (value.lookup) field.lookup(value.value);
@@ -1794,9 +1794,9 @@ class panda_recordpicker extends panda_dialog{
 												res.push(picker.id+' in ("'+keyword+'")');
 												break;
 											case 'creator':
+											case 'department':
 											case 'group':
 											case 'modifier':
-											case 'organization':
 											case 'spacer':
 											case 'user':
 												break;
@@ -1959,8 +1959,8 @@ class panda_unifiedpicker extends panda_dialog{
 				tab:null,
 				table:null
 			},
-			organizations:{
-				id:'organizations',
+			departments:{
+				id:'departments',
 				keyword:'',
 				limit:50,
 				offset:0,
@@ -2192,8 +2192,8 @@ class panda_unifiedpicker extends panda_dialog{
 		if (this.handler) this.ok.off('click',this.handler);
 		this.handler=(e) => {
 			callback({
+				departments:this.menus.departments.selection,
 				groups:this.menus.groups.selection,
-				organizations:this.menus.organizations.selection,
 				users:this.menus.users.selection
 			});
 			this.hide();
@@ -2632,6 +2632,135 @@ class panda_user_interface{
 									});
 								});
 								break;
+							case 'department':
+							case 'group':
+							case 'user':
+								field.elm('.pd-search').on('click',(e) => {
+									if (fieldinfo.unify)
+									{
+										field.recordpicker.show(
+											((fieldinfo.loginuser)?[{__id:{value:'LOGIN_USER'},account:{value:'LOGIN_USER'},name:{value:'Login user'}}]:[]),
+											(records) => {
+												((values) => {
+													records.users.each((record,index) => {
+														if (!values.includes(record['__id'].value.toString())) values.push(record['__id'].value.toString());
+													});
+													records.departments.each((record,index) => {
+														if (!values.includes('d'+record['__id'].value.toString())) values.push('d'+record['__id'].value.toString());
+													});
+													records.groups.each((record,index) => {
+														if (!values.includes('g'+record['__id'].value.toString())) values.push('g'+record['__id'].value.toString());
+													});
+													field.elm('input').val(JSON.stringify(values));
+													call('pd.change.'+fieldinfo.id);
+												})((field.elm('input').val())?JSON.parse(field.elm('input').val()):[]);
+											}
+										);
+									}
+									else
+									{
+										field.recordpicker.show(
+											{
+												app:fieldinfo.type+'s',
+												query:(fieldinfo.type=='user')?'available = "available"':'',
+												sort:'__id asc',
+												picker:{
+													name:{
+														id:'name',
+														type:'text',
+														caption:'name',
+														required:false,
+														nocaption:true
+													}
+												}
+											},
+											((fieldinfo.loginuser)?[{__id:{value:'LOGIN_USER'},account:{value:'LOGIN_USER'},name:{value:'Login user'}}]:[]),
+											(records) => {
+												((values) => {
+													records.each((record,index) => {
+														if (!values.includes(record['__id'].value.toString())) values.push(record['__id'].value.toString());
+													});
+													field.elm('input').val(JSON.stringify(values));
+													call('pd.change.'+fieldinfo.id);
+												})((field.elm('input').val())?JSON.parse(field.elm('input').val()):[]);
+											}
+										);
+									}
+								});
+								field.recordpicker=(fieldinfo.unify)?new panda_unifiedpicker():new panda_recordpicker(true);
+								field.guide=(id) => {
+									field.elm('.pd-guide').append(
+										((guide) => {
+											guide
+											.append(
+												pd.create('button').addclass('pd-icon pd-icon-del pd-'+fieldinfo.type+'guide-icon').on('click',(e) => {
+													pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+														field.elm('input').val(JSON.stringify(JSON.parse(field.elm('input').val()).filter((item) => item!=id)));
+														call('pd.change.'+fieldinfo.id);
+													});
+												})
+											)
+											.append(
+												((res) => {
+													if (id=='LOGIN_USER') res.html('Login user');
+													else
+													{
+														pd.request(
+															this.baseuri()+'/records.php',
+															'GET',
+															{'X-Requested-By':'panda'},
+															(() => {
+																var res={
+																	app:fieldinfo.type+'s',
+																	id:id
+																};
+																if (fieldinfo.unify)
+																	switch (id.charAt(0))
+																	{
+																		case 'd':
+																			res={
+																				app:'departments',
+																				id:id.slice(1)
+																			};
+																			break;
+																		case 'g':
+																			res={
+																				app:'groups',
+																				id:id.slice(1)
+																			};
+																			break;
+																		default:
+																			res={
+																				app:'users',
+																				id:id
+																			};
+																			break;
+																	}
+																return res;
+															})(),
+															true
+														)
+														.then((resp) => {
+															if (resp.total!=0)
+																if ('name' in resp.record) res.html(resp.record.name.value);
+														})
+														.catch((error) => pd.alert(error.message));
+													}
+													return res;
+												})(pd.create('span').addclass('pd-'+fieldinfo.type+'guide-label'))
+											)
+											return guide;
+										})(pd.create('span').addclass('pd-'+fieldinfo.type+'guide'))
+									);
+								};
+								if (fieldinfo.required)
+								{
+									field.alert=(message) => {
+										if (!field.elm('.pd-field-alert')) field.append(alert().addclass('pd-field-alert'));
+										field.elm('.pd-field-alert').elm('span').html(message).parentNode.show();
+									};
+								}
+								break;
 							case 'file':
 								if (!('dir' in fieldinfo)) fieldinfo['dir']='attachment';
 								field.elm('.pd-search').on('click',(e) => {
@@ -2840,135 +2969,6 @@ class panda_user_interface{
 									};
 								}
 								break;
-							case 'group':
-							case 'organization':
-							case 'user':
-								field.elm('.pd-search').on('click',(e) => {
-									if (fieldinfo.unify)
-									{
-										field.recordpicker.show(
-											((fieldinfo.loginuser)?[{__id:{value:'LOGIN_USER'},account:{value:'LOGIN_USER'},name:{value:'Login user'}}]:[]),
-											(records) => {
-												((values) => {
-													records.users.each((record,index) => {
-														if (!values.includes(record['__id'].value.toString())) values.push(record['__id'].value.toString());
-													});
-													records.organizations.each((record,index) => {
-														if (!values.includes('o'+record['__id'].value.toString())) values.push('o'+record['__id'].value.toString());
-													});
-													records.groups.each((record,index) => {
-														if (!values.includes('g'+record['__id'].value.toString())) values.push('g'+record['__id'].value.toString());
-													});
-													field.elm('input').val(JSON.stringify(values));
-													call('pd.change.'+fieldinfo.id);
-												})((field.elm('input').val())?JSON.parse(field.elm('input').val()):[]);
-											}
-										);
-									}
-									else
-									{
-										field.recordpicker.show(
-											{
-												app:fieldinfo.type+'s',
-												query:(fieldinfo.type=='user')?'available = "available"':'',
-												sort:'__id asc',
-												picker:{
-													name:{
-														id:'name',
-														type:'text',
-														caption:'name',
-														required:false,
-														nocaption:true
-													}
-												}
-											},
-											((fieldinfo.loginuser)?[{__id:{value:'LOGIN_USER'},account:{value:'LOGIN_USER'},name:{value:'Login user'}}]:[]),
-											(records) => {
-												((values) => {
-													records.each((record,index) => {
-														if (!values.includes(record['__id'].value.toString())) values.push(record['__id'].value.toString());
-													});
-													field.elm('input').val(JSON.stringify(values));
-													call('pd.change.'+fieldinfo.id);
-												})((field.elm('input').val())?JSON.parse(field.elm('input').val()):[]);
-											}
-										);
-									}
-								});
-								field.recordpicker=(fieldinfo.unify)?new panda_unifiedpicker():new panda_recordpicker(true);
-								field.guide=(id) => {
-									field.elm('.pd-guide').append(
-										((guide) => {
-											guide
-											.append(
-												pd.create('button').addclass('pd-icon pd-icon-del pd-'+fieldinfo.type+'guide-icon').on('click',(e) => {
-													pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
-														field.elm('input').val(JSON.stringify(JSON.parse(field.elm('input').val()).filter((item) => item!=id)));
-														call('pd.change.'+fieldinfo.id);
-													});
-												})
-											)
-											.append(
-												((res) => {
-													if (id=='LOGIN_USER') res.html('Login user');
-													else
-													{
-														pd.request(
-															this.baseuri()+'/records.php',
-															'GET',
-															{'X-Requested-By':'panda'},
-															(() => {
-																var res={
-																	app:fieldinfo.type+'s',
-																	id:id
-																};
-																if (fieldinfo.unify)
-																	switch (id.charAt(0))
-																	{
-																		case 'g':
-																			res={
-																				app:'groups',
-																				id:id.slice(1)
-																			};
-																			break;
-																		case 'o':
-																			res={
-																				app:'organizations',
-																				id:id.slice(1)
-																			};
-																			break;
-																		default:
-																			res={
-																				app:'users',
-																				id:id
-																			};
-																			break;
-																	}
-																return res;
-															})(),
-															true
-														)
-														.then((resp) => {
-															if (resp.total!=0)
-																if ('name' in resp.record) res.html(resp.record.name.value);
-														})
-														.catch((error) => pd.alert(error.message));
-													}
-													return res;
-												})(pd.create('span').addclass('pd-'+fieldinfo.type+'guide-label'))
-											)
-											return guide;
-										})(pd.create('span').addclass('pd-'+fieldinfo.type+'guide'))
-									);
-								};
-								if (fieldinfo.required)
-								{
-									field.alert=(message) => {
-										if (!field.elm('.pd-field-alert')) field.append(alert().addclass('pd-field-alert'));
-										field.elm('.pd-field-alert').elm('span').html(message).parentNode.show();
-									};
-								}
-								break;
 							case 'lookup':
 								((handler) => {
 									field.elm('.pd-search').on('click',(e) => {
@@ -3017,10 +3017,10 @@ class panda_user_interface{
 																{
 																	case 'checkbox':
 																	case 'creator':
+																	case 'department':
 																	case 'file':
 																	case 'group':
 																	case 'modifier':
-																	case 'organization':
 																	case 'user':
 																		if (value!=null)
 																			if (fieldinfo.ignore && value.value.length==0) value=null;
@@ -3144,9 +3144,9 @@ class panda_user_interface{
 															switch (fieldinfos[fieldinfo.mapping[key]].type)
 															{
 																case 'checkbox':
+																case 'department':
 																case 'file':
 																case 'group':
-																case 'organization':
 																case 'user':
 																	res[fieldinfo.mapping[key]]={value:[]};
 																	break;
@@ -3265,10 +3265,10 @@ class panda_user_interface{
 							{
 								case 'address':
 								case 'color':
+								case 'department':
 								case 'file':
 								case 'group':
 								case 'lookup':
-								case 'organization':
 								case 'postalcode':
 								case 'radio':
 								case 'user':
@@ -3344,17 +3344,17 @@ class panda_user_interface{
 										.append(pd.create('button').addclass('pd-icon pd-icon-date pd-search'))
 									);
 									break;
-								case 'dropdown':
-									field.append(pd.create('select').assignoption(fieldinfo.options,'option','option'));
-									break;
-								case 'file':
+								case 'department':
+								case 'group':
+								case 'user':
 									field
 									.append(pd.create('input').attr('type','hidden').attr('data-type',fieldinfo.type))
 									.append(pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search'));
 									break;
-								case 'group':
-								case 'organization':
-								case 'user':
+								case 'dropdown':
+									field.append(pd.create('select').assignoption(fieldinfo.options,'option','option'));
+									break;
+								case 'file':
 									field
 									.append(pd.create('input').attr('type','hidden').attr('data-type',fieldinfo.type))
 									.append(pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search'));
@@ -3425,12 +3425,12 @@ class panda_user_interface{
 						case 'autonumber':
 						case 'creator':
 						case 'createdtime':
+						case 'department':
 						case 'file':
 						case 'group':
 						case 'id':
 						case 'modifier':
 						case 'modifiedtime':
-						case 'organization':
 						case 'user':
 							field.elm('.pd-guide').addclass('pd-fixed');
 							break;
@@ -3443,12 +3443,12 @@ class panda_user_interface{
 							case 'checkbox':
 							case 'creator':
 							case 'createdtime':
+							case 'department':
 							case 'file':
 							case 'group':
 							case 'id':
 							case 'modifier':
 							case 'modifiedtime':
-							case 'organization':
 							case 'user':
 								break;
 							default:
@@ -3520,9 +3520,9 @@ class panda_user_interface{
 						case 'checkbox':
 						case 'color':
 						case 'date':
+						case 'department':
 						case 'file':
 						case 'group':
-						case 'organization':
 						case 'textarea':
 						case 'time':
 							res=(receiver.type==sender.type);
@@ -4254,13 +4254,13 @@ pd.constants=pd.extend({
 	},
 	picker:{
 		caption:{
+			departments:{
+				en:'Department',
+				ja:'組織'
+			},
 			groups:{
 				en:'Group',
 				ja:'グループ'
-			},
-			organizations:{
-				en:'Organization',
-				ja:'組織'
 			},
 			users:{
 				en:'User',
