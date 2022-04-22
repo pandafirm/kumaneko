@@ -202,10 +202,10 @@
                         "nocaption": false,
                         "format": "password"
                     },
-                    "organization": {
-                        "id": "organization",
-                        "type": "organization",
-                        "caption": "organization",
+                    "department": {
+                        "id": "department",
+                        "type": "department",
+                        "caption": "department",
                         "required": false,
                         "nocaption": false
                     },
@@ -273,7 +273,7 @@
                     {
                         "type": "row",
                         "fields": [
-                            "organization",
+                            "department",
                             "group"
                         ]
                     },
@@ -306,9 +306,9 @@
                 "customize": [],
                 "actions": []
             },
-            "organizations": {
-                "id": "organizations",
-                "name": "organizations",
+            "departments": {
+                "id": "departments",
+                "name": "departments",
                 "fields": {
                     "name": {
                         "id": "name",
