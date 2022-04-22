@@ -38,9 +38,9 @@ class clsDriver
 			switch ($arg_fields[$key]["type"])
 			{
 				case "checkbox":
+				case "department":
 				case "file":
 				case "group":
-				case "organization":
 				case "user":
 					if (array_key_exists($key,$arg_source)) $arg_destination[$key]=["value"=>$arg_source[$key]["value"]];
 					else
@@ -332,8 +332,8 @@ class clsDriver
 					switch ($fields[$key]["type"])
 					{
 						case "checkbox":
+						case "department":
 						case "group":
-						case "organization":
 							$query=preg_replace(
 								"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
 								'$me->FILTER_MULTIPLE($values["'.$key.'"]["value"],\'$1\',[$2])',
@@ -455,8 +455,8 @@ class clsDriver
 								switch ($value["type"])
 								{
 									case "checkbox":
+									case "department":
 									case "group":
-									case "organization":
 										$replacement='$me->FILTER_MULTIPLE($values["'.$key.'"]["value"],\'$1\',[$2])';
 										$query=preg_replace(
 											"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
@@ -1050,17 +1050,17 @@ class clsDriver
 	public function FILTER_USER_COUNT($arg_field,$arg_value)
 	{
 		$result=0;
+		$departments=[];
 		$groups=[];
-		$organizations=[];
 		$users=[];
 		foreach ($arg_value as $value)
 			switch (substr($value,0,1))
 			{
+				case "d":
+					$departments[]=substr($value,1);
+					break;
 				case "g":
 					$groups[]=substr($value,1);
-					break;
-				case "o":
-					$organizations[]=substr($value,1);
 					break;
 				default:
 					$users[]=$value;
@@ -1069,8 +1069,8 @@ class clsDriver
 		foreach ($arg_field as $field)
 			if (array_key_exists($field,$this->users))
 			{
+				$result+=count(array_filter($this->users[$field]["department"]["value"],function($value) use ($departments){return in_array($value,$departments,true);}));
 				$result+=count(array_filter($this->users[$field]["group"]["value"],function($value) use ($groups){return in_array($value,$groups,true);}));
-				$result+=count(array_filter($this->users[$field]["organization"]["value"],function($value) use ($organizations){return in_array($value,$organizations,true);}));
 				if (in_array($field,$users,true)) $result++;
 			}
 		return $result;
