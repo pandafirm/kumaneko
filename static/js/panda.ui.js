@@ -3866,9 +3866,9 @@ class panda_user_interface{
 						res
 						.append(pd.create('thead').append(pd.create('tr').addclass('pd-view-head')))
 						.append(pd.create('tbody').append(pd.create('tr').addclass('pd-view-row')));
-						res.elm('thead tr').append(pd.create('th').addclass('pd-view-head-cell pd-view-button'+((['linkage','list'].includes(view.type))?' pd-readonly':'')));
+						res.elm('thead tr').append(pd.create('th').addclass('pd-view-head-cell pd-view-button pd-view-guide'+((['linkage','list'].includes(view.type))?' pd-readonly':'')));
 						res.elm('tbody tr').append(
-							pd.create('td').addclass('pd-view-button'+((['linkage','list'].includes(view.type))?' pd-readonly':''))
+							pd.create('td').addclass('pd-view-button pd-view-guide'+((['linkage','list'].includes(view.type))?' pd-readonly':''))
 							.append(pd.create('button').addclass('pd-icon pd-icon-edit pd-view-row-edit'))
 							.append(pd.create('button').addclass('pd-icon pd-icon-copy pd-view-row-copy'))
 						);
