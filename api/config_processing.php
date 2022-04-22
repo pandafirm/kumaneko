@@ -62,9 +62,9 @@ function grow($arg_record,$arg_fields)
 			case "spacer":
 				break;
 			case "checkbox":
+			case "department":
 			case "file":
 			case "group":
-			case "organization":
 			case "user":
 				if (!array_key_exists($key,$arg_record)) $arg_record[$key]=["value"=>[]];
 				break;

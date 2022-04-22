@@ -132,9 +132,9 @@ class clsRequest extends clsBase
 		{
 			case "checkbox":
 			case "creator":
+			case "department":
 			case "group":
 			case "modifier":
-			case "organization":
 			case "user":
 				$values=array_unique(call_user_func_array("array_merge",$values));
 				break;
@@ -168,10 +168,10 @@ class clsRequest extends clsBase
 				{
 					case "checkbox":
 					case "creator":
+					case "department":
 					case "dropdown":
 					case "group":
 					case "modifier":
-					case "organization":
 					case "radio":
 					case "user":
 						$res[$item]=$arg_config["field"]." in (\"{$item}\")";

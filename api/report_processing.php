@@ -8,9 +8,9 @@
 */
 global $argv;
 $config;
+$departments;
 $fields;
 $groups;
-$organizations;
 $tables;
 $users;
 register_shutdown_function(function(){
@@ -26,7 +26,7 @@ require_once(dirname(__FILE__)."/lib/driver.php");
 require_once(dirname(__FILE__)."/google/sheet.php");
 function setupcell($arg_field,$arg_source)
 {
-	global $config,$groups,$organizations,$users;
+	global $config,$departments,$groups,$users;
 	$res="";
 	switch ($arg_field["type"])
 	{
@@ -46,22 +46,22 @@ function setupcell($arg_field,$arg_source)
 			}
 			$res=implode(",",$res);
 			break;
-		case "group":
+		case "department":
 			$res=[];
 			foreach ($arg_source[$arg_field["id"]]["value"] as $value)
 			{
-				$filter=array_filter($groups,function($values,$key) use ($value){
+				$filter=array_filter($departments,function($values,$key) use ($value){
 					return $values["__id"]["value"]==$value;
 				},ARRAY_FILTER_USE_BOTH);
 				if (count($filter)!=0) $res[]=array_values($filter)[0]["name"]["value"];
 			}
 			$res=implode(",",$res);
 			break;
-		case "organization":
+		case "group":
 			$res=[];
 			foreach ($arg_source[$arg_field["id"]]["value"] as $value)
 			{
-				$filter=array_filter($organizations,function($values,$key) use ($value){
+				$filter=array_filter($groups,function($values,$key) use ($value){
 					return $values["__id"]["value"]==$value;
 				},ARRAY_FILTER_USE_BOTH);
 				if (count($filter)!=0) $res[]=array_values($filter)[0]["name"]["value"];
@@ -205,8 +205,8 @@ if (count($argv)>1)
 		try
 		{
 			$driver=new clsDriver(dirname(__FILE__)."/storage/json/",$config["timezone"]);
+			$departments=$driver->records("departments");
 			$groups=$driver->records("groups");
-			$organizations=$driver->records("organizations");
 			$users=$driver->records("users");
 			[$fields,$tables]=(function($fields){
 				$res=[
