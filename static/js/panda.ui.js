@@ -1759,7 +1759,7 @@ class panda_recordpicker extends panda_dialog{
 		/* modify elements */
 		this.container.css({
 			height:'calc(34em + 16px)',
-			minWidth:'15em'
+			minWidth:'16em'
 		});
 		this.contents.css({
 			padding:'0px'
