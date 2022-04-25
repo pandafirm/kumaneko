@@ -537,11 +537,11 @@ svg *{
 /* Application Builder definition */
 .pd-kumaneko-appbuilder .pd-kumaneko-appbuilder-name{
 	margin-top:1px;
-	width:calc(100% - 18em);
+	width:calc(100% - 18.5em);
 }
 .pd-kumaneko-appbuilder .pd-kumaneko-appbuilder-button{
 	margin:calc(0.25em + 1px) 0.25em 0.25em 0;
-	width:8.75em;
+	width:9em;
 }
 .pd-kumaneko-appbuilder .pd-kumaneko-main{
 	height:calc(100% - (2em + 3px));
