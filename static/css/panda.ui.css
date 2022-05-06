@@ -400,6 +400,9 @@
 .pd-table .pd-table-button{
 	width:4em;
 }
+.pd-table .pd-table-button.pd-table-button-extension{
+	width:6em;
+}
 .pd-table .pd-table-button.pd-readonly{
 	display:none;
 }

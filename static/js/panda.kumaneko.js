@@ -9506,9 +9506,7 @@ pd.modules={
 											]
 										}
 									}
-								})
-								.addclass('pd-table-rows')
-								.spread((row,index) => {
+								}).addclass('pd-table-rows').spread((row,index) => {
 									/* event */
 									row.elm('.pd-table-row-add').on('click',(e) => {
 										menu.table.insertrow(row);
@@ -9820,9 +9818,7 @@ pd.modules={
 											format:'text'
 										}
 									}
-								})
-								.addclass('pd-table-rows')
-								.spread((row,index) => {
+								}).addclass('pd-table-rows').spread((row,index) => {
 									/* event */
 									row.elm('.pd-table-row-add').on('click',(e) => {
 										menu.tables.row.insertrow(row);
@@ -9876,9 +9872,7 @@ pd.modules={
 											nocaption:true
 										}
 									}
-								})
-								.addclass('pd-table-values')
-								.spread((row,index) => {
+								}).addclass('pd-table-values').spread((row,index) => {
 									/* event */
 									row.elm('.pd-table-row-add').on('click',(e) => {
 										menu.tables.value.insertrow(row);
