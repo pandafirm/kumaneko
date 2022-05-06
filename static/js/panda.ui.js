@@ -3739,11 +3739,10 @@ class panda_user_interface{
 									table.insertrow(row);
 									pd.event.call(app.id,'pd.row.copy.'+table.attr('field-id'),{
 										container:table,
-										record:(() => {
-											var res=pd.record.get(container,app,true).record;
-											res[table.attr('field-id')].value[index+1]=pd.extend({},res[table.attr('field-id')].value[index]);
-											return res;
-										})(),
+										record:((record) => {
+											record[table.attr('field-id')].value[index+1]=pd.extend({},record[table.attr('field-id')].value[index]);
+											return record;
+										})(pd.record.get(container,app,true).record),
 										rowindex:index+1
 									})
 									.then((param) => {
@@ -3790,9 +3789,9 @@ class panda_user_interface{
 								return fieldinfo;
 							})(pd.extend({},fieldinfo)))));
 						})(table.fields[key]);
-					if (!isview) res.elm('thead tr').append(pd.create('th').addclass('pd-table-button'));
 					if (!isform)
 					{
+						if (!isview) res.elm('thead tr').append(pd.create('th').addclass('pd-table-button'));
 						res.elm('tbody tr').append(
 							pd.create('td').addclass('pd-table-button')
 							.append(pd.create('button').addclass('pd-icon pd-icon-add pd-table-row-add'))
@@ -3801,6 +3800,7 @@ class panda_user_interface{
 					}
 					else
 					{
+						if (!isview) res.elm('thead tr').append(pd.create('th').addclass('pd-table-button pd-table-button-extension'));
 						res.elm('tbody tr').append(
 							pd.create('td').addclass('pd-table-button pd-table-button-extension')
 							.append(pd.create('button').addclass('pd-icon pd-icon-add pd-table-row-add'))
