@@ -291,7 +291,7 @@
 	width:100%;
 }
 .pd-filterbuilder .pd-table-caption{
-	padding:0.5em 0.25em 0  0.25em;
+	padding:0.5em 0.25em 0 0.25em;
 }
 .pd-flex{
 	display:flex;
@@ -415,7 +415,7 @@
 }
 .pd-table-caption{
 	display:inline-block;
-	padding:0 0.25em;
+	padding:0.25em 0.25em 0 0.25em;
 	user-select:none;
 }
 .pd-uneditable .pd-field .pd-field-value .pd-guide{

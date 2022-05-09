@@ -3721,6 +3721,35 @@ class panda_user_interface{
 								else table.delrow(row);
 							});
 						});
+						row.elm('.pd-table-row-copy').on('click',(e) => {
+							((index) => {
+								table.insertrow(row);
+								pd.event.call(app.id,'pd.row.copy.'+table.attr('field-id'),{
+									container:table,
+									record:((record) => {
+										record[table.attr('field-id')].value[index+1]=pd.extend({},record[table.attr('field-id')].value[index]);
+										return record;
+									})(pd.record.get(container,app,true).record),
+									rowindex:index+1
+								})
+								.then((param) => {
+									if (!param.error)
+									{
+										pd.event.call(app.id,'pd.action.call',{
+											record:param.record,
+											workplace:(container.closest('.pd-view'))?'view':'record'
+										})
+										.then((param) => {
+											pd.record.set(container,app,param.record);
+											((event) => {
+												container.attr('unsaved','unsaved').dispatchEvent(event);
+											})(new Event('change'));
+										});
+									}
+									else table.delrow(row);
+								});
+							})(parseInt(row.attr('row-id')));
+						});
 						row.elm('.pd-table-row-del').on('click',(e) => {
 							pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
 								pd.event.call(app.id,'pd.row.del.'+table.attr('field-id'),{
@@ -3733,36 +3762,6 @@ class panda_user_interface{
 								});
 							});
 						});
-						if (row.elm('.pd-table-row-copy'))
-							row.elm('.pd-table-row-copy').on('click',(e) => {
-								((index) => {
-									table.insertrow(row);
-									pd.event.call(app.id,'pd.row.copy.'+table.attr('field-id'),{
-										container:table,
-										record:((record) => {
-											record[table.attr('field-id')].value[index+1]=pd.extend({},record[table.attr('field-id')].value[index]);
-											return record;
-										})(pd.record.get(container,app,true).record),
-										rowindex:index+1
-									})
-									.then((param) => {
-										if (!param.error)
-										{
-											pd.event.call(app.id,'pd.action.call',{
-												record:param.record,
-												workplace:(container.closest('.pd-view'))?'view':'record'
-											})
-											.then((param) => {
-												pd.record.set(container,app,param.record);
-												((event) => {
-													container.attr('unsaved','unsaved').dispatchEvent(event);
-												})(new Event('change'));
-											});
-										}
-										else table.delrow(row);
-									});
-								})(parseInt(row.attr('row-id')));
-							});
 						/* activation */
 						row.elms('.pd-field').each((element,index) => this.field.activate(element,app));
 						/* setup row index */
@@ -3789,25 +3788,13 @@ class panda_user_interface{
 								return fieldinfo;
 							})(pd.extend({},fieldinfo)))));
 						})(table.fields[key]);
-					if (!isform)
-					{
-						if (!isview) res.elm('thead tr').append(pd.create('th').addclass('pd-table-button'));
-						res.elm('tbody tr').append(
-							pd.create('td').addclass('pd-table-button')
-							.append(pd.create('button').addclass('pd-icon pd-icon-add pd-table-row-add'))
-							.append(pd.create('button').addclass('pd-icon pd-icon-del pd-table-row-del'))
-						);
-					}
-					else
-					{
-						if (!isview) res.elm('thead tr').append(pd.create('th').addclass('pd-table-button pd-table-button-extension'));
-						res.elm('tbody tr').append(
-							pd.create('td').addclass('pd-table-button pd-table-button-extension')
-							.append(pd.create('button').addclass('pd-icon pd-icon-add pd-table-row-add'))
-							.append(pd.create('button').addclass('pd-icon pd-icon-copy pd-table-row-copy'))
-							.append(pd.create('button').addclass('pd-icon pd-icon-del pd-table-row-del'))
-						);
-					}
+					if (!isview) res.elm('thead tr').append(pd.create('th').addclass('pd-table-button'+((!isform)?'':' pd-table-button-extension')));
+					res.elm('tbody tr').append(
+						pd.create('td').addclass('pd-table-button'+((!isform)?'':' pd-table-button-extension'))
+						.append(pd.create('button').addclass('pd-icon pd-icon-add pd-table-row-add'))
+						.append(pd.create('button').addclass('pd-icon pd-icon-copy pd-table-row-copy').css({display:((!isform)?'none':'inline-block')}))
+						.append(pd.create('button').addclass('pd-icon pd-icon-del pd-table-row-del'))
+					);
 					/* setup to readonly field */
 					for (var key in table.fields)
 						((fieldinfo) => {

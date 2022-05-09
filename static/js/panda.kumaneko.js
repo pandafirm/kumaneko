@@ -630,6 +630,49 @@ class panda_kumaneko{
 								})
 							);
 						});
+						pd.event.on(this.config.apps.system.project.id,'pd.edit.submit',(e) => {
+							((smtps) => {
+								if (smtps.length!=0)
+								{
+									if (smtps.length!=Array.from(new Set(smtps.map((item) => item.smtp_mail.value))).length)
+									{
+										pd.alert(pd.constants.project.message.invalid.duplicates[pd.lang]);
+										e.error=true;
+									}
+									else
+									{
+										smtps.each((smtp,index) => {
+											if (!smtp.smtp_host.value)
+											{
+												pd.alert(pd.constants.project.message.invalid.host[pd.lang]);
+												e.error=true;
+											}
+											if (!smtp.smtp_port.value)
+											{
+												pd.alert(pd.constants.project.message.invalid.port[pd.lang]);
+												e.error=true;
+											}
+											if (!smtp.smtp_user.value)
+											{
+												pd.alert(pd.constants.project.message.invalid.user[pd.lang]);
+												e.error=true;
+											}
+											if (!smtp.smtp_pwd.value)
+											{
+												pd.alert(pd.constants.project.message.invalid.pwd[pd.lang]);
+												e.error=true;
+											}
+											if (!smtp.smtp_secure.value)
+											{
+												pd.alert(pd.constants.project.message.invalid.secure[pd.lang]);
+												e.error=true;
+											}
+										});
+									}
+								}
+							})(e.record.smtp.value.filter((item) => item.smtp_mail.value));
+							return e;
+						});
 						pd.event.on(this.config.apps.system.users.id,['pd.change.account','pd.change.pwd'],(e) => {
 							e.record.account.value=e.record.account.value.replace(/["']+/g,'');
 							e.record.pwd.value=e.record.pwd.value.replace(/["']+/g,'');
@@ -892,13 +935,11 @@ pd.modules={
 												{
 													case 'crosstab':
 													case 'timeseries':
-														if (res.body.elm('.pd-crosstab'))
-															res.body.elm('.pd-crosstab').elm('thead').css({top:res.header.innerheight().toString()+'px'});
+														if (res.body.elm('.pd-crosstab')) res.body.elm('.pd-crosstab').elm('thead').css({top:res.header.innerheight().toString()+'px'});
 														break;
 													case 'edit':
 													case 'list':
-														if (res.body.elm('.pd-view'))
-															res.body.elm('.pd-view').elm('thead').css({top:res.header.innerheight().toString()+'px'});
+														if (res.body.elm('.pd-view')) res.body.elm('.pd-view').elm('thead').css({top:res.header.innerheight().toString()+'px'});
 														break;
 												}
 											})(this.app.views.filter((item) => item.id==viewid).first());
@@ -1570,10 +1611,7 @@ pd.modules={
 																	var res=[];
 																	((fieldinfos[action.mail.to].tableid)?result[fieldinfos[action.mail.to].tableid].value:[result]).each((record,index) => {
 																		res.push({
-																			from:{
-																				mail:action.mail.from,
-																				name:action.mail.display
-																			},
+																			from:action.mail.from,
 																			to:record[action.mail.to].value,
 																			cc:action.mail.cc,
 																			bcc:action.mail.bcc,
@@ -4767,7 +4805,6 @@ pd.modules={
 																	mapping:[]
 																},
 																mail:{
-																	display:'',
 																	from:'',
 																	to:'',
 																	cc:'',
@@ -5580,20 +5617,13 @@ pd.modules={
 								{option:{value:'upsert'}}
 							]
 						},
-						display:{
-							id:'display',
-							type:'text',
-							caption:pd.constants.action.caption.mail.display[pd.lang],
-							required:false,
-							nocaption:false
-						},
 						from:{
 							id:'from',
-							type:'text',
+							type:'dropdown',
 							caption:pd.constants.action.caption.mail.from[pd.lang],
 							required:false,
 							nocaption:false,
-							format:'mail'
+							options:[]
 						},
 						to:{
 							id:'to',
@@ -5719,6 +5749,7 @@ pd.modules={
 				};
 				this.keep={
 					layout:[],
+					mail:[],
 					action:{},
 					config:{},
 					fields:{},
@@ -6353,8 +6384,7 @@ pd.modules={
 							((container) => {
 								this.keep.sections.mail.container=container
 								container.elm('.pd-box-container')
-								.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.from).css({width:'50%'}),this.app))
-								.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.display).css({width:'50%'}),this.app))
+								.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.from).css({width:'100%'}),this.app))
 								.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.to).css({width:'100%'}),this.app))
 								.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.cc).css({width:'100%'}),this.app))
 								.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.bcc).css({width:'100%'}),this.app))
@@ -6801,7 +6831,6 @@ pd.modules={
 													})(pd.ui.field.parallelize(this.keep.fields));
 													if (!res.error)
 													{
-														res.action.mail.display=record.display.value;
 														res.action.mail.from=record.from.value;
 														res.action.mail.to=record.to.value;
 														res.action.mail.cc=record.cc.value;
@@ -6813,7 +6842,6 @@ pd.modules={
 												}
 												else
 												{
-													res.action.mail.display='';
 													res.action.mail.from='';
 													res.action.mail.to='';
 													res.action.mail.cc='';
@@ -6968,7 +6996,6 @@ pd.modules={
 										}
 										return pattern;
 									})(this.keep.action.transfer.pattern)};
-									res['display']={value:this.keep.action.mail.display};
 									res['from']={value:this.keep.action.mail.from};
 									res['to']={value:this.keep.action.mail.to};
 									res['cc']={value:this.keep.action.mail.cc};
@@ -7069,6 +7096,15 @@ pd.modules={
 											});
 											if (elements.tables.mapping.tr.length==0) elements.tables.mapping.addrow();
 										});
+										elements.from.empty().assignoption((() => {
+											var res=[];
+											res.push({
+												id:{value:''},
+												caption:{value:''}
+											});
+											Array.prototype.push.apply(res,this.keep.mail.map((item) => ({id:{value:item},caption:{value:item}})));
+											return res;
+										})(),'caption','id');
 										elements.to.empty().assignoption((() => {
 											var res=[];
 											res.push({
@@ -7115,6 +7151,7 @@ pd.modules={
 										saveas:this.contents.elm('[field-id=saveas]').elm('select'),
 										store:this.contents.elm('[field-id=store]').elm('select'),
 										app:this.contents.elm('[field-id=app]').elm('select'),
+										from:this.contents.elm('[field-id=from]').elm('select'),
 										to:this.contents.elm('[field-id=to]').elm('select'),
 										attachment:this.contents.elm('[field-id=attachment]').elm('select'),
 										tables:pd.extend({template:this.keep.sections.report.table},this.keep.sections.transfer.tables)
@@ -7232,28 +7269,33 @@ pd.modules={
 						this.keep.config=resp.file;
 						this.keep.fields=fields;
 						this.keep.layout=layout;
-						/* modify elements */
-						this.contents.elms('input,select,textarea').each((element,index) => {
-							if (element.alert) element.alert.hide();
-						});
-						/* setup handler */
-						if (this.handler) this.ok.off('click',this.handler);
-						this.handler=(e) => {
-							this.get().then((resp) => {
-								if (!resp.error)
-								{
-									callback(this.keep.action);
-									this.hide();
-								}
+						pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'project',id:'1'})
+						.then((resp) => {
+							this.keep.mail=(resp.total!=0)?resp.record.smtp.value.shape((item) => (item.smtp_mail.value)?item.smtp_mail.value:PD_THROW):[];
+							/* modify elements */
+							this.contents.elms('input,select,textarea').each((element,index) => {
+								if (element.alert) element.alert.hide();
 							});
-						};
-						this.ok.on('click',this.handler);
-						this.cancel.on('click',(e) => this.hide());
-						/* set configuration */
-						this.set().then(() => {
-							/* show */
-							super.show();
-						});
+							/* setup handler */
+							if (this.handler) this.ok.off('click',this.handler);
+							this.handler=(e) => {
+								this.get().then((resp) => {
+									if (!resp.error)
+									{
+										callback(this.keep.action);
+										this.hide();
+									}
+								});
+							};
+							this.ok.on('click',this.handler);
+							this.cancel.on('click',(e) => this.hide());
+							/* set configuration */
+							this.set().then(() => {
+								/* show */
+								super.show();
+							});
+						})
+						.catch((error) => pd.alert(error.message));
 					})
 					.catch((error) => pd.alert(error.message));
 				}
@@ -12342,10 +12384,6 @@ pd.constants=pd.extend({
 					en:'CC EMail Addresss',
 					ja:'CCメールアドレス'
 				},
-				display:{
-					en:'Sender Name',
-					ja:'差出人名'
-				},
 				from:{
 					en:'Sender EMail Address',
 					ja:'送信元メールアドレス'
@@ -12498,8 +12536,8 @@ pd.constants=pd.extend({
 						ja:'本文を入力して下さい'
 					},
 					from:{
-						en:'Please enter the sender email address',
-						ja:'送信元メールアドレスを入力して下さい'
+						en:'Please specify the sender email address',
+						ja:'送信元メールアドレスを指定して下さい'
 					},
 					subject:{
 						en:'Please enter the email subject',
@@ -13232,6 +13270,36 @@ pd.constants=pd.extend({
 			name:{
 				en:'Enter the linkage view name',
 				ja:'リンクビュー名を入力'
+			}
+		}
+	},
+	project:{
+		message:{
+			invalid:{
+				duplicates:{
+					en:'You cannot enter the same email address in Sender EMail Address',
+					ja:'Sender EMail Address に同じメールアドレスを入力することは出来ません'
+				},
+				host:{
+					en:'Please enter Server Name',
+					ja:'Server Name を入力して下さい'
+				},
+				port:{
+					en:'Please enter Port',
+					ja:'Port を入力して下さい'
+				},
+				user:{
+					en:'Please enter User Name',
+					ja:'User Name を入力して下さい'
+				},
+				pwd:{
+					en:'Please enter Password',
+					ja:'Password を入力して下さい'
+				},
+				secure:{
+					en:'Please specify Connection Security',
+					ja:'Connection Security を指定して下さい'
+				}
 			}
 		}
 	},
