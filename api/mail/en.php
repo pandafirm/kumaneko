@@ -20,11 +20,13 @@ class clsRequest extends clsBase
 	private $driver;
 	private $project;
 	private $response;
+	private $smtp;
 	/* constructor */
 	public function __construct()
 	{
 		$this->project=[];
 		$this->response=[];
+		$this->smtp=[];
 	}
 	/* methods */
 	protected function GET()
@@ -41,19 +43,29 @@ class clsRequest extends clsBase
 		if (!isset($this->body["subject"])) $this->callrequesterror(400);
 		if (!isset($this->body["body"])) $this->callrequesterror(400);
 		if (!isset($this->body["attachment"])) $this->callrequesterror(400);
-		if ($this->project["smtp_host"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
-		if ($this->project["smtp_port"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
-		if ($this->project["smtp_user"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
-		if ($this->project["smtp_pwd"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
+		foreach ($this->project["smtp"]["value"] as $value)
+			if ($value["smtp_mail"]["value"]==$this->body["from"])
+			{
+				$this->smtp=$value;
+				break;
+			}
+		if (count($this->smtp)==0) $this->callrequesterror(500,"EMail settings are not made.");
+		else
+		{
+			if ($this->smtp["smtp_host"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
+			if ($this->smtp["smtp_port"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
+			if ($this->smtp["smtp_user"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
+			if ($this->smtp["smtp_pwd"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
+		}
 		try
 		{
 			$mailer=new PHPMailer(true);
 			$mailer->isSMTP();
-			$mailer->Host=$this->project["smtp_host"]["value"];
+			$mailer->Host=$this->smtp["smtp_host"]["value"];
 			$mailer->SMTPAuth=true;
-			$mailer->Username=$this->project["smtp_user"]["value"];
-			$mailer->Password=$this->project["smtp_pwd"]["value"];
-			switch ($this->project["smtp_secure"]["value"])
+			$mailer->Username=$this->smtp["smtp_user"]["value"];
+			$mailer->Password=$this->smtp["smtp_pwd"]["value"];
+			switch ($this->smtp["smtp_secure"]["value"])
 			{
 				case "STARTTLS":
 					$mailer->SMTPSecure=PHPMailer::ENCRYPTION_STARTTLS;
@@ -80,9 +92,9 @@ class clsRequest extends clsBase
 					$mailer->SMTPAutoTLS=false;
 					break;
 			}
-			$mailer->Port=$this->project["smtp_port"]["value"];
-			if ($this->body["from"]["name"]!="") $mailer->setFrom($this->body["from"]["mail"],mb_encode_mimeheader($this->body["from"]["name"]));
-			else $mailer->setFrom($this->body["from"]["mail"]);
+			$mailer->Port=$this->smtp["smtp_port"]["value"];
+			if ($this->smtp["smtp_sender"]["value"]!="") $mailer->setFrom($this->body["from"],mb_encode_mimeheader($this->smtp["smtp_sender"]["value"]));
+			else $mailer->setFrom($this->body["from"]);
 			$this->body["to"]=explode(",",$this->body["to"]);
 			foreach ($this->body["to"] as $to) if ($to!="") $mailer->addAddress($to);
 			if (isset($this->body["cc"]))
