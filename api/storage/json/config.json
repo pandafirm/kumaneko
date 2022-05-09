@@ -42,64 +42,88 @@
                         "required": false,
                         "nocaption": false
                     },
-                    "smtp_host": {
-                        "id": "smtp_host",
-                        "type": "text",
-                        "caption": "Server Name",
-                        "required": false,
+                    "smtp": {
+                        "id": "smtp",
+                        "type": "table",
+                        "caption": "EMail Settings",
                         "nocaption": false,
-                        "format": "alphanum"
-                    },
-                    "smtp_port": {
-                        "id": "smtp_port",
-                        "type": "number",
-                        "caption": "Port",
-                        "required": false,
-                        "nocaption": false,
-                        "demiliter": false,
-                        "decimals": "0",
-                        "unit": "",
-                        "unitposition": "suffix"
-                    },
-                    "smtp_user": {
-                        "id": "smtp_user",
-                        "type": "text",
-                        "caption": "User Name",
-                        "required": false,
-                        "nocaption": false,
-                        "format": "alphanum"
-                    },
-                    "smtp_pwd": {
-                        "id": "smtp_pwd",
-                        "type": "text",
-                        "caption": "Password",
-                        "required": false,
-                        "nocaption": false,
-                        "format": "password"
-                    },
-                    "smtp_secure": {
-                        "id": "smtp_secure",
-                        "type": "dropdown",
-                        "caption": "Connection Security",
-                        "required": false,
-                        "nocaption": false,
-                        "options": [
-                            {
-                                "option": {
-                                    "value": ""
-                                }
+                        "fields": {
+                            "smtp_mail": {
+                                "id": "smtp_mail",
+                                "type": "text",
+                                "caption": "Sender EMail Address",
+                                "required": false,
+                                "nocaption": false,
+                                "format": "mail"
                             },
-                            {
-                                "option": {
-                                    "value": "STARTTLS"
-                                }
+                            "smtp_sender": {
+                                "id": "smtp_sender",
+                                "type": "text",
+                                "caption": "Sender Name",
+                                "required": false,
+                                "nocaption": false,
+                                "format": "text"
                             },
-                            {
-                                "option": {
-                                    "value": "SSL\/TLS"
-                                }
+                            "smtp_host": {
+                                "id": "smtp_host",
+                                "type": "text",
+                                "caption": "Server Name",
+                                "required": false,
+                                "nocaption": false,
+                                "format": "alphanum"
+                            },
+                            "smtp_port": {
+                                "id": "smtp_port",
+                                "type": "number",
+                                "caption": "Port",
+                                "required": false,
+                                "nocaption": false,
+                                "demiliter": false,
+                                "decimals": "0",
+                                "unit": "",
+                                "unitposition": "suffix"
+                            },
+                            "smtp_user": {
+                                "id": "smtp_user",
+                                "type": "text",
+                                "caption": "User Name",
+                                "required": false,
+                                "nocaption": false,
+                                "format": "alphanum"
+                            },
+                            "smtp_pwd": {
+                                "id": "smtp_pwd",
+                                "type": "text",
+                                "caption": "Password",
+                                "required": false,
+                                "nocaption": false,
+                                "format": "password"
+                            },
+                            "smtp_secure": {
+                                "id": "smtp_secure",
+                                "type": "dropdown",
+                                "caption": "Connection Security",
+                                "required": false,
+                                "nocaption": false,
+                                "options": [
+                                    {
+                                        "option": {
+                                            "value": ""
+                                        }
+                                    },
+                                    {
+                                        "option": {
+                                            "value": "STARTTLS"
+                                        }
+                                    },
+                                    {
+                                        "option": {
+                                            "value": "SSL\/TLS"
+                                        }
+                                    }
+                                ]
                             }
-                        ]
+                        }
                     }
                 },
                 "styles": {},
@@ -145,21 +169,8 @@
                         ]
                     },
                     {
-                        "type": "box",
-                        "id": "mailarea",
-                        "caption": "EMail Settings",
-                        "rows": [
-                            {
-                                "type": "row",
-                                "fields": [
-                                    "smtp_host",
-                                    "smtp_port",
-                                    "smtp_user",
-                                    "smtp_pwd",
-                                    "smtp_secure"
-                                ]
-                            }
-                        ]
+                        "type": "table",
+                        "id": "smtp"
                     }
                 ],
                 "views": [],
