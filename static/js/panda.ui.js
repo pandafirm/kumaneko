@@ -1659,7 +1659,7 @@ class panda_record{
 							break;
 						case 'textarea':
 							field.elm('textarea').val(value.value);
-							field.elm('.pd-guide').html(value.value);
+							field.elm('.pd-guide').html(value.value.replace(/\n/g,'<br>'));
 							break;
 						case 'time':
 							if (value.value)
@@ -3411,7 +3411,10 @@ class panda_user_interface{
 									}
 									break;
 								case 'textarea':
-									field.append(pd.create('textarea'));
+									field.append(((res) => {
+										if (fieldinfo.lines) res.css({height:'calc('+(parseFloat(fieldinfo.lines)*1.5).toString()+'em + 2px)'});
+										return res;
+									})(pd.create('textarea')));
 									break;
 								case 'time':
 									time(field);

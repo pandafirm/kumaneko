@@ -3565,6 +3565,9 @@ pd.modules={
 																	);
 																});
 																break;
+															case 'dropdown':
+																element.elm('select').empty().assignoption(fieldinfo.options,'option','option')
+																break;
 															case 'radio':
 																element.elm('.pd-field-value').empty();
 																fieldinfo.options.each((option,index) => {
@@ -3580,11 +3583,10 @@ pd.modules={
 																	);
 																});
 																break;
-															case 'dropdown':
-																element.elm('select').empty().assignoption(fieldinfo.options,'option','option')
-																break;
 															default:
 																element.elms('input,select,textarea').each((element,index) => {
+																	if (fieldinfo.lines) element.css({height:'calc('+(parseFloat(fieldinfo.lines)*1.5).toString()+'em + 2px)'});
+																	else element.css({height:''});
 																	if (fieldinfo.placeholder) element.attr('placeholder',fieldinfo.placeholder);
 																	else element.removeattr('placeholder');
 																});
@@ -4293,6 +4295,12 @@ pd.modules={
 															res=pd.extend({
 																placeholder:'',
 																format:'text'
+															},res);
+															break;
+														case 'textarea':
+															res=pd.extend({
+																placeholder:'',
+																lines:''
 															},res);
 															break;
 														case 'id':
@@ -7371,6 +7379,15 @@ pd.modules={
 								{option:{value:'url'}}
 							]
 						},
+						lines:{
+							id:'lines',
+							type:'number',
+							caption:pd.constants.field.caption.lines[pd.lang],
+							required:false,
+							nocaption:false,
+							demiliter:false,
+							decimals:'0'
+						},
 						options:{
 							id:'options',
 							type:'table',
@@ -7615,6 +7632,7 @@ pd.modules={
 							case 'number':
 							case 'postalcode':
 							case 'text':
+							case 'textarea':
 								contents.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.placeholder).css({width:'100%'}),this.app));
 								switch (this.fieldinfo.type)
 								{
@@ -7977,6 +7995,9 @@ pd.modules={
 											return res;
 										})(pd.ui.field.create(this.app.fields.format).css({width:'100%'})),this.app));
 										break;
+									case 'textarea':
+										contents.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.lines).css({width:'100%'}),this.app));
+										break;
 								}
 								break;
 							case 'autonumber':
@@ -8073,6 +8094,14 @@ pd.modules={
 									}
 									else this.fieldinfo.options=record.options.value.map((item) => ({option:{value:item}}));
 									break;
+								case 'textarea':
+									if (record.lines.value)
+										if (parseFloat(record.lines.value)<2)
+										{
+											pd.alert(pd.constants.field.message.invalid.textarea[pd.lang]);
+											res=true;
+										}
+									break;
 							}
 							if (!res)
 							{
@@ -8102,6 +8131,7 @@ pd.modules={
 									case 'number':
 									case 'postalcode':
 									case 'text':
+									case 'textarea':
 										this.fieldinfo.placeholder=record.placeholder.value;
 										switch (this.fieldinfo.type)
 										{
@@ -8164,6 +8194,9 @@ pd.modules={
 											case 'text':
 												this.fieldinfo.format=record.format.value;
 												break;
+											case 'textarea':
+												this.fieldinfo.lines=record.lines.value;
+												break;
 										}
 										break;
 									case 'autonumber':
@@ -8220,6 +8253,7 @@ pd.modules={
 							case 'number':
 							case 'postalcode':
 							case 'text':
+							case 'textarea':
 								res['placeholder']={value:this.fieldinfo.placeholder};
 								switch (this.fieldinfo.type)
 								{
@@ -8360,6 +8394,9 @@ pd.modules={
 										break;
 									case 'text':
 										res['format']={value:this.fieldinfo.format};
+										break;
+									case 'textarea':
+										res['lines']={value:this.fieldinfo.lines};
 										break;
 								}
 								break;
@@ -13049,6 +13086,10 @@ pd.constants=pd.extend({
 				en:'Fields for grouping',
 				ja:'グループ化のフィールド'
 			},
+			lines:{
+				en:'Visible line count',
+				ja:'可視行数'
+			},
 			lookup:{
 				app:{
 					en:'Datasource App',
@@ -13161,6 +13202,10 @@ pd.constants=pd.extend({
 				option:{
 					en:'Please enter one or more options',
 					ja:'選択項目を入力して下さい'
+				},
+				textarea:{
+					en:'Visible line count must be at least 2 lines',
+					ja:'可視行数は2行以上にする必要があります'
 				}
 			}
 		}
