@@ -3655,7 +3655,7 @@ pd.modules={
 												res.elm('.pd-guide').html(pd.constants.common.prompt.autofill[pd.lang]);
 												break;
 										}
-										res.css({width:(fieldinfo.id in this.app.styles)?this.app.styles[fieldinfo.id].width:'225px'});
+										res.css({width:(fieldinfo.id in this.app.styles)?this.app.styles[fieldinfo.id].width:'235px'});
 										break;
 								}
 								return ((uniques) => {
@@ -4282,6 +4282,7 @@ pd.modules={
 															delete res.required;
 															res=pd.extend({
 																nocaption:true,
+																multiuse:false,
 																contents:pd.constants.app.prompt.spacer[pd.lang]
 															},res);
 															break;
@@ -7404,6 +7405,16 @@ pd.modules={
 								}
 							}
 						},
+						multiuse:{
+							id:'multiuse',
+							type:'checkbox',
+							caption:'',
+							required:false,
+							nocaption:true,
+							options:[
+								{option:{value:'multiuse'}}
+							]
+						},
 						contents:{
 							id:'contents',
 							type:'textarea',
@@ -8058,11 +8069,15 @@ pd.modules={
 								contents.css({
 									height:'100%'
 								})
+								.append(pd.ui.field.activate(((res) => {
+									res.elm('input').closest('label').elm('span').html(pd.constants.field.caption.multiuse[pd.lang]);
+									return res;
+								})(pd.ui.field.create(this.app.fields.multiuse)).css({width:'100%'}),this.app))
 								.append(
 									((res) => {
 										res.elm('.pd-field-value').css({height:'calc(100% - (1.75em + 1px))'});
 										return res;
-									})(pd.ui.field.activate(pd.ui.field.create(this.app.fields.contents).css({height:'calc(100% - (7.5em + 4px))',width:'100%'}),this.app))
+									})(pd.ui.field.activate(pd.ui.field.create(this.app.fields.contents).css({height:'calc(100% - (9em + 4px))',width:'100%'}),this.app))
 								);
 								break;
 						}
@@ -8213,6 +8228,7 @@ pd.modules={
 										})();
 										break;
 									case 'spacer':
+										this.fieldinfo.multiuse=(record.multiuse.value.length!=0);
 										this.fieldinfo.contents=record.contents.value;
 										break;
 								}
@@ -8443,6 +8459,7 @@ pd.modules={
 								res['options']={value:this.fieldinfo.options.map((item) => ({option:{value:item.option.value}}))};
 								break;
 							case 'spacer':
+								res['multiuse']={value:(this.fieldinfo.multiuse)?[this.app.fields.multiuse.options.first().option.value]:[]};
 								res['contents']={value:this.fieldinfo.contents};
 								break;
 						}
@@ -9089,7 +9106,7 @@ pd.modules={
 										}
 										break;
 								}
-								return this.menus.list.lib.activate(res.css({width:'225px'}).attr('field-type','field'),fieldinfo,true);
+								return this.menus.list.lib.activate(res.css({width:'235px'}).attr('field-type','field'),fieldinfo,true);
 							},
 							init:() => {
 								this.menus.list.contents.elm('.pd-box').insertBefore(this.menus.list.contents.elm('.pd-kumaneko-drag-guide'),null);
@@ -11497,7 +11514,7 @@ pd.modules={
 											.append(
 												((res) => {
 													this.keep.nav[app.id+'_'+view.id]=res;
-													return this.lib.activate(res,{type:'panel',app:app.id,view:view.id,styles:{width:'225px'}})
+													return this.lib.activate(res,{type:'panel',app:app.id,view:view.id,styles:{width:'235px'}})
 													.append(pd.create('span').addclass('pd-kumaneko-nav-button-details-item-label').html(view.name));
 												})(pd.create('span').addclass('pd-kumaneko-nav-button-details-item'))
 											);
@@ -13127,6 +13144,10 @@ pd.constants=pd.extend({
 					en:'Key Field',
 					ja:'参照元フィールド'
 				}
+			},
+			multiuse:{
+				en:'Also use in views',
+				ja:'一覧画面でも使用する'
 			},
 			nocaption:{
 				en:'Hide field name',

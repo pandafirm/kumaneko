@@ -102,7 +102,7 @@
 }
 .pd-dropdown:is(.pd-hour,.pd-minute){
 	display:inline-block;
-	width:3em;
+	width:calc(3em + 2px);
 }
 .pd-dropdown.pd-hour{
 	margin-right:0.25em;
@@ -216,7 +216,7 @@
 	width:calc(100% - 1.5em) !important;
 }
 .pd-field .pd-field-value:is(.pd-date,.pd-datetime) input{
-	width:6em !important;
+	width:calc(6em + 2px) !important;
 }
 .pd-field .pd-field-value:is(.pd-checkbox,.pd-radio){
 	white-space:normal;
@@ -461,6 +461,9 @@
 .pd-view .pd-view-button{
 	width:4em;
 }
+.pd-view .pd-view-button.pd-view-button-extension{
+	width:6em;
+}
 .pd-view .pd-view-button .pd-icon{
 	background-position:center center;
 	background-size:1.85em 1.85em;
@@ -538,6 +541,9 @@
 	display:inline-block;
 }
 .pd-view .pd-view-unuse{
+	display:none !important;
+}
+.pd-view .pd-view-unuse.pd-field.pd-hidden{
 	display:none !important;
 }
 body.pd-not-allowed *{
