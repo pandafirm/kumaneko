@@ -3921,7 +3921,7 @@ class panda_user_interface{
 												res.elm('thead tr').append(
 													((cell,fieldinfo) => {
 														if (!unuse) span++;
-														return cell.addclass('pd-view-head-cell'+((unuse)?' pd-view-unuse':'')).attr('column-id',fieldinfo.id)
+														return cell.addclass('pd-view-head-cell'+((unuse)?' pd-unuse':'')).attr('column-id',fieldinfo.id)
 														.append(pd.create('span').addclass('pd-view-head-caption').html(fieldinfo.caption))
 														.append(pd.create('span').addclass('pd-view-head-guide').on('click',(e) => {
 															pd.event.call(app.id,'pd.view.guide.call',{id:fieldinfo.id});
@@ -3936,14 +3936,14 @@ class panda_user_interface{
 											if (!['linkage','list'].includes(view.type))
 											{
 												if (!unuse) span++;
-												res.elm('thead tr').append(pd.create('th').addclass('pd-view-head-cell pd-view-button pd-view-button-extension'+((unuse)?' pd-view-unuse':'')));
+												res.elm('thead tr').append(pd.create('th').addclass('pd-view-head-cell pd-view-button pd-view-button-extension'+((unuse)?' pd-unuse':'')));
 											}
 											break;
 										default:
 											res.elm('thead tr').append(
 												((cell) => {
 													if (!unuse) span++;
-													return cell.addclass('pd-view-head-cell'+((unuse)?' pd-view-unuse':'')).attr('column-id',fieldinfo.id)
+													return cell.addclass('pd-view-head-cell'+((unuse)?' pd-unuse':'')).attr('column-id',fieldinfo.id)
 													.append(pd.create('span').addclass('pd-view-head-caption').html(fieldinfo.caption))
 													.append(pd.create('span').addclass('pd-view-head-guide').on('click',(e) => {
 														pd.event.call(app.id,'pd.view.guide.call',{id:fieldinfo.id});
@@ -3967,13 +3967,13 @@ class panda_user_interface{
 											{
 												case 'table':
 													cell.append(
-														pd.create('div').addclass('pd-view-row-cell'+((unuse)?' pd-view-unuse':'')).append(
+														pd.create('div').addclass('pd-view-row-cell'+((unuse)?' pd-unuse':'')).append(
 															this.table.create(fieldinfo,true,true)
 														)
 													);
 													break;
 												default:
-													cell.append(this.field.create(fieldinfo).addclass('pd-view-row-cell'+((unuse)?' pd-view-unuse':'')));
+													cell.append(this.field.create(fieldinfo).addclass('pd-view-row-cell'+((unuse)?' pd-unuse':'')));
 													break;
 											}
 										})(app.fields[field],(view.fields.length!=0)?!view.fields.includes(field):false);

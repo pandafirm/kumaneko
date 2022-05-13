@@ -10795,7 +10795,7 @@ pd.modules={
 								break;
 							default:
 								panel.body.elm('.pd-view').clearrows();
-								panel.body.elm('.pd-view').elms('thead tr').each((element,index) => element.elms('.pd-view-button').last().addclass('pd-view-unuse'));
+								panel.body.elm('.pd-view').elms('thead tr').each((element,index) => element.elms('.pd-view-button').last().addclass('pd-hidden'));
 								var setup=(index,callback) => {
 									if (e.records.length!=0)
 									{
@@ -10805,7 +10805,7 @@ pd.modules={
 										})
 										.then((param) => {
 											pd.record.set(((row) => {
-												row.elms('.pd-view-button').last().addclass('pd-view-unuse');
+												row.elms('.pd-view-button').last().addclass('pd-hidden');
 												return row;
 											})(panel.body.elm('.pd-view').addrow()).elm('[form-id=form_'+panel.config.app.id+']'),panel.config.app,param.record);
 											index++;

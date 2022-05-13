@@ -296,7 +296,7 @@
 .pd-flex{
 	display:flex;
 }
-.pd-hidden{
+:is(.pd-hidden,.pd-unuse){
 	display:none !important;
 }
 .pd-icon{
@@ -453,7 +453,7 @@
 	border:none;
 	font-weight:normal;
 }
-.pd-view .pd-field.pd-hidden{
+.pd-view .pd-field.pd-hidden:not(.pd-unuse){
 	display:inline-block !important;
 	opacity:0;
 	pointer-events:none;
@@ -539,12 +539,6 @@
 }
 .pd-view .pd-view-row .pd-view-row-cell{
 	display:inline-block;
-}
-.pd-view .pd-view-unuse{
-	display:none !important;
-}
-.pd-view .pd-view-unuse.pd-field.pd-hidden{
-	display:none !important;
 }
 body.pd-not-allowed *{
 	cursor:not-allowed !important;
