@@ -7863,6 +7863,9 @@ pd.modules={
 																			switch (fieldinfo.type)
 																			{
 																				case 'file':
+																					mappings.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
+																					res[fieldinfo.id]=fieldinfo;
+																					break;
 																				case 'spacer':
 																				case 'table':
 																					break;
