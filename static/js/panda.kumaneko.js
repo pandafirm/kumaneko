@@ -8088,7 +8088,7 @@ pd.modules={
 									((res) => {
 										res.elm('.pd-field-value').css({height:'calc(100% - (1.75em + 1px))'});
 										return res;
-									})(pd.ui.field.activate(pd.ui.field.create(this.app.fields.contents).css({height:'calc(100% - (9em + 4px))',width:'100%'}),this.app))
+									})(pd.ui.field.activate(pd.ui.field.create(this.app.fields.contents).css({height:'calc(100% - (13.25em + 7px))',width:'100%'}),this.app))
 								);
 								break;
 						}
