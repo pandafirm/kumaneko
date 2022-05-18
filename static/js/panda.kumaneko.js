@@ -25,7 +25,6 @@ class panda_kumaneko{
 			sort:null
 		};
 		/* initialize */
-		pd.loadstart();
 		pd.elm('body').addclass(pd.theme);
 		pd.ui.baseuri(baseuri);
 		/* load configuration file */
@@ -965,7 +964,7 @@ pd.modules={
 							query:view.query,
 							sort:view.sort,
 							offset:0,
-							limit:100,
+							limit:25,
 							loaded:false,
 							calendar:null,
 							crosstab:null,
@@ -1112,9 +1111,9 @@ pd.modules={
 										pd.create('div').addclass('pd-kumaneko-app-header-filter-cases pd-dropdown')
 										.append(
 											pd.create('select').assignoption([
-												{id:{value:100},caption:{value:'/100 rec'}},
-												{id:{value:200},caption:{value:'/200 rec'}},
-												{id:{value:500},caption:{value:'/500 rec'}}
+												{id:{value:25},caption:{value:'/25 rec'}},
+												{id:{value:50},caption:{value:'/50 rec'}},
+												{id:{value:100},caption:{value:'/100 rec'}}
 											],'caption','id')
 											.on('focus',(e) => e.currentTarget.previousValue=e.currentTarget.val())
 											.on('change',(e) => {
@@ -2500,6 +2499,7 @@ pd.modules={
 							switch (view.type)
 							{
 								case 'calendar':
+									if (!deactivate) pd.loadstart();
 									this.record.bulk({
 										app:this.app.id,
 										query:((date,query) => {
@@ -2510,6 +2510,7 @@ pd.modules={
 										offset:0,
 										limit:500
 									},[],true,(records) => {
+										if (!deactivate) pd.loadend();
 										pd.event.call(this.app.id,'pd.view.show',{
 											container:view.calendar.calendar,
 											records:records,
@@ -2530,13 +2531,16 @@ pd.modules={
 																		records.each((record,index) => {
 																			((app) => {
 																				cell.append(
-																					pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item')
-																					.append(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}))
-																					.on('click',(e) => {
-																						pd.event.call(app.id,'pd.edit.call',{recordid:record['__id'].value});
-																					})
+																					((cell) => {
+																						cell
+																						.append(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}))
+																						.on('click',(e) => {
+																							pd.event.call(app.id,'pd.edit.call',{recordid:record['__id'].value});
+																						});
+																						pd.record.set(cell,app,this.actions.value(record));
+																						return cell;
+																					})(pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item'))
 																				);
-																				pd.record.set(cell.elm('.pd-scope'),app,this.actions.value(record));
 																			})({
 																				id:this.app.id,
 																				fields:(() => {
@@ -2593,7 +2597,8 @@ pd.modules={
 											column:{
 												starting:(view.monitor)?view.monitor.text():''
 											}
-										},view.fields)
+										},view.fields),
+										deactivate
 									)
 									.then((resp) => {
 										if ('fields' in resp)
@@ -2621,6 +2626,7 @@ pd.modules={
 									});
 									break;
 								case 'map':
+									if (!deactivate) pd.loadstart();
 									this.record.bulk({
 										app:this.app.id,
 										query:((query) => {
@@ -2631,6 +2637,7 @@ pd.modules={
 										offset:0,
 										limit:500
 									},[],true,(records) => {
+										if (!deactivate) pd.loadend();
 										pd.event.call(this.app.id,'pd.view.show',{
 											container:view.map.container,
 											records:records,
@@ -2671,7 +2678,8 @@ pd.modules={
 											sort:(typeof sort==='string')?sort:view.sort,
 											offset:view.offset,
 											limit:view.limit
-										}
+										},
+										deactivate
 									)
 									.then((resp) => {
 										pd.event.call(this.app.id,'pd.view.show',{

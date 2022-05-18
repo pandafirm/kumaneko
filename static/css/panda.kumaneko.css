@@ -927,6 +927,9 @@ body.dark .pd-kumaneko-appmanager{
 body.dark .pd-kumaneko-dashboardmanager{
 	background-color:var(--dark-main-bg-color) !important;
 }
+body.dark .pd-kumaneko-importmanager{
+	background-color:var(--dark-main-bg-color) !important;
+}
 body.dark .pd-activate{
 	background-color:var(--dark-emphasis-color);
 	color:var(--dark-highlight-color);
@@ -1235,6 +1238,9 @@ body.light .pd-kumaneko-appmanager{
 body.light .pd-kumaneko-dashboardmanager{
 	background-color:var(--light-main-bg-color) !important;
 }
+body.light .pd-kumaneko-importmanager{
+	background-color:var(--light-main-bg-color) !important;
+}
 body.light .pd-activate{
 	background-color:var(--light-emphasis-color);
 	color:var(--light-highlight-color);
@@ -1409,4 +1415,8 @@ body.light .pd-view-head-resizer{
 }
 body.light .pd-view-row.pd-view-unsaved:after{
 	background-color:var(--light-emphasis-color);
+}
+/* Platform definition */
+body.mac .pd-field .pd-field-value:is(.pd-date,.pd-datetime,.pd-time) :is(input,select){
+	font-family:revert;
 }

@@ -240,6 +240,56 @@ class panda_filter extends panda_dialog{
 				}
 			return res;
 		};
+		if (!('__id' in fieldinfos))
+		{
+			fieldinfos['__id']={
+				id:'__id',
+				type:'id',
+				caption:'id',
+				required:false,
+				nocaption:false
+			};
+		}
+		if (!('__creator' in fieldinfos))
+		{
+			fieldinfos['__creator']={
+				id:'__creator',
+				type:'creator',
+				caption:'creator',
+				required:false,
+				nocaption:false
+			};
+		}
+		if (!('__createdtime' in fieldinfos))
+		{
+			fieldinfos['__createdtime']={
+				id:'__createdtime',
+				type:'createdtime',
+				caption:'createdtime',
+				required:false,
+				nocaption:false
+			};
+		}
+		if (!('__modifier' in fieldinfos))
+		{
+			fieldinfos['__modifier']={
+				id:'__modifier',
+				type:'modifier',
+				caption:'modifier',
+				required:false,
+				nocaption:false
+			};
+		}
+		if (!('__modifiedtime' in fieldinfos))
+		{
+			fieldinfos['__modifiedtime']={
+				id:'__modifiedtime',
+				type:'modifiedtime',
+				caption:'modifiedtime',
+				required:false,
+				nocaption:false
+			};
+		}
 		/* create table */
 		this.tables.query=pd.ui.table.create({
 			id:'queries',

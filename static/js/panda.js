@@ -466,6 +466,21 @@ class panda{
 					})())
 				);
 			}
+			/* platform */
+			switch (navigator.platform.replace(/^(iPad|iPhone|Linux|Mac|Win).*$/g,'$1'))
+			{
+				case 'iPad':
+				case 'iPhone':
+				case 'Mac':
+					pd.elm('body').addclass('mac');
+					break;
+				case 'Linux':
+					pd.elm('body').addclass('linux');
+					break;
+				case 'Win':
+					pd.elm('body').addclass('win');
+					break;
+			}
 			if (callback) callback(this);
 		});
 	}
