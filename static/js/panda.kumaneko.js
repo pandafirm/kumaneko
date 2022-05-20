@@ -902,20 +902,7 @@ pd.modules={
 										})())
 										.append((() => {
 											res.buttons.add=pd.create('button').addclass('pd-icon pd-icon-add').on('click',(e) => {
-												this.confirm(() => {
-													this.record.clear();
-													pd.event.call(this.app.id,'pd.create.show',{
-														container:this.record.ui.body,
-														record:pd.record.get(this.record.ui.body,this.app,true).record
-													})
-													.then((param) => {
-														if (!param.error)
-														{
-															pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
-															if (typeof viewid!=='undefined') pd.event.call(this.app.id,'pd.app.activate',{});
-														}
-													});
-												});
+												pd.event.call(this.app.id,'pd.create.call',{activate:(typeof viewid!=='undefined')});
 											});
 											return res.buttons.add;
 										})())
@@ -2410,28 +2397,28 @@ pd.modules={
 								var execute=() => {
 									pd.request(pd.ui.baseuri()+'/records.php',(param.record['__id'].value)?'PUT':'POST',{'X-Requested-By':'panda'},{app:this.app.id,records:[param.record]})
 									.then((resp) => {
-										pd.event.call(this.app.id,(param.record['__id'].value)?'pd.edit.submit.success':'pd.create.submit.success',{
-											container:this.record.ui.body,
-											record:((record) => {
-												if ('id' in resp) this.record.id=record['__id'].value=resp.id;
-												if ('autonumbers' in resp) record['__autonumber'].value=resp.autonumbers[record['__id'].value.toString()];
-												record['__modifiedtime'].value=new Date().format('ISOSEC');
-												return record;
-											})(param.record)
+										if ('id' in resp) this.record.id=resp.id;
+										pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:this.app.id,id:this.record.id})
+										.then((resp) => {
+											pd.event.call(this.app.id,(param.record['__id'].value)?'pd.edit.submit.success':'pd.create.submit.success',{
+												container:this.record.ui.body,
+												record:((resp.total!=0)?resp.record:param.record)
+											})
+											.then((param) => {
+												if (!param.error)
+													this.notify().then(() => {
+														if (!single) this.record.load(param.record,true);
+														else
+														{
+															pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
+																window.location.reload(true);
+															});
+														}
+														pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
+													});
+											});
 										})
-										.then((param) => {
-											if (!param.error)
-												this.notify().then(() => {
-													if (!single) this.record.load(param.record,true);
-													else
-													{
-														pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
-															window.location.reload(true);
-														});
-													}
-													pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
-												});
-										});
+										.catch((error) => pd.alert(error.message));
 									})
 									.catch((error) => pd.alert(error.message));
 								};
@@ -2555,20 +2542,17 @@ pd.modules={
 																	pd.create('button').addclass('pd-icon pd-icon-add pd-kumaneko-calendar-cell-button').on('click',(e) => {
 																		this.confirm(() => {
 																			this.record.clear();
-																			pd.event.call(this.app.id,'pd.create.show',{
-																				container:this.record.ui.body,
-																				record:((record) => {
-																					record[view.fields.date].value=date.format('Y-m-d');
-																					return record;
-																				})(pd.record.get(this.record.ui.body,this.app,true).record)
-																			})
-																			.then((param) => {
-																				if (!param.error)
+																			pd.event.call(
+																				this.app.id,
+																				'pd.create.call',
 																				{
-																					pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
-																					pd.event.call(this.app.id,'pd.app.activate',{});
+																					activate:true,
+																					record:((record) => {
+																						record[view.fields.date].value=date.format('Y-m-d');
+																						return record;
+																					})(pd.record.get(this.record.ui.body,this.app,true).record)
 																				}
-																			});
+																			);
 																		});
 																	})
 																);
@@ -2787,6 +2771,10 @@ pd.modules={
 												this.record.id='';
 												res['__id'].value='';
 												res['__autonumber'].value='';
+												res['__creator'].value=[];
+												res['__createdtime'].value='';
+												res['__modifier'].value=[];
+												res['__modifiedtime'].value='';
 												return res;
 											})(pd.record.get(this.record.ui.body,this.app,true).record)
 										})
@@ -2931,17 +2919,7 @@ pd.modules={
 										(address,postalcode,latlng) => {
 											this.confirm(() => {
 												var finish=() => {
-													pd.event.call(this.app.id,'pd.create.show',{
-														container:this.record.ui.body,
-														record:pd.record.get(this.record.ui.body,this.app,true).record
-													})
-													.then((param) => {
-														if (!param.error)
-														{
-															pd.record.set(this.record.ui.body,this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
-															pd.event.call(this.app.id,'pd.app.activate',{});
-														}
-													});
+													pd.event.call(this.app.id,'pd.create.call',{activate:true,record:pd.record.get(this.record.ui.body,this.app,true).record});
 												};
 												this.record.clear();
 												pd.record.set(this.record.ui.init(),this.app,(() => {
@@ -3146,6 +3124,28 @@ pd.modules={
 				return new Promise((resolve,reject) => {
 					this.actions.value(e.record,e.workplace);
 					resolve(e);
+				});
+			});
+			pd.event.on(this.app.id,'pd.create.call',(e) => {
+				return new Promise((resolve,reject) => {
+					this.confirm(() => {
+						if (!('record' in e))
+						{
+							this.record.clear();
+							e.record=pd.record.get(this.record.ui.body,this.app,true).record;
+						}
+						pd.event.call(this.app.id,'pd.create.show',{
+							container:this.record.ui.body,
+							record:e.record
+						})
+						.then((param) => {
+							if (!param.error)
+							{
+								pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
+								if (e.activate) pd.event.call(this.app.id,'pd.app.activate',{});
+							}
+						});
+					});
 				});
 			});
 			pd.event.on(this.app.id,'pd.delete.call',(e) => {

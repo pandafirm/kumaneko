@@ -1940,7 +1940,7 @@ class panda_recordpicker extends panda_dialog{
 					.append(pd.ui.field.create(((fieldinfo) => {
 						fieldinfo.nocaption=true;
 						return fieldinfo;
-					})(pd.extend({},picker))).css({width:'100%'}).addclass('pd-readonly'))
+					})(pd.extend({},picker))).css({width:'100%'}).addclass('pd-picker pd-readonly'))
 				);
 			})(this.fieldinfo.picker[key]);
 		this.contents.empty().append(
@@ -3029,6 +3029,10 @@ class panda_user_interface{
 								break;
 							case 'lookup':
 								((handler) => {
+									field.elm('.pd-open').on('click',(e) => {
+										if (field.elm('.pd-lookup-value').val()) pd.event.call(fieldinfo.app,'pd.edit.call',{recordid:field.elm('.pd-lookup-value').val()});
+										else pd.event.call(fieldinfo.app,'pd.create.call',{activate:true});
+									});
 									field.elm('.pd-search').on('click',(e) => {
 										handler(field.elm('.pd-lookup-search').val(),pd.extend({},fieldinfo));
 									});
@@ -3421,7 +3425,8 @@ class panda_user_interface{
 									field
 									.append(pd.create('input').addclass('pd-lookup-search').attr('type','text').attr('data-type',fieldinfo.type))
 									.append(pd.create('input').addclass('pd-lookup-value').attr('type','hidden').attr('data-type',fieldinfo.type))
-									.append(pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search'));
+									.append(pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search'))
+									.append(pd.create('button').addclass('pd-icon pd-icon-open pd-open'));
 									break;
 								case 'number':
 									field.append(

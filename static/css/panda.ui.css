@@ -209,10 +209,10 @@
 .pd-field .pd-field-value.pd-force-forecolor .pd-guide *{
 	color:inherit !important;
 }
-.pd-field .pd-field-value.pd-address input{
+.pd-field .pd-field-value:is(.pd-address,.pd-lookup) input{
 	width:calc(100% - 3em) !important;
 }
-.pd-field .pd-field-value:is(.pd-color,.pd-lookup,.pd-postalcode) input{
+.pd-field .pd-field-value:is(.pd-color,.pd-postalcode) input{
 	width:calc(100% - 1.5em) !important;
 }
 .pd-field .pd-field-value:is(.pd-date,.pd-datetime) input{
@@ -264,6 +264,12 @@
 }
 .pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value.pd-dropdown:after{
 	display:none;
+}
+.pd-field:is(.pd-disabled,.pd-readonly):not(.pd-picker) .pd-field-value:is(.pd-address,.pd-lookup) .pd-guide{
+	width:calc(100% - 1.5em);
+}
+.pd-field:is(.pd-disabled,.pd-readonly):not(.pd-picker) .pd-field-value > .pd-icon.pd-open{
+	display:inline-block;
 }
 .pd-filterbuilder{
 	padding:0;
