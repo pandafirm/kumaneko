@@ -375,7 +375,7 @@ svg *{
 	margin:calc(0.25em - 1px) 0.25em;
 }
 .pd-kumaneko-main .pd-kumaneko-app-header[copied=copied]{
-	padding-bottom:1.5em;
+	padding-bottom:2em;
 }
 .pd-kumaneko-main .pd-kumaneko-app-header[copied=copied] .pd-kumaneko-app-header-buttons:after{
 	border-radius:0.25em;
