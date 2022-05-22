@@ -259,17 +259,20 @@
 	padding-left:0;
 	width:100%;
 }
-.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value > :not(.pd-guide){
+.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value > :not(.pd-guide,.pd-icon.pd-open){
 	display:none;
 }
 .pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value.pd-dropdown:after{
 	display:none;
 }
+.pd-field:is(.pd-disabled,.pd-readonly).pd-picker .pd-field-value > .pd-icon.pd-open{
+	display:none;
+}
+.pd-field:is(.pd-disabled,.pd-readonly).pd-picker .pd-field-value.pd-file .pd-guide .pd-fileguide .pd-fileguide-label{
+	pointer-events:none;
+}
 .pd-field:is(.pd-disabled,.pd-readonly):not(.pd-picker) .pd-field-value:is(.pd-address,.pd-lookup) .pd-guide{
 	width:calc(100% - 1.5em);
-}
-.pd-field:is(.pd-disabled,.pd-readonly):not(.pd-picker) .pd-field-value > .pd-icon.pd-open{
-	display:inline-block;
 }
 .pd-filterbuilder{
 	padding:0;
@@ -437,11 +440,14 @@
 	padding-left:0;
 	width:100%;
 }
-.pd-uneditable .pd-field .pd-field-value > :not(.pd-guide){
+.pd-uneditable .pd-field .pd-field-value > :not(.pd-guide,.pd-icon.pd-open){
 	display:none;
 }
 .pd-uneditable .pd-field .pd-field-value.pd-dropdown:after{
 	display:none;
+}
+.pd-uneditable .pd-field .pd-field-value:is(.pd-address,.pd-lookup) .pd-guide{
+	width:calc(100% - 1.5em);
 }
 .pd-view{
 	border-collapse:collapse;

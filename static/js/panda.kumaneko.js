@@ -7872,6 +7872,7 @@ pd.modules={
 																			{
 																				case 'file':
 																					mappings.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
+																					pickers.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
 																					res[fieldinfo.id]=fieldinfo;
 																					break;
 																				case 'spacer':
