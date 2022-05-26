@@ -3971,7 +3971,7 @@ class panda_user_interface{
 						((fields) => {
 							fields.concat(Object.keys(app.fields).shape((item) => (!fields.includes(item))?item:PD_THROW)).each((field,index) => {
 								((fieldinfo,unuse) => {
-									if ('multiuse' in fieldinfo) unuse=!fieldinfo.multiuse;
+									if (!unuse && ('multiuse' in fieldinfo)) unuse=!fieldinfo.multiuse;
 									switch (fieldinfo.type)
 									{
 										case 'table':
@@ -4021,7 +4021,7 @@ class panda_user_interface{
 								((cell) => {
 									fields.concat(Object.keys(app.fields).shape((item) => (!fields.includes(item))?item:PD_THROW)).each((field,index) => {
 										((fieldinfo,unuse) => {
-											if ('multiuse' in fieldinfo) unuse=!fieldinfo.multiuse;
+											if (!unuse && ('multiuse' in fieldinfo)) unuse=!fieldinfo.multiuse;
 											switch (fieldinfo.type)
 											{
 												case 'table':
