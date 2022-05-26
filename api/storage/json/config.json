@@ -189,6 +189,13 @@
                 "id": "users",
                 "name": "users",
                 "fields": {
+                    "__id": {
+                        "id": "__id",
+                        "type": "id",
+                        "caption": "id",
+                        "required": false,
+                        "nocaption": false
+                    },
                     "account": {
                         "id": "account",
                         "type": "text",
@@ -276,6 +283,7 @@
                     {
                         "type": "row",
                         "fields": [
+                            "__id",
                             "account",
                             "name",
                             "pwd"
@@ -321,6 +329,13 @@
                 "id": "departments",
                 "name": "departments",
                 "fields": {
+                    "__id": {
+                        "id": "__id",
+                        "type": "id",
+                        "caption": "id",
+                        "required": false,
+                        "nocaption": false
+                    },
                     "name": {
                         "id": "name",
                         "type": "text",
@@ -335,6 +350,7 @@
                     {
                         "type": "row",
                         "fields": [
+                            "__id",
                             "name"
                         ]
                     }
@@ -364,6 +380,13 @@
                 "id": "groups",
                 "name": "groups",
                 "fields": {
+                    "__id": {
+                        "id": "__id",
+                        "type": "id",
+                        "caption": "id",
+                        "required": false,
+                        "nocaption": false
+                    },
                     "name": {
                         "id": "name",
                         "type": "text",
@@ -378,6 +401,7 @@
                     {
                         "type": "row",
                         "fields": [
+                            "__id",
                             "name"
                         ]
                     }
