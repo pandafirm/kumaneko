@@ -2555,9 +2555,9 @@ class panda_map{
 		*	-balloon
 		*/
 		var addmarker=(markeroptions,index) => {
-			var backcolor='#'+(('backcolor' in markeroptions)?markeroptions.backcolor:'e60012');
-			var forecolor='#'+(('forecolor' in markeroptions)?markeroptions.forecolor:'000000');
-			var fontsize=(('fontsize' in markeroptions)?markeroptions.fontsize:'11')+'px';
+			var backcolor=(markeroptions.backcolor || '#e60012');
+			var forecolor=(markeroptions.forecolor || '#000000');
+			var fontsize=(markeroptions.fontsize || '11')+'px';
 			var marker=new google.maps.Marker({
 				map:this.map,
 				position:new google.maps.LatLng(markeroptions.lat,markeroptions.lng)

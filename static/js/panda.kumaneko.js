@@ -1312,6 +1312,7 @@ pd.modules={
 										((app) => {
 											var events=[];
 											res.linkage[linkage.id]={
+												id:linkage.id,
 												app:app,
 												aggregate:((fieldinfos) => {
 													var res=[];
@@ -2162,12 +2163,17 @@ pd.modules={
 									});
 									((param) => {
 										this.record.bulk(param,[],true,(records) => {
-											var aggregates=Object.fromEntries(((head) => {
-												return linkage.aggregate.map((item) => {
-													head.elm('[column-id='+CSS.escape(item)+']').addclass('pd-view-head-cell-extension');
-													return [item,[]];
-												});
-											})(linkage.contents.elm('.pd-view').elm('thead')));
+											var keep={
+												container:linkage.contents.elm('.pd-view'),
+												records:[],
+												aggregates:Object.fromEntries(((head) => {
+													return linkage.aggregate.map((item) => {
+														head.elm('[column-id='+CSS.escape(item)+']').addclass('pd-view-head-cell-extension');
+														return [item,[]];
+													});
+												})(linkage.contents.elm('.pd-view').elm('thead'))),
+												linkageid:linkage.id
+											};
 											var finish=() => {
 												index++;
 												if (index<linkages.length) build(index);
@@ -2187,8 +2193,9 @@ pd.modules={
 																if (linkage.app.fields[key].tableid==linkage.tableid) cells[key]=param.record[linkage.tableid].value[index][key];
 															}
 															else cells[key]=param.record[key];
-															if (key in aggregates) aggregates[key].push((cells[key].value)?parseFloat(cells[key].value):0);
+															if (key in keep.aggregates) keep.aggregates[key].push((cells[key].value)?parseFloat(cells[key].value):0);
 														}
+														keep.records.push(cells);
 														pd.record.set(linkage.contents.elm('.pd-view').addrow().elm('[form-id=form_'+linkage.app.id+']'),linkage.app,cells);
 													});
 													index++;
@@ -2205,6 +2212,14 @@ pd.modules={
 												linkage.contents.elm('.pd-view').clearrows();
 												setup(0,() => {
 													linkage.aggregate.each((aggregate,index) => {
+														keep.aggregates[aggregate]=((aggregate) => {
+															return {
+																avg:((aggregate.length!=0)?aggregate.reduce((a,b) => a+b)/aggregate.length:0),
+																min:((aggregate.length!=0)?aggregate.reduce((a,b) => Math.min(a,b)):0),
+																max:((aggregate.length!=0)?aggregate.reduce((a,b) => Math.max(a,b)):0),
+																sum:((aggregate.length!=0)?aggregate.reduce((a,b) => a+b):0)
+															};
+														})(keep.aggregates[aggregate]);
 														((fieldinfo) => {
 															pd.event.on(linkage.app.id,'pd.view.guide.call',(e) => {
 																if (e.id==aggregate)
@@ -2212,22 +2227,7 @@ pd.modules={
 																	((aggregate) => {
 																		var res=[];
 																		var setup=(key) => {
-																			var res='';
-																			switch (key)
-																			{
-																				case 'avg':
-																					res=(aggregate.length!=0)?aggregate.reduce((a,b) => a+b)/aggregate.length:0;
-																					break;
-																				case 'min':
-																					res=(aggregate.length!=0)?aggregate.reduce((a,b) => Math.min(a,b)):0;
-																					break;
-																				case 'max':
-																					res=(aggregate.length!=0)?aggregate.reduce((a,b) => Math.max(a,b)):0;
-																					break;
-																				case 'sum':
-																					res=(aggregate.length!=0)?aggregate.reduce((a,b) => a+b):0;
-																					break;
-																			}
+																			var res=aggregate[key];
 																			if (fieldinfo.demiliter) res=Number(res).comma(fieldinfo.decimals);
 																			else res=(fieldinfo.decimals)?Number(res).toFixed(parseInt(fieldinfo.decimals)):res;
 																			if (fieldinfo.unit)
@@ -2249,11 +2249,12 @@ pd.modules={
 																			})()
 																		);
 																		linkage.contents.css({paddingBottom:linkage.contents.elm('.pd-kumaneko-linkage-guide').show().outerheight(false).toString()+'px'});
-																	})(aggregates[aggregate])
+																	})(keep.aggregates[aggregate])
 																}
 															});
 														})(linkage.app.fields[aggregate])
 													});
+													pd.event.call(this.app.id,'pd.linkage.show',keep);
 													linkage.contents.elm('.pd-view').css({display:'table'});
 													finish();
 												});
@@ -2637,6 +2638,7 @@ pd.modules={
 															label:item['__id'].value.toString(),
 															lat:item[view.fields.lat].value,
 															lng:item[view.fields.lng].value,
+															backcolor:((view.fields.color in item)?item[view.fields.color].value:''),
 															balloon:pd.create('p').addclass('pd-kumaneko-map-item').html(item[view.fields.title].value).on('click',(e) => {
 																pd.event.call(this.app.id,'pd.edit.call',{recordid:item['__id'].value});
 															})
@@ -2917,27 +2919,28 @@ pd.modules={
 										},
 										null,
 										(address,postalcode,latlng) => {
-											this.confirm(() => {
-												var finish=() => {
-													pd.event.call(this.app.id,'pd.create.call',{activate:true,record:pd.record.get(this.record.ui.body,this.app,true).record});
-												};
-												this.record.clear();
-												pd.record.set(this.record.ui.init(),this.app,(() => {
-													var res={};
-													if (view.fields.lat in this.app.fields) res[view.fields.lat]={value:latlng.lat()};
-													if (view.fields.lng in this.app.fields) res[view.fields.lng]={value:latlng.lng()};
-													if (view.fields.address in this.app.fields) res[view.fields.address]={value:address};
-													return res;
-												})());
-												if (view.fields.postalcode in this.app.fields)
-												{
-													pd.pickuppostal(postalcode.replace(/[^0-9]/g,''),(resp) => {
-														if (resp) this.record.ui.body.elm('[field-id='+CSS.escape(view.fields.postalcode)+']').elm('.pd-field-value').set(resp).then(() => finish());
-														else finish();
-													});
-												}
-												else finish();
-											});
+											if (view.fields.handover)
+												this.confirm(() => {
+													var finish=() => {
+														pd.event.call(this.app.id,'pd.create.call',{activate:true,record:pd.record.get(this.record.ui.body,this.app,true).record});
+													};
+													this.record.clear();
+													pd.record.set(this.record.ui.init(),this.app,(() => {
+														var res={};
+														if (view.fields.lat in this.app.fields) res[view.fields.lat]={value:latlng.lat()};
+														if (view.fields.lng in this.app.fields) res[view.fields.lng]={value:latlng.lng()};
+														if (view.fields.address in this.app.fields) res[view.fields.address]={value:address};
+														return res;
+													})());
+													if (view.fields.postalcode in this.app.fields)
+													{
+														pd.pickuppostal(postalcode.replace(/[^0-9]/g,''),(resp) => {
+															if (resp) this.record.ui.body.elm('[field-id='+CSS.escape(view.fields.postalcode)+']').elm('.pd-field-value').set(resp).then(() => finish());
+															else finish();
+														});
+													}
+													else finish();
+												});
 										}
 									);
 								})(pd.create('div').addclass('pd-kumaneko-map'));
@@ -3367,6 +3370,7 @@ pd.modules={
 																	res.push({id:view.fields.lat,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	res.push({id:view.fields.lng,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	res.push({id:view.fields.title,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
+																	if (view.fields.color) res.push({id:view.fields.color,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	if (view.fields.address) res.push({id:view.fields.address,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	if (view.fields.postalcode) res.push({id:view.fields.postalcode,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	break;
@@ -4630,8 +4634,10 @@ pd.modules={
 																lat:'',
 																lng:'',
 																title:'',
+																color:'',
 																address:'',
-																postalcode:''
+																postalcode:'',
+																handover:false
 															};
 															break;
 													}
@@ -9504,7 +9510,7 @@ pd.modules={
 									((element) => {
 										element.append(
 											pd.create('div').addclass('pd-container')
-											.append(menu.calendar.calendar.addclass('pd-kumaneko-calendar'))
+											.append(menu.calendar.calendar.addclass('pd-kumaneko-'+menu.id))
 										);
 										menu.calendar.show(new Date(new Date().format('Y-m')+'-01'),null,{
 											create:(cell,date,style) => {
@@ -9679,7 +9685,7 @@ pd.modules={
 								});
 								menu.contents
 								.append(
-									pd.create('nav').addclass('pd-kumaneko-nav')
+									pd.create('nav').addclass('pd-kumaneko-nav pd-kumaneko-nav-extension')
 									.append(
 										pd.create('div').addclass('pd-kumaneko-nav-main')
 										.append(
@@ -9825,6 +9831,9 @@ pd.modules={
 												return container;
 											})(pd.create('div').addclass('pd-kumaneko-section'))
 										)
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-main pd-kumaneko-border-left pd-kumaneko-inset-left')
 										.append(
 											((container) => {
 												container
@@ -10071,7 +10080,7 @@ pd.modules={
 								menu.tables.value.template.elm('[field-id=valueid]').addclass('pd-table-values-guide');
 								menu.contents
 								.append(
-									pd.create('nav').addclass('pd-kumaneko-nav')
+									pd.create('nav').addclass('pd-kumaneko-nav pd-kumaneko-nav-extension')
 									.append(
 										pd.create('div').addclass('pd-kumaneko-nav-main')
 										.append(
@@ -10104,6 +10113,9 @@ pd.modules={
 												return container;
 											})(pd.create('div').addclass('pd-kumaneko-section'))
 										)
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-main pd-kumaneko-border-left pd-kumaneko-inset-left')
 										.append(
 											((container) => {
 												container
@@ -10177,6 +10189,14 @@ pd.modules={
 											nocaption:false,
 											options:[]
 										},
+										color:{
+											id:'color',
+											type:'dropdown',
+											caption:pd.constants.view.caption.map.color[pd.lang],
+											required:false,
+											nocaption:false,
+											options:[]
+										},
 										address:{
 											id:'address',
 											type:'dropdown',
@@ -10192,6 +10212,16 @@ pd.modules={
 											required:false,
 											nocaption:false,
 											options:[]
+										},
+										handover:{
+											id:'handover',
+											type:'checkbox',
+											caption:'',
+											required:false,
+											nocaption:true,
+											options:[
+												{option:{value:'handover'}}
+											]
 										}
 									}
 								};
@@ -10204,8 +10234,13 @@ pd.modules={
 										.append(pd.ui.field.create(menu.app.fields.lat))
 										.append(pd.ui.field.create(menu.app.fields.lng))
 										.append(pd.ui.field.create(menu.app.fields.title))
+										.append(pd.ui.field.create(menu.app.fields.color))
 										.append(pd.ui.field.create(menu.app.fields.address))
 										.append(pd.ui.field.create(menu.app.fields.postalcode))
+										.append(((res) => {
+											res.elm('input').closest('label').elm('span').html(pd.constants.view.caption.map.handover[pd.lang]);
+											return res;
+										})(pd.ui.field.create(menu.app.fields.handover)))
 									)
 									.append(
 										pd.create('div').addclass('pd-kumaneko-nav-footer pd-kumaneko-border-top pd-kumaneko-inset-top')
@@ -10263,7 +10298,7 @@ pd.modules={
 														}],true);
 													}
 													return element;
-												})(pd.create('div').addclass('pd-kumaneko-map'))
+												})(pd.create('div').addclass('pd-kumaneko-'+menu.id))
 											)
 										);
 										return element;
@@ -10364,8 +10399,10 @@ pd.modules={
 									view.fields.lat=res.record.lat.value;
 									view.fields.lng=res.record.lng.value;
 									view.fields.title=res.record.title.value;
+									view.fields.color=res.record.color.value;
 									view.fields.address=res.record.address.value;
 									view.fields.postalcode=res.record.postalcode.value;
+									view.fields.handover=(res.record.handover.value.length!=0);
 								}
 								return res.error;
 							})(pd.record.get(this.menus.map.contents,this.menus.map.app),res.view);
@@ -10568,13 +10605,16 @@ pd.modules={
 									lat:{value:this.keep.view.fields.lat},
 									lng:{value:this.keep.view.fields.lng},
 									title:{value:this.keep.view.fields.title},
+									color:{value:this.keep.view.fields.color},
 									address:{value:this.keep.view.fields.address},
-									postalcode:{value:this.keep.view.fields.postalcode}
+									postalcode:{value:this.keep.view.fields.postalcode},
+									handover:{value:(this.keep.view.fields.handover)?[this.menus.map.app.fields.handover.options.first().option.value]:[]}
 								};
 								((elements) => {
 									elements.lat.empty().append(pd.create('option'));
 									elements.lng.empty().append(pd.create('option'));
 									elements.title.empty().append(pd.create('option'));
+									elements.color.empty().append(pd.create('option'));
 									elements.address.empty().append(pd.create('option'));
 									elements.postalcode.empty().append(pd.create('option'));
 									for (var key in this.keep.fields)
@@ -10584,6 +10624,9 @@ pd.modules={
 											case 'box':
 											case 'spacer':
 											case 'table':
+												break;
+											case 'color':
+												elements.color.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
 												break;
 											case 'number':
 												elements.lat.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
@@ -10611,6 +10654,7 @@ pd.modules={
 									lat:this.menus.map.contents.elm('[field-id=lat]').elm('select'),
 									lng:this.menus.map.contents.elm('[field-id=lng]').elm('select'),
 									title:this.menus.map.contents.elm('[field-id=title]').elm('select'),
+									color:this.menus.map.contents.elm('[field-id=color]').elm('select'),
 									address:this.menus.map.contents.elm('[field-id=address]').elm('select'),
 									postalcode:this.menus.map.contents.elm('[field-id=postalcode]').elm('select')
 								});
@@ -10798,6 +10842,7 @@ pd.modules={
 											label:item['__id'].value.toString(),
 											lat:item[panel.config.view.fields.lat].value,
 											lng:item[panel.config.view.fields.lng].value,
+											backcolor:((panel.config.view.fields.color in item)?item[panel.config.view.fields.color].value:''),
 											balloon:pd.create('p').addclass('pd-kumaneko-map-item').html(item[panel.config.view.fields.title].value).on('click',(e) => {
 												pd.event.call(panel.app,'pd.edit.call',{recordid:item['__id'].value});
 											})
@@ -13473,6 +13518,14 @@ pd.constants=pd.extend({
 				address:{
 					en:'Address Field',
 					ja:'住所フィールド'
+				},
+				color:{
+					en:'Marker Color Field',
+					ja:'マーカーカラーフィールド'
+				},
+				handover:{
+					en:'Register the clicked location',
+					ja:'クリックした場所を登録する'
 				},
 				lat:{
 					en:'Latitude Field',

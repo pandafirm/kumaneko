@@ -255,6 +255,16 @@ svg *{
 .pd-kumaneko-main .pd-kumaneko-nav+.pd-kumaneko-block{
 	width:calc(100% - 15em);
 }
+.pd-kumaneko-main .pd-kumaneko-nav.pd-kumaneko-nav-extension{
+	width:30em;
+}
+.pd-kumaneko-main .pd-kumaneko-nav.pd-kumaneko-nav-extension .pd-kumaneko-nav-main{
+	display:inline-block;
+	width:50%;
+}
+.pd-kumaneko-main .pd-kumaneko-nav.pd-kumaneko-nav-extension+.pd-kumaneko-block{
+	width:calc(100% - 30em);
+}
 /* Tab definition */
 .pd-kumaneko-main .pd-kumaneko-tab{
 	box-shadow:none !important;
