@@ -479,11 +479,20 @@ svg *{
 .pd-kumaneko-main .pd-kumaneko-map{
 	height:100%;
 }
+.pd-kumaneko-main .pd-kumaneko-map *{
+	color:initial;
+}
 .pd-kumaneko-main .pd-kumaneko-map .pd-kumaneko-map-item{
-	color:initial !important;
 	cursor:pointer;
-	font-size:0.8em;
 	user-select:none;
+}
+.pd-kumaneko-main .pd-kumaneko-map .pd-kumaneko-map-item .pd-field{
+	display:block;
+	padding:0;
+}
+.pd-kumaneko-main .pd-kumaneko-map .pd-kumaneko-map-item .pd-field .pd-guide{
+	display:block;
+	font-size:0.8em;
 }
 /* Splitter definition */
 .pd-kumaneko-main .pd-kumaneko-splitter{

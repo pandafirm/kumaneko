@@ -2521,7 +2521,7 @@ pd.modules={
 																				cell.append(
 																					((cell) => {
 																						cell
-																						.append(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}))
+																						.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}),app))
 																						.on('click',(e) => {
 																							pd.event.call(app.id,'pd.edit.call',{recordid:record['__id'].value});
 																						});
@@ -2632,19 +2632,35 @@ pd.modules={
 										.then((param) => {
 											if (!param.error)
 											{
-												view.map.reloadmap(((records) => {
-													return records.map((item) => {
-														return {
-															label:item['__id'].value.toString(),
-															lat:item[view.fields.lat].value,
-															lng:item[view.fields.lng].value,
-															backcolor:((view.fields.color in item)?item[view.fields.color].value:''),
-															balloon:pd.create('p').addclass('pd-kumaneko-map-item').html(item[view.fields.title].value).on('click',(e) => {
-																pd.event.call(this.app.id,'pd.edit.call',{recordid:item['__id'].value});
-															})
-														};
-													});
-												})(param.records),!view.tab.active);
+												((app) => {
+													view.map.reloadmap(((records) => {
+														return records.map((item) => {
+															return {
+																label:item['__id'].value.toString(),
+																lat:item[view.fields.lat].value,
+																lng:item[view.fields.lng].value,
+																backcolor:((view.fields.color in item)?item[view.fields.color].value:''),
+																balloon:((balloon) => {
+																	balloon
+																	.append(pd.ui.field.activate(pd.ui.field.create(app.fields[view.fields.title]).addclass('pd-picker pd-readonly').css({width:'100%'}),app))
+																	.on('click',(e) => {
+																		pd.event.call(app.id,'pd.edit.call',{recordid:item['__id'].value});
+																	});
+																	pd.record.set(balloon,app,this.actions.value(item));
+																	return balloon;
+																})(pd.create('div').addclass('pd-scope pd-kumaneko-map-item'))
+															};
+														});
+													})(param.records),!view.tab.active);
+												})({
+													id:this.app.id,
+													fields:((fieldinfo) => {
+														var res={};
+														fieldinfo.nocaption=true;
+														res[fieldinfo.id]=fieldinfo;
+														return res;
+													})(pd.extend({},this.app.fields[view.fields.title]))
+												});
 												if (typeof query==='string') view.query=query;
 												if (typeof sort==='string') view.sort=sort;
 												finish(param.records);
@@ -10292,8 +10308,8 @@ pd.modules={
 														);
 														menu.map.reloadmap([{
 															label:'1',
-															lat:35.6585805,
-															lng:139.7454329,
+															lat:((pd.lang!='ja')?40.7484:35.6585805),
+															lng:((pd.lang!='ja')?-73.9857:139.7454329),
 															balloon:pd.create('p').addclass('pd-kumaneko-map-item').html(pd.constants.view.prompt.map.title[pd.lang])
 														}],true);
 													}
@@ -10802,18 +10818,21 @@ pd.modules={
 														records.each((record,index) => {
 															pd.event.call(panel.app,'pd.action.call',{
 																record:record,
-																workplace:'record'
+																workplace:'view'
 															})
 															.then((param) => {
 																((app) => {
 																	cell.append(
-																		pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item')
-																		.append(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}))
-																		.on('click',(e) => {
-																			pd.event.call(panel.app,'pd.edit.call',{recordid:param.record['__id'].value});
-																		})
+																		((cell) => {
+																			cell
+																			.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}),app))
+																			.on('click',(e) => {
+																				pd.event.call(panel.app,'pd.edit.call',{recordid:param.record['__id'].value});
+																			});
+																			pd.record.set(cell,app,param.record);
+																			return cell;
+																		})(pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item'))
 																	);
-																	pd.record.set(cell.elm('.pd-scope'),app,param.record);
 																})({
 																	id:panel.config.app.id,
 																	fields:(() => {
@@ -10836,19 +10855,41 @@ pd.modules={
 								panel[panel.config.view.type].show(e.records,panel.config.view);
 								break;
 							case 'map':
-								panel.map.reloadmap(((records) => {
-									return records.map((item) => {
-										return {
-											label:item['__id'].value.toString(),
-											lat:item[panel.config.view.fields.lat].value,
-											lng:item[panel.config.view.fields.lng].value,
-											backcolor:((panel.config.view.fields.color in item)?item[panel.config.view.fields.color].value:''),
-											balloon:pd.create('p').addclass('pd-kumaneko-map-item').html(item[panel.config.view.fields.title].value).on('click',(e) => {
-												pd.event.call(panel.app,'pd.edit.call',{recordid:item['__id'].value});
-											})
-										};
-									});
-								})(e.records),true);
+								((app) => {
+									panel.map.reloadmap(((records) => {
+										return records.map((item) => {
+											return {
+												label:item['__id'].value.toString(),
+												lat:item[panel.config.view.fields.lat].value,
+												lng:item[panel.config.view.fields.lng].value,
+												backcolor:((panel.config.view.fields.color in item)?item[panel.config.view.fields.color].value:''),
+												balloon:((balloon) => {
+													balloon
+													.append(pd.ui.field.activate(pd.ui.field.create(app.fields[panel.config.view.fields.title]).addclass('pd-picker pd-readonly').css({width:'100%'}),app))
+													.on('click',(e) => {
+														pd.event.call(panel.app,'pd.edit.call',{recordid:item['__id'].value});
+													});
+													pd.event.call(panel.app,'pd.action.call',{
+														record:item,
+														workplace:'view'
+													})
+													.then((param) => {
+														pd.record.set(balloon,app,param.record);
+													});
+													return balloon;
+												})(pd.create('div').addclass('pd-scope pd-kumaneko-map-item'))
+											};
+										});
+									})(e.records),true);
+								})({
+									id:panel.config.app.id,
+									fields:((fieldinfo) => {
+										var res={};
+										fieldinfo.nocaption=true;
+										res[fieldinfo.id]=fieldinfo;
+										return res;
+									})(pd.extend({},panel.config.app.fields[panel.config.view.fields.title]))
+								});
 								break;
 							default:
 								panel.body.elm('.pd-view').clearrows();
@@ -13524,8 +13565,8 @@ pd.constants=pd.extend({
 					ja:'マーカーカラーフィールド'
 				},
 				handover:{
-					en:'Register the clicked location',
-					ja:'クリックした場所を登録する'
+					en:'Register the click location',
+					ja:'クリック位置を登録する'
 				},
 				lat:{
 					en:'Latitude Field',
