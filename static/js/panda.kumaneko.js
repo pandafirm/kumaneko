@@ -10816,31 +10816,31 @@ pd.modules={
 													((fieldinfo,records) => {
 														fieldinfo.nocaption=true;
 														records.each((record,index) => {
-															pd.event.call(panel.app,'pd.action.call',{
-																record:record,
-																workplace:'view'
-															})
-															.then((param) => {
-																((app) => {
-																	cell.append(
-																		((cell) => {
-																			cell
-																			.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}),app))
-																			.on('click',(e) => {
-																				pd.event.call(panel.app,'pd.edit.call',{recordid:param.record['__id'].value});
-																			});
+															((app) => {
+																cell.append(
+																	((cell) => {
+																		cell
+																		.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}),app))
+																		.on('click',(e) => {
+																			pd.event.call(panel.app,'pd.edit.call',{recordid:record['__id'].value});
+																		});
+																		pd.event.call(panel.app,'pd.action.call',{
+																			record:record,
+																			workplace:'view'
+																		})
+																		.then((param) => {
 																			pd.record.set(cell,app,param.record);
-																			return cell;
-																		})(pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item'))
-																	);
-																})({
-																	id:panel.config.app.id,
-																	fields:(() => {
-																		var res={};
-																		res[fieldinfo.id]=fieldinfo;
-																		return res;
-																	})()
-																});
+																		});
+																		return cell;
+																	})(pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item'))
+																);
+															})({
+																id:panel.config.app.id,
+																fields:(() => {
+																	var res={};
+																	res[fieldinfo.id]=fieldinfo;
+																	return res;
+																})()
 															});
 														});
 													})(panel.config.app.fields[panel.config.view.fields.title],e.records.filter((item) => new Date(item[panel.config.view.fields.date].value).getDate()==date.getDate()));
