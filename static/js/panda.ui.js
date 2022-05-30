@@ -1971,7 +1971,7 @@ class panda_recordpicker extends panda_dialog{
 				});
 				/* activation */
 				((app) => {
-					row.addclass('pd-scope').attr('form-id','form_'+app.id).elms('.pd-field').each((element,index) => pd.ui.field.activate(element,app));
+					row.addclass('pd-scope').elms('.pd-field').each((element,index) => pd.ui.field.activate(element,app));
 				})({id:'recordpicker',fields:pd.extend({},this.fieldinfo.picker)})
 			})
 		);

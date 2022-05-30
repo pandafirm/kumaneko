@@ -2471,6 +2471,113 @@ pd.modules={
 				ui:{}
 			};
 			this.view={
+				build:(app,view,records,option) => {
+					switch (view.type)
+					{
+						case 'calendar':
+							view.calendar.show(new Date(option.date),null,{
+								create:(cell,date,style) => {
+									cell.append(
+										((cell) => {
+											cell.append(pd.create('span').addclass('pd-kumaneko-calendar-cell-guide').css(style).html(date.getDate().toString()));
+											if (view.fields.title in app.fields)
+												((fieldinfo,records) => {
+													fieldinfo.nocaption=true;
+													records.each((record,index) => {
+														((app) => {
+															cell.append(
+																((cell) => {
+																	cell
+																	.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}),app))
+																	.on('click',(e) => {
+																		pd.event.call(this.app.id,'pd.edit.call',{recordid:record['__id'].value});
+																	});
+																	pd.record.set(cell,app,this.actions.value(record,'view'));
+																	return cell;
+																})(pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item'))
+															);
+														})({
+															id:app.id,
+															fields:(() => {
+																var res={};
+																res[fieldinfo.id]=fieldinfo;
+																return res;
+															})()
+														});
+													});
+												})(pd.extend({},app.fields[view.fields.title]),records.filter((item) => new Date(item[view.fields.date].value).getDate()==date.getDate()));
+											if (!option.readonly)
+												cell.append(
+													pd.create('button').addclass('pd-icon pd-icon-add pd-kumaneko-calendar-cell-button').on('click',(e) => {
+														this.confirm(() => {
+															this.record.clear();
+															pd.event.call(
+																this.app.id,
+																'pd.create.call',
+																{
+																	activate:true,
+																	record:((record) => {
+																		record[view.fields.date].value=date.format('Y-m-d');
+																		return record;
+																	})(pd.record.get(this.record.ui.body,this.app,true).record)
+																}
+															);
+														});
+													})
+												);
+											return cell;
+										})(pd.create('div').addclass('pd-kumaneko-calendar-cell'))
+									);
+								}
+							});
+							break;
+						case 'crosstab':
+						case 'timeseries':
+							view[view.type].show(records,view);
+							break;
+						case 'map':
+							((app) => {
+								view.map.reloadmap(((records) => {
+									return records.map((item) => {
+										return {
+											label:item['__id'].value.toString(),
+											lat:item[view.fields.lat].value,
+											lng:item[view.fields.lng].value,
+											backcolor:((view.fields.color in item)?item[view.fields.color].value:''),
+											balloon:((balloon) => {
+												balloon
+												.append(pd.ui.field.activate(pd.ui.field.create(app.fields[view.fields.title]).addclass('pd-picker pd-readonly').css({width:'100%'}),app))
+												.on('click',(e) => {
+													pd.event.call(this.app.id,'pd.edit.call',{recordid:item['__id'].value});
+												});
+												pd.record.set(balloon,app,this.actions.value(item,'view'));
+												return balloon;
+											})(pd.create('div').addclass('pd-scope pd-kumaneko-map-item'))
+										};
+									});
+								})(records),option.center);
+							})({
+								id:app.id,
+								fields:((fieldinfo) => {
+									var res={};
+									fieldinfo.nocaption=true;
+									res[fieldinfo.id]=fieldinfo;
+									return res;
+								})(pd.extend({},app.fields[view.fields.title]))
+							});
+							break;
+						default:
+							view.body.elm('.pd-view').clearrows();
+							if (option.readonly) view.body.elm('.pd-view').elms('thead tr').each((element,index) => element.elms('.pd-view-button').last().addclass('pd-hidden'));
+							records.each((record,index) => {
+								pd.record.set(((row) => {
+									if (option.readonly) row.elms('.pd-view-button').last().addclass('pd-hidden');
+									return row;
+								})(view.body.elm('.pd-view').addrow()).elm('[form-id=form_'+app.id+']'),app,this.actions.value(record,'view'));
+							});
+							break;
+					}
+				},
 				load:(viewid,query,sort,deactivate) => {
 					return new Promise((resolve,reject) => {
 						((view) => {
@@ -2508,60 +2615,7 @@ pd.modules={
 										.then((param) => {
 											if (!param.error)
 											{
-												view.calendar.show(new Date(view.monitor.text()+'-01'),null,{
-													create:(cell,date,style) => {
-														cell.append(
-															((cell) => {
-																cell.append(pd.create('span').addclass('pd-kumaneko-calendar-cell-guide').css(style).html(date.getDate().toString()));
-																if (view.fields.title in this.app.fields)
-																	((fieldinfo,records) => {
-																		fieldinfo.nocaption=true;
-																		records.each((record,index) => {
-																			((app) => {
-																				cell.append(
-																					((cell) => {
-																						cell
-																						.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}),app))
-																						.on('click',(e) => {
-																							pd.event.call(app.id,'pd.edit.call',{recordid:record['__id'].value});
-																						});
-																						pd.record.set(cell,app,this.actions.value(record));
-																						return cell;
-																					})(pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item'))
-																				);
-																			})({
-																				id:this.app.id,
-																				fields:(() => {
-																					var res={};
-																					res[fieldinfo.id]=fieldinfo;
-																					return res;
-																				})()
-																			});
-																		});
-																	})(pd.extend({},this.app.fields[view.fields.title]),param.records.filter((item) => new Date(item[view.fields.date].value).getDate()==date.getDate()));
-																cell.append(
-																	pd.create('button').addclass('pd-icon pd-icon-add pd-kumaneko-calendar-cell-button').on('click',(e) => {
-																		this.confirm(() => {
-																			this.record.clear();
-																			pd.event.call(
-																				this.app.id,
-																				'pd.create.call',
-																				{
-																					activate:true,
-																					record:((record) => {
-																						record[view.fields.date].value=date.format('Y-m-d');
-																						return record;
-																					})(pd.record.get(this.record.ui.body,this.app,true).record)
-																				}
-																			);
-																		});
-																	})
-																);
-																return cell;
-															})(pd.create('div').addclass('pd-kumaneko-calendar-cell'))
-														);
-													}
-												});
+												this.view.build(this.app,view,param.records,{readonly:false,date:view.monitor.text()+'-01'});
 												if (typeof query==='string') view.query=query;
 												if (typeof sort==='string') view.sort=sort;
 												finish(param.records);
@@ -2596,7 +2650,7 @@ pd.modules={
 											.then((param) => {
 												if (!param.error)
 												{
-													view[view.type].show(resp,view);
+													this.view.build(this.app,view,resp);
 													if (typeof query==='string') view.query=query;
 													finish(param.records);
 												}
@@ -2632,35 +2686,7 @@ pd.modules={
 										.then((param) => {
 											if (!param.error)
 											{
-												((app) => {
-													view.map.reloadmap(((records) => {
-														return records.map((item) => {
-															return {
-																label:item['__id'].value.toString(),
-																lat:item[view.fields.lat].value,
-																lng:item[view.fields.lng].value,
-																backcolor:((view.fields.color in item)?item[view.fields.color].value:''),
-																balloon:((balloon) => {
-																	balloon
-																	.append(pd.ui.field.activate(pd.ui.field.create(app.fields[view.fields.title]).addclass('pd-picker pd-readonly').css({width:'100%'}),app))
-																	.on('click',(e) => {
-																		pd.event.call(app.id,'pd.edit.call',{recordid:item['__id'].value});
-																	});
-																	pd.record.set(balloon,app,this.actions.value(item));
-																	return balloon;
-																})(pd.create('div').addclass('pd-scope pd-kumaneko-map-item'))
-															};
-														});
-													})(param.records),!view.tab.active);
-												})({
-													id:this.app.id,
-													fields:((fieldinfo) => {
-														var res={};
-														fieldinfo.nocaption=true;
-														res[fieldinfo.id]=fieldinfo;
-														return res;
-													})(pd.extend({},this.app.fields[view.fields.title]))
-												});
+												this.view.build(this.app,view,param.records,{center:!view.tab.active});
 												if (typeof query==='string') view.query=query;
 												if (typeof sort==='string') view.sort=sort;
 												finish(param.records);
@@ -2693,10 +2719,7 @@ pd.modules={
 										.then((param) => {
 											if (!param.error)
 											{
-												/* setup records */
-												view.body.elm('.pd-view').clearrows();
-												param.records.each((record,index) => pd.record.set(view.body.elm('.pd-view').addrow().elm('[form-id=form_'+this.app.id+']'),this.app,this.actions.value(record,'view')));
-												/* setup header menus */
+												this.view.build(this.app,view,param.records,{readonly:false});
 												view.monitor.html((() => {
 													var res='';
 													res+=(view.offset+1).comma()+'&nbsp;-&nbsp;'+(view.offset+param.records.length).comma()+'&nbsp;of&nbsp;'+param.total.comma();
@@ -3204,6 +3227,10 @@ pd.modules={
 				return new Promise((resolve,reject) => {
 					this.record.truncate().then(() => resolve({})).catch(() => reject({}));
 				});
+			});
+			pd.event.on(this.app.id,'pd.view.call',(e) => {
+				this.view.build(e.app,e.view,e.records,('option' in e)?e.option:{});
+				return e;
 			});
 		}
 		/* confirmation before execution */
@@ -10803,122 +10830,26 @@ pd.modules={
 			pd.event.on('0','pd.dashboard.redraw',(e) => {
 				((panel) => {
 					if (panel)
-					{
-						switch (panel.config.view.type)
-						{
-							case 'calendar':
-								panel.calendar.show(new Date(e.month),null,{
-									create:(cell,date,style) => {
-										cell.append(
-											((cell) => {
-												cell.append(pd.create('span').addclass('pd-kumaneko-calendar-cell-guide').css(style).html(date.getDate().toString()));
-												if (panel.config.view.fields.title in panel.config.app.fields)
-													((fieldinfo,records) => {
-														fieldinfo.nocaption=true;
-														records.each((record,index) => {
-															((app) => {
-																cell.append(
-																	((cell) => {
-																		cell
-																		.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}),app))
-																		.on('click',(e) => {
-																			pd.event.call(panel.app,'pd.edit.call',{recordid:record['__id'].value});
-																		});
-																		pd.event.call(panel.app,'pd.action.call',{
-																			record:record,
-																			workplace:'view'
-																		})
-																		.then((param) => {
-																			pd.record.set(cell,app,param.record);
-																		});
-																		return cell;
-																	})(pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item'))
-																);
-															})({
-																id:panel.config.app.id,
-																fields:(() => {
-																	var res={};
-																	res[fieldinfo.id]=fieldinfo;
-																	return res;
-																})()
-															});
-														});
-													})(panel.config.app.fields[panel.config.view.fields.title],e.records.filter((item) => new Date(item[panel.config.view.fields.date].value).getDate()==date.getDate()));
-												return cell;
-											})(pd.create('div').addclass('pd-kumaneko-calendar-cell'))
-										);
-									}
-								});
-								break;
-							case 'crosstab':
-							case 'timeseries':
-								panel[panel.config.view.type].show(e.records,panel.config.view);
-								break;
-							case 'map':
-								((app) => {
-									panel.map.reloadmap(((records) => {
-										return records.map((item) => {
-											return {
-												label:item['__id'].value.toString(),
-												lat:item[panel.config.view.fields.lat].value,
-												lng:item[panel.config.view.fields.lng].value,
-												backcolor:((panel.config.view.fields.color in item)?item[panel.config.view.fields.color].value:''),
-												balloon:((balloon) => {
-													balloon
-													.append(pd.ui.field.activate(pd.ui.field.create(app.fields[panel.config.view.fields.title]).addclass('pd-picker pd-readonly').css({width:'100%'}),app))
-													.on('click',(e) => {
-														pd.event.call(panel.app,'pd.edit.call',{recordid:item['__id'].value});
-													});
-													pd.event.call(panel.app,'pd.action.call',{
-														record:item,
-														workplace:'view'
-													})
-													.then((param) => {
-														pd.record.set(balloon,app,param.record);
-													});
-													return balloon;
-												})(pd.create('div').addclass('pd-scope pd-kumaneko-map-item'))
-											};
-										});
-									})(e.records),true);
-								})({
-									id:panel.config.app.id,
-									fields:((fieldinfo) => {
-										var res={};
-										fieldinfo.nocaption=true;
-										res[fieldinfo.id]=fieldinfo;
-										return res;
-									})(pd.extend({},panel.config.app.fields[panel.config.view.fields.title]))
-								});
-								break;
-							default:
-								panel.body.elm('.pd-view').clearrows();
-								panel.body.elm('.pd-view').elms('thead tr').each((element,index) => element.elms('.pd-view-button').last().addclass('pd-hidden'));
-								var setup=(index,callback) => {
-									if (e.records.length!=0)
-									{
-										pd.event.call(panel.app,'pd.action.call',{
-											record:e.records[index],
-											workplace:'view'
-										})
-										.then((param) => {
-											pd.record.set(((row) => {
-												row.elms('.pd-view-button').last().addclass('pd-hidden');
-												return row;
-											})(panel.body.elm('.pd-view').addrow()).elm('[form-id=form_'+panel.config.app.id+']'),panel.config.app,param.record);
-											index++;
-											if (index<e.records.length) setup(index,callback);
-											else callback();
-										});
-									}
-									else callback();
-								};
-								setup(0,() => {
-									panel.body.parentNode.show();
-								});
-								break;
-						}
-					}
+						((app,view) => {
+							switch (view.type)
+							{
+								case 'calendar':
+									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({calendar:panel.calendar},view),records:e.records,option:{readonly:true,date:e.month}});
+									break;
+								case 'crosstab':
+									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({crosstab:panel.crosstab},view),records:e.records});
+									break;
+								case 'map':
+									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({map:panel.map},view),records:e.records,option:{center:true}});
+									break;
+								case 'timeseries':
+									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({timeseries:panel.timeseries},view),records:e.records});
+									break;
+								default:
+									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({body:panel.body},view),records:e.records,option:{readonly:true}}).then(() => panel.body.parentNode.show());
+									break;
+							}
+						})(panel.config.app,panel.config.view);
 				})(this.panels[e.app+'_'+e.view]);
 			});
 			/* setup panels */
