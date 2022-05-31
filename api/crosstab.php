@@ -83,24 +83,52 @@ class clsRequest extends clsBase
 			else $this->callrequesterror(400);
 		if (array_key_exists($this->body["column"]["field"],$this->fields))
 		{
+			$departments=$this->driver->records("departments");
+			$groups=$this->driver->records("groups");
+			$users=$this->driver->records("users");
 			$this->queries["columns"]=$this->createquery($this->body["column"],isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
-			foreach (array_keys($this->queries["columns"]) as $column)
+			foreach ($this->queries["columns"] as $key=>$value)
+			{
+				$caption=$key;
+				switch ($value["type"])
+				{
+					case "creator":
+					case "modifier":
+					case "user":
+						$filter=array_filter($users,function($values,$key) use ($caption){
+							return $values["__id"]["value"]==$caption;
+						},ARRAY_FILTER_USE_BOTH);
+						if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
+						break;
+					case "department":
+						$filter=array_filter($departments,function($values,$key) use ($caption){
+							return $values["__id"]["value"]==$caption;
+						},ARRAY_FILTER_USE_BOTH);
+						if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
+						break;
+					case "group":
+						$filter=array_filter($groups,function($values,$key) use ($caption){
+							return $values["__id"]["value"]==$caption;
+						},ARRAY_FILTER_USE_BOTH);
+						if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
+						break;
+				}
 				if (array_key_exists($this->body["value"]["field"],$this->fields))
 				{
-					$this->response["fields"][]=(function($field,$column){
-						$field["id"]=$column;
-						$field["caption"]=$column;
+					$this->response["fields"][]=(function($field,$key,$caption){
+						$field["id"]=$key;
+						$field["caption"]=$caption;
 						$field["required"]=false;
 						$field["nocaption"]=true;
 						return $field;
-					})($this->fields[$this->body["value"]["field"]],$column);
+					})($this->fields[$this->body["value"]["field"]],$key,$caption);
 				}
 				else
 				{
 					$this->response["fields"][]=[
-						"id"=>$column,
+						"id"=>$key,
 						"type"=>"number",
-						"caption"=>$column,
+						"caption"=>$caption,
 						"required"=>false,
 						"nocaption"=>true,
 						"demiliter"=>true,
@@ -109,7 +137,8 @@ class clsRequest extends clsBase
 						"unitposition"=>"Suffix"
 					];
 				}
-			$this->response["records"]=$this->createrecords(0,$this->body["value"],$this->records);
+			}
+			$this->response["records"]=$this->createrecords(0,$this->body["value"],$this->records,$users,$departments,$groups);
 		}
 		else $this->callrequesterror(400);
 		header("HTTP/1.1 200 OK");
@@ -160,10 +189,11 @@ class clsRequest extends clsBase
 				$format="";
 				break;
 		}
-		$res=[];
+		$queries=[];
 		foreach ($values as $item)
 			if (isset($item))
 			{
+				$query="";
 				switch ($this->fields[$arg_config["field"]]["type"])
 				{
 					case "checkbox":
@@ -174,10 +204,10 @@ class clsRequest extends clsBase
 					case "modifier":
 					case "radio":
 					case "user":
-						$res[$item]=$arg_config["field"]." in (\"{$item}\")";
+						$query=$arg_config["field"]." in (\"{$item}\")";
 						break;
 					case "date":
-						if ($format=="") $res[$item]=$arg_config["field"]." = \"{$item}\"";
+						if ($format=="") $query=$arg_config["field"]." = \"{$item}\"";
 						else
 						{
 							$timezone=new DateTimeZone($arg_timezone);
@@ -186,16 +216,16 @@ class clsRequest extends clsBase
 							switch ($format)
 							{
 								case "Y":
-									$res[$item]=$arg_config["field"]." >= \"{$item}-01-01\" and ".$arg_config["field"]." <= \"{$item}-12-31\"";
+									$query=$arg_config["field"]." >= \"{$item}-01-01\" and ".$arg_config["field"]." <= \"{$item}-12-31\"";
 									break;
 								case "Y-m":
-									$res[$item]=$arg_config["field"]." >= \"{$item}-01\" and ";
+									$query=$arg_config["field"]." >= \"{$item}-01\" and ";
 									$date=new DateTime($item."-01",$timezone);
 									$date->modify("1 month")->modify("-1 day");
-									$res[$item].=$arg_config["field"]." <= \"".$date->format("Y-m-d")."\"";
+									$query.=$arg_config["field"]." <= \"".$date->format("Y-m-d")."\"";
 									break;
 								case "Y-m-d":
-									$res[$item]=$arg_config["field"]." = \"{$item}\"";
+									$query=$arg_config["field"]." = \"{$item}\"";
 									break;
 							}
 						}
@@ -205,7 +235,11 @@ class clsRequest extends clsBase
 					case "modifiedtime":
 						$timezone=new DateTimeZone($arg_timezone);
 						$date=new DateTime($item,$timezone);
-						if ($format=="") $res[$date->modify(strval($timezone->getOffset($date))." second")->format("Y-m-d H:i")]=$arg_config["field"]." = \"{$item}\"";
+						if ($format=="")
+						{
+							$item=$date->modify(strval($timezone->getOffset($date))." second")->format("Y-m-d H:i");
+							$query=$arg_config["field"]." = \"{$item}\"";
+						}
 						else
 						{
 							$item=$date->modify(strval($timezone->getOffset($date))." second")->format($format);
@@ -214,49 +248,53 @@ class clsRequest extends clsBase
 								case "Y":
 									$date=new DateTime($item."-01-01",$timezone);
 									$date->modify(strval($timezone->getOffset($date)*-1)." second");
-									$res[$item]=$arg_config["field"]." >= \"".$date->format("Y-m-d\TH:i:s")."Z\" and ";
+									$query=$arg_config["field"]." >= \"".$date->format("Y-m-d\TH:i:s")."Z\" and ";
 									$date->modify("1 year")->modify("-1 second");
-									$res[$item].=$arg_config["field"]." <= \"".$date->format("Y-m-d\TH:i:s")."Z\"";
+									$query.=$arg_config["field"]." <= \"".$date->format("Y-m-d\TH:i:s")."Z\"";
 									break;
 								case "Y-m":
 									$date=new DateTime($item."-01",$timezone);
 									$date->modify(strval($timezone->getOffset($date)*-1)." second");
-									$res[$item]=$arg_config["field"]." >= \"".$date->format("Y-m-d\TH:i:s")."Z\" and ";
+									$query=$arg_config["field"]." >= \"".$date->format("Y-m-d\TH:i:s")."Z\" and ";
 									$date->modify("1 month")->modify("-1 second");
-									$res[$item].=$arg_config["field"]." <= \"".$date->format("Y-m-d\TH:i:s")."Z\"";
+									$query.=$arg_config["field"]." <= \"".$date->format("Y-m-d\TH:i:s")."Z\"";
 									break;
 								case "Y-m-d":
 									$date=new DateTime($item,$timezone);
 									$date->modify(strval($timezone->getOffset($date)*-1)." second");
-									$res[$item]=$arg_config["field"]." >= \"".$date->format("Y-m-d\TH:i:s")."Z\" and ";
+									$query=$arg_config["field"]." >= \"".$date->format("Y-m-d\TH:i:s")."Z\" and ";
 									$date->modify("1 day")->modify("-1 second");
-									$res[$item].=$arg_config["field"]." <= \"".$date->format("Y-m-d\TH:i:s")."Z\"";
+									$query.=$arg_config["field"]." <= \"".$date->format("Y-m-d\TH:i:s")."Z\"";
 									break;
 							}
 						}
 						break;
+					case "id":
 					case "number":
-						$res[strval($item)]=$arg_config["field"]." = ".strval($item);
+						$item=strval($item);
+						$query=$arg_config["field"]." = ".strval($item);
 						break;
 					case "time":
-						if ($format=="") $res[$item]=$arg_config["field"]." = \"{$item}\"";
+						if ($format=="") $query=$arg_config["field"]." = \"{$item}\"";
 						else
 						{
 							$item=explode(":",$item)[0];
-							$res[$item]=$arg_config["field"]." >= \"{$item}:00\" and ".$arg_config["field"]." <= \"{$item}:59\"";
+							$query=$arg_config["field"]." >= \"{$item}:00\" and ".$arg_config["field"]." <= \"{$item}:59\"";
 						}
 						break;
 					default:
-						$res[$item]=$arg_config["field"]." = \"{$item}\"";
+						$query=$arg_config["field"]." = \"{$item}\"";
 						break;
 				}
+				$queries[$item]=["query"=>$query,"type"=>$this->fields[$arg_config["field"]]["type"]];
 			}
-		$res=array_unique($res);
+		$res=[];
+		foreach($queries as $key=>$value) if (!in_array($key,$res)) $res[$key]=$value;
 		if ($arg_config["sort"]=="asc") ksort($res);
 		else krsort($res);
 		return $res;
 	}
-	public function createrecords($arg_index,$arg_config,$arg_records)
+	public function createrecords($arg_index,$arg_config,$arg_records,$arg_users,$arg_departments,$arg_groups)
 	{
 		$res=[];
 		if (count($this->queries["rows"])>$arg_index)
@@ -264,11 +302,35 @@ class clsRequest extends clsBase
 			$row=$this->queries["rows"][$arg_index];
 			foreach ($row as $key=>$value)
 			{
-				$records=$this->driver->filter($arg_records,$this->fields,$value,"");
+				$records=$this->driver->filter($arg_records,$this->fields,$value["query"],"");
 				if (count($records)!=0)
 				{
-					$cells=$this->createrecords($arg_index+1,$arg_config,$records);
-					if (count($cells)!=0) $res[$key]=$cells;
+					$caption=$key;
+					switch ($value["type"])
+					{
+						case "creator":
+						case "modifier":
+						case "user":
+							$filter=array_filter($arg_users,function($values,$key) use ($caption){
+								return $values["__id"]["value"]==$caption;
+							},ARRAY_FILTER_USE_BOTH);
+							if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
+							break;
+						case "department":
+							$filter=array_filter($arg_departments,function($values,$key) use ($caption){
+								return $values["__id"]["value"]==$caption;
+							},ARRAY_FILTER_USE_BOTH);
+							if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
+							break;
+						case "group":
+							$filter=array_filter($arg_groups,function($values,$key) use ($caption){
+								return $values["__id"]["value"]==$caption;
+							},ARRAY_FILTER_USE_BOTH);
+							if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
+							break;
+					}
+					$cells=$this->createrecords($arg_index+1,$arg_config,$records,$arg_users,$arg_departments,$arg_groups);
+					if (count($cells)!=0) $res[$key]=["caption"=>$caption,"rows"=>$cells];
 				}
 			}
 		}
@@ -276,7 +338,7 @@ class clsRequest extends clsBase
 		{
 			foreach ($this->queries["columns"] as $key=>$value)
 			{
-				$records=$this->driver->filter($arg_records,$this->fields,$value,"");
+				$records=$this->driver->filter($arg_records,$this->fields,$value["query"],"");
 				if ($arg_config["func"]!="CNT")
 				{
 					$res[$key]="";

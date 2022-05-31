@@ -180,7 +180,7 @@ class clsRequest extends clsBase
 							$record[$column]=0;
 						}
 					}
-					$this->response["records"][$row["caption"]]=$record;
+					$this->response["records"][$row["caption"]]=["caption"=>$row["caption"],"rows"=>$record];
 				}
 				restore_error_handler();
 			}
