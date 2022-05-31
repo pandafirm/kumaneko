@@ -2313,7 +2313,7 @@ class panda_user_interface{
 										{
 											for (var key in records)
 											{
-												parsed[source.rows[index].field]={value:key};
+												parsed[source.rows[index].field]={value:records[key].caption};
 												row=((res) => {
 													row.elm('[field-id='+CSS.escape(source.rows[index].field)+']').closest('td').attr('rowspan',res.span);
 													((id) => {
@@ -2323,7 +2323,7 @@ class panda_user_interface{
 														});
 													})(source.rows[index].field);
 													return res.row;
-												})(set(index+1,records[key],row,parsed));
+												})(set(index+1,records[key].rows,row,parsed));
 												if (Object.keys(records).last()!=key) row=table.insertrow(row);
 											}
 											return {row:row,span:Object.keys(records).length};
@@ -2366,7 +2366,7 @@ class panda_user_interface{
 													var set=(index,records,parsed) => {
 														if (index<source.rows.length)
 														{
-															for (var key in records) set(index+1,records[key],{name:(index==0)?key:parsed.name+' '+key,data:[]});
+															for (var key in records) set(index+1,records[key].rows,{name:(index==0)?records[key].caption:parsed.name+' '+records[key].caption,data:[]});
 														}
 														else
 														{
@@ -2394,12 +2394,16 @@ class panda_user_interface{
 															res.shift();
 															break;
 													}
-													set(0,source.records);
-													switch (view.chart.type)
+													if (source.rows.length==0) res=[['','']].concat(categories.map((item) => [item.caption,source.records[item.id]]));
+													else
 													{
-														case 'pie':
-															res=[['','']].concat(res.flat(1));
-															break;
+														set(0,source.records);
+														switch (view.chart.type)
+														{
+															case 'pie':
+																res=[['','']].concat(res.flat(1));
+																break;
+														}
 													}
 													return res;
 												})(categories.map((item) => item.caption)),
@@ -2435,9 +2439,16 @@ class panda_user_interface{
 													height:chart.parentNode.innerheight(),
 													legend:{
 														alignment:'center',
+														pagingTextStyle:{
+															color:pd.themecolor().forecolor
+														},
 														position:'bottom',
 														textStyle:{
 															color:pd.themecolor().forecolor
+														},
+														scrollArrows:{
+															activeColor:pd.themecolor().forecolor,
+															inactiveColor:'transparent'
 														}
 													},
 													pieSliceBorderColor:'transparent',

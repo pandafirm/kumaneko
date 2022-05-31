@@ -2391,69 +2391,40 @@ class panda_chart{
 	}
 	/* reload chart */
 	reloadchart(container,body){
-		var chart=(chart) =>{
-			google.visualization.events.addListener(chart,['legendpagination','ready'],(e) => {
-				((monitor) => {
-					if (monitor)
-					{
-						switch (monitor.parentNode.previousElementSibling.getAttribute('fill'))
-						{
-							case '#cccccc':
-								monitor.parentNode.previousElementSibling.setAttribute('fill','transparent');
-								break;
-							case '#0011cc':
-								monitor.parentNode.previousElementSibling.setAttribute('fill',pd.themecolor().forecolor);
-								break;
-						}
-						switch (monitor.parentNode.nextElementSibling.getAttribute('fill'))
-						{
-							case '#cccccc':
-								monitor.parentNode.nextElementSibling.setAttribute('fill','transparent');
-								break;
-							case '#0011cc':
-								monitor.parentNode.nextElementSibling.setAttribute('fill',pd.themecolor().forecolor);
-								break;
-						}
-						monitor.setAttribute('fill',pd.themecolor().forecolor);
-					}
-				})(container.elm('text[fill="#0011cc"]'));
-			});
-			return chart;
-		};
 		switch (body.type)
 		{
 			case 'area':
-				chart(new google.visualization.AreaChart(container)).draw(google.visualization.arrayToDataTable(body.data),body.options);
+				new google.visualization.AreaChart(container).draw(google.visualization.arrayToDataTable(body.data),body.options);
 				break;
 			case 'bar':
-				chart(new google.visualization.BarChart(container)).draw(google.visualization.arrayToDataTable(body.data),body.options);
+				new google.visualization.BarChart(container).draw(google.visualization.arrayToDataTable(body.data),body.options);
 				break;
 			case 'stacking_bar':
-				chart(new google.visualization.BarChart(container)).draw(google.visualization.arrayToDataTable(body.data),pd.extend({isStacked:true},body.options));
+				new google.visualization.BarChart(container).draw(google.visualization.arrayToDataTable(body.data),pd.extend({isStacked:true},body.options));
 				break;
 			case 'stacking_percent_bar':
-				chart(new google.visualization.BarChart(container)).draw(google.visualization.arrayToDataTable(body.data),pd.extend({isStacked:'percent'},body.options));
+				new google.visualization.BarChart(container).draw(google.visualization.arrayToDataTable(body.data),pd.extend({isStacked:'percent'},body.options));
 				break;
 			case 'column':
-				chart(new google.visualization.ColumnChart(container)).draw(google.visualization.arrayToDataTable(body.data),body.options);
+				new google.visualization.ColumnChart(container).draw(google.visualization.arrayToDataTable(body.data),body.options);
 				break;
 			case 'stacking_column':
-				chart(new google.visualization.ColumnChart(container)).draw(google.visualization.arrayToDataTable(body.data),pd.extend({isStacked:true},body.options));
+				new google.visualization.ColumnChart(container).draw(google.visualization.arrayToDataTable(body.data),pd.extend({isStacked:true},body.options));
 				break;
 			case 'stacking_percent_column':
-				chart(new google.visualization.ColumnChart(container)).draw(google.visualization.arrayToDataTable(body.data),pd.extend({isStacked:'percent'},body.options));
+				new google.visualization.ColumnChart(container).draw(google.visualization.arrayToDataTable(body.data),pd.extend({isStacked:'percent'},body.options));
 				break;
 			case 'line':
-				chart(new google.visualization.LineChart(container)).draw(google.visualization.arrayToDataTable(body.data),body.options);
+				new google.visualization.LineChart(container).draw(google.visualization.arrayToDataTable(body.data),body.options);
 				break;
 			case 'pie':
-				chart(new google.visualization.PieChart(container)).draw(google.visualization.arrayToDataTable(body.data),body.options);
+				new google.visualization.PieChart(container).draw(google.visualization.arrayToDataTable(body.data),body.options);
 				break;
 			case 'scatter':
-				chart(new google.visualization.ScatterChart(container)).draw(google.visualization.arrayToDataTable(body.data),body.options);
+				new google.visualization.ScatterChart(container).draw(google.visualization.arrayToDataTable(body.data),body.options);
 				break;
 			case 'spline':
-				chart(new google.visualization.LineChart(container)).draw(google.visualization.arrayToDataTable(body.data),pd.extend({curveType:'function'},body.options));
+				new google.visualization.LineChart(container).draw(google.visualization.arrayToDataTable(body.data),pd.extend({curveType:'function'},body.options));
 				break;
 		}
 	}

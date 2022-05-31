@@ -9204,7 +9204,7 @@ pd.modules={
 							load:(view) => {
 								view=pd.extend({},(view instanceof Object)?view:this.menus.crosstab.lib.remodel());
 								if (this.keep.app)
-									if (view.fields.column.field && view.fields.rows.length!=0)
+									if (view.fields.column.field)
 									{
 										pd.request(
 											pd.ui.baseuri()+'/crosstab.php',
@@ -10386,16 +10386,8 @@ pd.modules={
 								if (!res.error)
 								{
 									var config=this.menus.crosstab.lib.remodel();
-									if (config.fields.rows.length==0)
-									{
-										res.error=true;
-										pd.alert(pd.constants.view.message.invalid.crosstab.row[pd.lang]);
-									}
-									else
-									{
-										view.chart=config.chart;
-										view.fields=config.fields;
-									}
+									view.chart=config.chart;
+									view.fields=config.fields;
 								}
 								return res.error;
 							})(pd.record.get(this.menus.crosstab.contents,this.menus.crosstab.app),res.view);
@@ -10839,11 +10831,11 @@ pd.modules={
 								case 'crosstab':
 									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({crosstab:panel.crosstab},view),records:e.records});
 									break;
-								case 'map':
-									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({map:panel.map},view),records:e.records,option:{center:true}});
-									break;
 								case 'timeseries':
 									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({timeseries:panel.timeseries},view),records:e.records});
+									break;
+								case 'map':
+									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({map:panel.map},view),records:e.records,option:{center:true}});
 									break;
 								default:
 									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({body:panel.body},view),records:e.records,option:{readonly:true}}).then(() => panel.body.parentNode.show());
@@ -13537,12 +13529,6 @@ pd.constants=pd.extend({
 		},
 		message:{
 			invalid:{
-				crosstab:{
-					row:{
-						en:'Please specify one or more rows',
-						ja:'行を指定して下さい'
-					}
-				},
 				list:{
 					field:{
 						en:'Please place one or more fields',
