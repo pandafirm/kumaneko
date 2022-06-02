@@ -12275,23 +12275,23 @@ pd.constants=pd.extend({
 				},
 				previous:{
 					count:{
-						en:'Count over PP',
+						en:'Count on PP',
 						ja:'前期件数'
 					},
 					sum:{
-						en:'Sum over PP',
+						en:'Sum on PP',
 						ja:'前期合計'
 					},
 					average:{
-						en:'Average over PP',
+						en:'Average on PP',
 						ja:'前期平均'
 					},
 					maximum:{
-						en:'Maximum over PP',
+						en:'Maximum on PP',
 						ja:'前期最大'
 					},
 					minimum:{
-						en:'Minimum over PP',
+						en:'Minimum on PP',
 						ja:'前期最小'
 					}
 				}
