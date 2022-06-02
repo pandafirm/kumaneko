@@ -293,7 +293,7 @@ class clsRequest extends clsBase
 			$records=$this->driver->filter(
 				$arg_records,
 				$this->fields,
-				(($value["query"]!=0)?$value["query"]." and ":"").(preg_match("/^PP/u",$value["func"])?$arg_query["previous"]:$arg_query["current"]),
+				(($value["query"]!="")?$value["query"]." and ":"").(preg_match("/^PP/u",$value["func"])?$arg_query["previous"]:$arg_query["current"]),
 				$arg_operator
 			);
 			if (substr($value["func"],-3)!="CNT")
