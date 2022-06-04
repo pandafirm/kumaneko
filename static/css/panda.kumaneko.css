@@ -600,10 +600,13 @@ svg *{
 	padding:0;
 	width:100%;
 }
-.pd-kumaneko-actionbuilder .pd-field-value.pd-field-report input{
+.pd-kumaneko-actionbuilder .pd-field-value.pd-lookup input{
+	width:calc(100% - 1.5em) !important;
+}
+.pd-kumaneko-actionbuilder .pd-field-value.pd-spreadsheet input{
 	width:calc(100% - 5.5em) !important;
 }
-.pd-kumaneko-actionbuilder .pd-field-value.pd-field-report button{
+.pd-kumaneko-actionbuilder .pd-field-value.pd-spreadsheet button{
 	width:5em !important;
 }
 .pd-kumaneko-actionbuilder .pd-table{

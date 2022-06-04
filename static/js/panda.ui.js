@@ -93,11 +93,9 @@ class panda_filter extends panda_dialog{
 						res='""';
 						break;
 					case 'id':
+					case 'lookup':
 					case 'number':
 						res=((pd.isnumeric(rhs.value))?rhs.value:'null');
-						break;
-					case 'lookup':
-						res='"'+rhs.search+'"';
 						break;
 					default:
 						res='"'+((rhs.value)?rhs.value:'')+'"';
@@ -154,6 +152,14 @@ class panda_filter extends panda_dialog{
 							res.push({id:{value:'like'},caption:{value:pd.constants.filter.operator.like[pd.lang]}});
 							res.push({id:{value:'not like'},caption:{value:pd.constants.filter.operator.notlike[pd.lang]}});
 							break;
+						case 'lookup':
+							res.push({id:{value:'='},caption:{value:pd.constants.filter.operator.equal[pd.lang]}});
+							res.push({id:{value:'!='},caption:{value:pd.constants.filter.operator.notequal[pd.lang]}});
+							res.push({id:{value:'like'},caption:{value:pd.constants.filter.operator.like[pd.lang]}});
+							res.push({id:{value:'not like'},caption:{value:pd.constants.filter.operator.notlike[pd.lang]}});
+							res.push({id:{value:'match'},caption:{value:pd.constants.filter.operator.match[pd.lang]}});
+							res.push({id:{value:'not match'},caption:{value:pd.constants.filter.operator.notmatch[pd.lang]}});
+							break;
 						case 'spacer':
 							break;
 						default:
@@ -167,7 +173,7 @@ class panda_filter extends panda_dialog{
 			},
 			parse:(query) => {
 				var res=[];
-				query.split(' and ').map((item) => item.match(/^([^!><= ]+|(?:(?!(?:not in|in|not like|like).)*))[ ]*([!><=]+|not in|in|not like|like)[ ]*(.*)$/)).each((query,index) => {
+				query.split(' and ').map((item) => item.match(/^([^!><= ]+|(?:(?!(?:not match|match|not in|in|not like|like).)*))[ ]*([!><=]+|not match|match|not in|in|not like|like)[ ]*(.*)$/)).each((query,index) => {
 					if (query)
 					{
 						res.push({
@@ -410,9 +416,6 @@ class panda_filter extends panda_dialog{
 													case 'number':
 														res=field.elm('input').val();
 														break;
-													case 'lookup':
-														res='"'+field.elm('.pd-lookup-search').val()+'"';
-														break;
 													case 'time':
 														res='""';
 														if (field.elm('.pd-hour').elm('select').val())
@@ -489,9 +492,6 @@ class panda_filter extends panda_dialog{
 															unit:field.elm('[field-id=unit]').elm('select')
 														});
 														break;
-													case 'lookup':
-														field.elm('.pd-lookup-search').val(value.replace(/^\"/g,'').replace(/\"$/g,''));
-														break;
 													case 'time':
 														var values=value.replace(/^\"/g,'').replace(/\"$/g,'').split(':').filter((item) => item);
 														if (values.length==2)
@@ -525,6 +525,7 @@ class panda_filter extends panda_dialog{
 											case 'autonumber':
 											case 'file':
 											case 'id':
+											case 'lookup':
 											case 'postalcode':
 											case 'textarea':
 												res=pd.ui.field.create({
@@ -643,15 +644,6 @@ class panda_filter extends panda_dialog{
 														})(pd.create('div').addclass('pd-field-value'))
 													);
 												})(pd.create('div').addclass('pd-field').attr('field-id','value'));
-												break;
-											case 'lookup':
-												((fieldinfo) => {
-													res=pd.ui.field.activate(pd.ui.field.create(fieldinfo),((app) => {
-														app.fields[fieldinfo.id]=fieldinfo;
-														return app;
-													})({id:'filterbuilder',fields:{}}));
-													res.elm('input').off('change');
-												})(pd.extend({},fieldinfo));
 												break;
 											default:
 												((fieldinfo) => {
@@ -1000,6 +992,16 @@ class panda_filter extends panda_dialog{
 							((pattern) => {
 								formula=(pattern)?'lhs.search.match(/(?:'+pattern+')/g)':'!lhs.search';
 							})(rhs.replace(/^\"/g,'').replace(/\"$/g,''));
+							break;
+						case 'not match':
+							formula=((rhs) => {
+								return '(pd.isnumeric(lhs.value)?parseFloat(lhs.value):null) != '+((rhs!='0')?rhs.replace(/^0/g,''):rhs);
+							})((pd.isnumeric(rhs.replace(/^\"/g,'').replace(/\"$/g,'')))?rhs.replace(/^\"/g,'').replace(/\"$/g,''):'null');
+							break;
+						case 'match':
+							formula=((rhs) => {
+								return '(pd.isnumeric(lhs.value)?parseFloat(lhs.value):null) == '+((rhs!='0')?rhs.replace(/^0/g,''):rhs);
+							})((pd.isnumeric(rhs.replace(/^\"/g,'').replace(/\"$/g,'')))?rhs.replace(/^\"/g,'').replace(/\"$/g,''):'null');
 							break;
 						default:
 							formula='lhs.search '+((operator=='=')?'==':operator)+' '+rhs;
@@ -3188,10 +3190,7 @@ class panda_user_interface{
 															};
 															for (var key in fieldinfo.mapping)
 																if ((key in resp.record) && (fieldinfo.mapping[key] in fieldinfos))
-																{
-																	if ('lookup' in fieldinfos[fieldinfo.mapping[key]]) res[fieldinfo.mapping[key]]={lookup:true,value:resp.record[key].value};
-																	else res[fieldinfo.mapping[key]]={value:('search' in resp.record[key])?resp.record[key].search:resp.record[key].value};
-																}
+																	res[fieldinfo.mapping[key]]=pd.extend((fieldinfos[fieldinfo.mapping[key]].type=='lookup')?{lookup:true}:{},{value:resp.record[key].value});
 															return res;
 														})());
 														resolve();
@@ -3567,97 +3566,97 @@ class panda_user_interface{
 			},
 			typing:(sender,receiver,isfilter=false) => {
 				var res=false;
-				switch (sender.type)
+				if (receiver.type=='text')
 				{
+					if (receiver.format=='text')
+						switch (sender.type)
+						{
+								case 'address':
+								case 'autonumber':
+								case 'color':
+								case 'createdtime':
+								case 'date':
+								case 'datetime':
+								case 'dropdown':
+								case 'modifiedtime':
+								case 'postalcode':
+								case 'radio':
+								case 'text':
+								case 'time':
+									res=true;
+									break;
+								case 'id':
+								case 'number':
+									res=!isfilter;
+									break;
+						}
+					if (receiver.type==sender.type)
+						if (receiver.format==sender.format) res=true;
+				}
+				if (receiver.type=='lookup')
+					switch (sender.type)
+					{
 						case 'address':
-						case 'postalcode':
-							if (receiver.type==sender.type) res=true;
-							else
-							{
-								if (receiver.type=='text')
-									if (receiver.format=='text') res=true;
-							}
-							break;
 						case 'autonumber':
-							if (isfilter)
-							{
-								if (receiver.type==sender.type) res=true;
-								else
-								{
-									if (receiver.type=='text')
-										if (receiver.format=='text') res=true;
-								}
-							}
-							else
-							{
-								if (receiver.type=='text')
-									if (receiver.format=='text') res=true;
-							}
+						case 'color':
+						case 'date':
+						case 'datetime':
+						case 'dropdown':
+						case 'postalcode':
+						case 'radio':
+						case 'text':
+						case 'time':
+							res=isfilter;
 							break;
+						case 'id':
+						case 'number':
+							res=true;
+							break;
+						case 'lookup':
+							res=(receiver.app==sender.app);
+							break;
+					}
+				if (!res)
+					switch (sender.type)
+					{
+						case 'address':
 						case 'checkbox':
 						case 'color':
 						case 'date':
 						case 'department':
 						case 'file':
 						case 'group':
+						case 'postalcode':
 						case 'textarea':
 						case 'time':
 							res=(receiver.type==sender.type);
 							break;
+						case 'autonumber':
+							res=(isfilter)?(receiver.type==sender.type):false;
+							break;
 						case 'creator':
 						case 'modifier':
 						case 'user':
-							if (isfilter) res=['creator','modifier','user'].includes(receiver.type);
-							else res=(receiver.type=='user');
+							res=(isfilter)?['creator','modifier','user'].includes(receiver.type):(receiver.type=='user');
 							break;
 						case 'createdtime':
-						case 'modifiedtime':
 						case 'datetime':
-							if (isfilter) res=['createdtime','modifiedtime','datetime'].includes(receiver.type);
-							else res=(receiver.type=='datetime');
+						case 'modifiedtime':
+							res=(isfilter)?['createdtime','datetime','modifiedtime'].includes(receiver.type):(receiver.type=='datetime');
 							break;
 						case 'dropdown':
 						case 'radio':
-							if (['dropdown','radio'].includes(receiver.type)) res=true;
-							else
-							{
-								if (receiver.type=='text')
-									if (receiver.format=='text') res=true;
-							}
+							res=['dropdown','radio'].includes(receiver.type);
 							break;
 						case 'id':
-						case 'number':
-							if (isfilter) res=['id','number'].includes(receiver.type);
-							else res=(receiver.type=='number');
-							break;
 						case 'lookup':
-							if (receiver.type==sender.type)
-							{
-								if (receiver.app==sender.app && receiver.search==sender.search) res=true;
-							}
-							else
-							{
-								if (receiver.type=='text')
-									if (receiver.format=='text') res=true;
-							}
+						case 'number':
+							res=(isfilter)?['id','number'].includes(receiver.type):(receiver.type=='number');
 							break;
 						case 'text':
-							if (isfilter)
-							{
-								if (['address','autonumber','postalcode','dropdown','radio'].includes(receiver.type)) res=true;
-								else
-								{
-									if (receiver.type==sender.type)
-										if (receiver.format=='text' || receiver.format==sender.format) res=true;
-								}
-							}
-							else
-							{
-								if (receiver.type==sender.type)
-									if (receiver.format=='text' || receiver.format==sender.format) res=true;
-							}
+							res=(isfilter)?['address','autonumber','dropdown','postalcode','radio','textarea'].includes(receiver.type):['address','textarea'].includes(receiver.type);
 							break;
-				}
+					}
 				return res;
 			}
 		};
@@ -4358,6 +4357,14 @@ pd.constants=pd.extend({
 					en:'less than or equal',
 					ja:'以前'
 				}
+			},
+			match:{
+				en:'matches id',
+				ja:'idが一致'
+			},
+			notmatch:{
+				en:'not matches id',
+				ja:'idが一致しない'
 			}
 		}
 	},

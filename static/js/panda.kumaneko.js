@@ -1822,7 +1822,7 @@ pd.modules={
 																		}
 																	}
 																	else res=result[fieldinfo.id];
-																	return pd.extend((fieldinfo.type=='lookup')?{lookup:true,type:fieldinfo.type}:{type:fieldinfo.type},res);
+																	return pd.extend({type:fieldinfo.type},res);
 																},
 																record:(origin) => {
 																	increments.row.each((index) => {
@@ -1850,7 +1850,7 @@ pd.modules={
 																				if (criteria.external.tableid)
 																				{
 																					if (!(criteria.external.tableid in res.rows)) res.rows[criteria.external.tableid]=pd.record.create(target.fields[criteria.external.tableid],false);
-																					res.rows[criteria.external.tableid][criteria.external.id]=create.field(criteria.internal,increments.progress.row);
+																					res.rows[criteria.external.tableid][criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.row));
 																					res.query.push(pd.filter.query.create(criteria.external,criteria.operator,create.field(criteria.internal,increments.progress.row)));
 																				}
 																			});
@@ -1866,22 +1866,32 @@ pd.modules={
 																					{
 																						origin[mapping.external.tableid]={value:tables[mapping.external.tableid]};
 																						tables[mapping.external.tableid].each((row,index) => {
-																							row[mapping.external.id]=create.field(mapping.internal,index);
+																							row[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,index));
 																						});
 																					}
 																					else
 																					{
 																						record[mapping.external.tableid].value.each((row,index) => {
-																							row[mapping.external.id]=create.field(mapping.internal,increments.progress.row);
+																							row[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,increments.progress.row));
 																						});
 																					}
 																				}
-																				else origin[mapping.external.id]=create.field(mapping.internal,increments.progress.record);
+																				else origin[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,increments.progress.record));
 																			});
 																		}
 																	});
 																	return pd.kumaneko.apps[action.transfer.app].actions.value(origin,'backend');
 																}
+															};
+															var cast=(fieldinfo,value) => {
+																var res=value;
+																switch (fieldinfo.type)
+																{
+																	case 'lookup':
+																		res=pd.extend((!('search' in res))?{lookup:true,search:''}:{lookup:true},res);
+																		break;
+																}
+																return res;
 															};
 															var finish=() => {
 																increments.progress.record++;
@@ -1930,7 +1940,7 @@ pd.modules={
 																					var res=pd.record.create(target);
 																					criterias.each((criteria,index) => {
 																						if (criteria.external.tableid) res[criteria.external.tableid]={value:[]};
-																						else res[criteria.external.id]=create.field(criteria.internal,increments.progress.record);
+																						else res[criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.record));
 																					});
 																					return res;
 																				})()));
@@ -2255,7 +2265,10 @@ pd.modules={
 														})(linkage.app.fields[aggregate])
 													});
 													pd.event.call(this.app.id,'pd.linkage.show',keep);
-													linkage.contents.elm('.pd-view').css({display:'table'});
+													((contents) => {
+														contents.elm('.pd-view').css({display:'table'});
+														return contents;
+													})(linkage.contents).show();
 													finish();
 												});
 											}
@@ -6251,7 +6264,7 @@ pd.modules={
 								container.elm('.pd-box-container')
 								.append(
 									((res) => {
-										res.elm('.pd-field-value').addclass('pd-field-report')
+										res.elm('.pd-field-value').addclass('pd-spreadsheet')
 										.insertBefore(
 											((res) => {
 												res.on('click',(e) => e.currentTarget.rebuild()).rebuild=() => {
@@ -6259,9 +6272,9 @@ pd.modules={
 														((templates) => {
 															templates.clearrows();
 															templates.template.elm('[field-id=template]').elm('select').empty().append(pd.create('option'));
-															if (res.closest('.pd-field-report').elm('input').val())
+															if (res.closest('.pd-spreadsheet').elm('input').val())
 															{
-																pd.request(pd.ui.baseuri()+'/report.php','GET',{'X-Requested-By':'panda'},{spreadsheet:res.closest('.pd-field-report').elm('input').val()},true)
+																pd.request(pd.ui.baseuri()+'/report.php','GET',{'X-Requested-By':'panda'},{spreadsheet:res.closest('.pd-spreadsheet').elm('input').val()},true)
 																.then((resp) => {
 																	for (var key in resp.sheets) templates.template.elm('select').append(pd.create('option').attr('value',key).html(resp.sheets[key]));
 																	templates.addrow();
@@ -7070,7 +7083,7 @@ pd.modules={
 									res['subject']={value:this.keep.action.mail.subject};
 									res['body']={value:this.keep.action.mail.body};
 									((elements) => {
-										elements.spreadsheet.val(this.keep.action.report.spreadsheet).closest('.pd-field-report').elm('button').rebuild().then((sheets) => {
+										elements.spreadsheet.val(this.keep.action.report.spreadsheet).closest('.pd-spreadsheet').elm('button').rebuild().then((sheets) => {
 											elements.tables.template.clearrows();
 											this.keep.action.report.template.each((values,index) => {
 												if (values in sheets) elements.tables.template.addrow().elm('[field-id=template]').elm('select').val(values);
