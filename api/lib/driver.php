@@ -32,6 +32,7 @@ class clsDriver
 	/* build */
 	public function build($arg_destination,$arg_source,$arg_fields,$arg_records=null)
 	{
+		$continue=false;
 		$lookups=[];
 		foreach ($arg_fields as $key=>$value)
 		{
@@ -121,6 +122,13 @@ class clsDriver
 							if (array_key_exists($mappingvalue,$arg_fields))
 								switch ($arg_fields[$mappingvalue]["type"])
 								{
+									case "lookup":
+										if (!array_key_exists($mappingvalue,$lookups))
+										{
+											$arg_destination[$mappingvalue]=["lookup"=>true,"value"=>($source[$mappingkey]["value"]=="")?null:floatval($source[$mappingkey]["value"])];
+											$continue=true;
+										}
+										break;
 									case "number":
 										$arg_destination[$mappingvalue]=["value"=>($source[$mappingkey]["value"]=="")?null:floatval($source[$mappingkey]["value"])];
 										break;
@@ -188,6 +196,7 @@ class clsDriver
 			}
 			else $arg_destination["__autonumber"]=["value"=>""];
 		}
+		if ($continue) $arg_destination=$this->build($arg_destination,$arg_destination,$arg_fields);
 		return $arg_destination;
 	}
 	/* delete */
@@ -427,6 +436,24 @@ class clsDriver
 							);
 							break;
 						case "lookup":
+							if (preg_match("/{$key}[ ]*( not match | match )[ ]*[\"]{1}[0-9-]*[\"]{1}/u",$query))
+							{
+								$query=preg_replace(
+									"/({$key})[ ]*( not match | match )[ ]*[\"]{1}([0-9-]*)[\"]{1}/u",
+									'$1 $2 $3',
+									$query
+								);
+							}
+							if (preg_match("/{$key}[ ]*( not match | match )[ ]*( and | or |[\)]{1}|$)/u",$query))
+							{
+								$query=preg_replace(
+									"/({$key})[ ]*( not match | match )[ ]*( and | or |[\)]{1}|$)/u",
+									'$1 $2 null $3',
+									$query
+								);
+							}
+							$query=preg_replace("/(^|[ \(]{1}){$key}[ ]*( not match)/u",'$1$values["'.$key.'"]["value"] !=',$query);
+							$query=preg_replace("/(^|[ \(]{1}){$key}[ ]*( match)/u",'$1$values["'.$key.'"]["value"] =',$query);
 							$query=preg_replace("/(^|[ \(]{1}){$key}/u",'$1$values["'.$key.'"]["search"]',$query);
 							break;
 						case "number":
@@ -583,6 +610,32 @@ class clsDriver
 										);
 										break;
 									case "lookup":
+										if (preg_match("/{$key}[ ]*( not match | match )[ ]*[\"]{1}[0-9-]*[\"]{1}/u",$query))
+										{
+											$query=preg_replace(
+												"/({$key})[ ]*( not match | match )[ ]*[\"]{1}([0-9-]*)[\"]{1}/u",
+												'$1 $2 $3',
+												$query
+											);
+										}
+										if (preg_match("/{$key}[ ]*( not match | match )[ ]*( and | or |[\)]{1}|$)/u",$query))
+										{
+											$query=preg_replace(
+												"/({$key})[ ]*( not match | match )[ ]*( and | or |[\)]{1}|$)/u",
+												'$1 $2 null $3',
+												$query
+											);
+										}
+										$query=preg_replace(
+											"/{$key}[ ]*( not match )[ ]*([^ \)]+)/u",
+											'count(array_filter($values["'.$table.'"]["value"],function($values){return $values["'.$key.'"]["value"] != $2;}))>0',
+											$query
+										);
+										$query=preg_replace(
+											"/{$key}[ ]*( match )[ ]*([^ \)]+)/u",
+											'count(array_filter($values["'.$table.'"]["value"],function($values){return $values["'.$key.'"]["value"] = $2;}))>0',
+											$query
+										);
 										$query=preg_replace(
 											"/{$key}[ ]*([!><=]+| not like | like )[ ]*([^ \)]+)/u",
 											'count(array_filter($values["'.$table.'"]["value"],function($values){return $values["'.$key.'"]["search"]$1$2;}))>0',
