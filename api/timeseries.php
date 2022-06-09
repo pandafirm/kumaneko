@@ -173,7 +173,7 @@ class clsRequest extends clsBase
 						try
 						{
 							$formula=preg_replace("/([^!><]{1})=/u","$1==",$row["formula"]);
-							$record[$column]=eval("return ".preg_replace("/(IF\(|AND\(|OR\(|CEIL\(|CONCAT\(|FLOOR\(|FORMAT\(|ROUND\()/u",'_$1',preg_replace("/(F[0-9]+)/u",'$values[$column]["$1"]',$formula)).";");
+							$record[$column]=eval("return ".preg_replace("/(IF\(|AND\(|OR\(|CEIL\(|CONCAT\(|FLOOR\(|FORMAT\(|ROUND\()/u",'_$1',preg_replace("/(F[0-9]+_)/u",'$values[$column]["$1"]',$formula)).";");
 						}
 						catch (Exception $e)
 						{
