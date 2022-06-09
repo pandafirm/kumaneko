@@ -872,23 +872,23 @@ class panda_filter extends panda_dialog{
 			};
 			var TODAY=(type='date',adddays='0') => {
 				var date=new Date(new Date().format('Y-m-d'));
-				return (type!='date')?date.calc(adddays+' day').calc(date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
+				return (type!='date')?date.calc(adddays+' day,'+date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
 			};
 			var FROM_TODAY=(interval,unit,type='date',adddays='0') => {
 				var date=new Date(new Date().format('Y-m-d')).calc(interval+' '+unit);
-				return (type!='date')?date.calc(adddays+' day').calc(date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
+				return (type!='date')?date.calc(adddays+' day,'+date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
 			};
 			var FROM_THISWEEK=(interval,unit,type='date',adddays='0') => {
-				var date=new Date(new Date().format('Y-m-d')).calc('-'+new Date().getDay().toString()+' day').calc(interval+' '+unit);
-				return (type!='date')?date.calc(adddays+' day').calc(date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
+				var date=new Date(new Date().format('Y-m-d')).calc('-'+new Date().getDay().toString()+' day,'+interval+' '+unit);
+				return (type!='date')?date.calc(adddays+' day,'+date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
 			};
 			var FROM_THISMONTH=(interval,unit,type='date',adddays='0') => {
 				var date=new Date(new Date().format('Y-m-01')).calc(interval+' '+unit);
-				return (type!='date')?date.calc(adddays+' day').calc(date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
+				return (type!='date')?date.calc(adddays+' day,'+date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
 			};
 			var FROM_THISYEAR=(interval,unit,type='date',adddays='0') => {
 				var date=new Date(new Date().format('Y-01-01')).calc(interval+' '+unit);
-				return (type!='date')?date.calc(adddays+' day').calc(date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
+				return (type!='date')?date.calc(adddays+' day,'+date.getTimezoneOffset().toString()+' minute').format('ISO'):date.format('Y-m-d');
 			};
 			switch (fieldinfo.type)
 			{
@@ -1078,15 +1078,6 @@ class panda_formula{
 			var CONTAIN=(value,pattern) => {
 				return (Array.isArray(value))?value.includes(pattern):(STR(value).match(new RegExp(STR(pattern),'g')));
 			};
-			var AGE=(value) => {
-				var res=0;
-				if (!isNaN(Date.parse(value)))
-					res=((date) => {
-						var thisyear=new Date(new Date().getFullYear(),date.getMonth(),date.getDate());
-						return (new Date().getFullYear()-date.getFullYear())+((thisyear.getTime()>new Date().getTime())?-1:0);
-					})(new Date(value))
-				return res;
-			};
 			var ASC=(value) => {
 				var map={
 					'ア':'ｱ','イ':'ｲ','ウ':'ｳ','エ':'ｴ','オ':'ｵ',
@@ -1134,20 +1125,57 @@ class panda_formula{
 			var CONCAT=(...args) => {
 				return (args.length>0)?args.map((item) => (typeof item==='number' || typeof item==='string')?item.toString():'').join(''):'';
 			};
-			var MIN=(id) => {
-				var res=0;
-				if (id in fieldinfos)
+			var CEIL=(value) => {
+				return Math.ceil(NUM(value));
+			};
+			var FLOOR=(value) => {
+				return Math.floor(NUM(value));
+			};
+			var ROUND=(value) => {
+				return Math.round(NUM(value));
+			};
+			var DIFF=(from,to,format) => {
+				from=STR(from);
+				to=STR(to);
+				if (isNaN(Date.parse(from))) return '';
+				else
 				{
-					var fieldinfo=fieldinfos[id];
-					if (fieldinfo.tableid)
-					{
-						res=((values) => {
-							return (values.length!=0)?values.reduce((a,b) => Math.min(a,b)):0;
-						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
-					}
-					else res=NUM(record[id].value);
+					return ((from,to,res) => {
+						var year=0;
+						var month=0;
+						var day=0;
+						var days=parseInt(from.format('d'))-1;
+						var keep={
+							from:from.calc('first-of-month'),
+							to:to.calc('first-of-month')
+						};
+						if (keep.from.format('Y-m-d')==keep.to.format('Y-m-d')) day=Math.floor((to.getTime()-from.getTime())/(1000*60*60*24));
+						else
+						{
+							while (keep.from.getTime()<keep.to.getTime())
+							{
+								if (keep.from.calc('1 month,'+days.toString()+' day')<to)
+								{
+									month++;
+									if (month>11)
+									{
+										year++;
+										month=0;
+									}
+									day=Math.floor((to.getTime()-keep.from.calc('1 month,'+days.toString()+' day').getTime())/(1000*60*60*24));
+								}
+								else day=Math.floor((to.getTime()-keep.from.calc(days.toString()+' day').getTime())/(1000*60*60*24));
+								keep.from=keep.from.calc('1 month');
+							}
+						}
+						return res
+						.replace(/Y/g,year.toString())
+						.replace(/FM/g,((year*12)+month).toString())
+						.replace(/M/g,month.toString())
+						.replace(/FD/g,Math.floor((to.getTime()-from.getTime())/(1000*60*60*24)).toString())
+						.replace(/D/g,day.toString());
+					})(new Date(from),(isNaN(Date.parse(to)))?new Date():new Date(to),STR(format));
 				}
-				return res;
 			};
 			var MAX=(id) => {
 				var res=0;
@@ -1158,6 +1186,21 @@ class panda_formula{
 					{
 						res=((values) => {
 							return (values.length!=0)?values.reduce((a,b) => Math.max(a,b)):0;
+						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+					}
+					else res=NUM(record[id].value);
+				}
+				return res;
+			};
+			var MIN=(id) => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					var fieldinfo=fieldinfos[id];
+					if (fieldinfo.tableid)
+					{
+						res=((values) => {
+							return (values.length!=0)?values.reduce((a,b) => Math.min(a,b)):0;
 						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
 					}
 					else res=NUM(record[id].value);
@@ -1728,13 +1771,33 @@ class panda_record{
 							}
 							break;
 						case 'table':
-							field.tr.each((element,index) => {
-								if (value.value.length>index) this.set(element,fieldinfo,value.value[index]);
-							});
-							for (var i=field.tr.length;i<value.value.length;i++)
-								this.set(field.addrow(),fieldinfo,value.value[i]);
-							field.tr.slice(value.value.length).each((element,index) => field.delrow(element));
-							if (field.tr.length==0) field.addrow();
+							if (value.value.length==0) field.clearrows();
+							else
+							{
+								field.tr.each((element,index) => {
+									if (value.value.length>index)
+										this.set(element,fieldinfo,((values) => {
+											if (value.disabled)
+												for (var key in values) values[key].disabled=true;
+											return values;
+										})(value.value[index]));
+								});
+								for (var i=field.tr.length;i<value.value.length;i++)
+									this.set(field.addrow(),fieldinfo,((values) => {
+										if (value.disabled)
+											for (var key in values) values[key].disabled=true;
+										return values;
+									})(value.value[i]));
+								field.tr.slice(value.value.length).each((element,index) => field.delrow(element));
+							}
+							if (field.tr.length==0)
+								((row) => {
+									if (value.disabled)
+										this.set(row,fieldinfo,((values) => {
+											for (var key in values) values[key].disabled=true;
+											return values;
+										})(this.get(row,fieldinfo,true).record));
+								})(field.addrow());
 							break;
 						default:
 							field.elm('input').val(value.value);

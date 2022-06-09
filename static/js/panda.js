@@ -3726,43 +3726,47 @@ Array.prototype.shape=function(handler){
 Date extention
 */
 Date.prototype.calc=function(pattern){
-	var year=this.getFullYear();
-	var month=this.getMonth()+1;
-	var day=this.getDate();
-	var hour=this.getHours();
-	var minute=this.getMinutes();
-	var second=this.getSeconds();
-	//first day of year
-	if (pattern.match(/^first-of-year$/g)) {month=1;day=1};
-	//first day of month
-	if (pattern.match(/^first-of-month$/g)) day=1;
-	//add years
-	if (pattern.match(/^-?[0-9]+ year$/g)) year+=parseInt(pattern.match(/^-?[0-9]+/g));
-	//add months
-	if (pattern.match(/^-?[0-9]+ month$/g))
-	{
-		month+=parseInt(pattern.match(/^-?[0-9]+/g));
-		//check of next year
-		while (month<1) {year--;month+=12;}
-		while (month>12) {year++;month-=12;}
-		//check of next month
-		var check=new Date(year,(month-1),day);
-		if (check.getMonth()+1!=month)
+	var date=this;
+	pattern.split(',').map((item) => item.replace(/^[ ]*/g,'').replace(/[ ]*$/g,'')).each((pattern,index) => {
+		var year=date.getFullYear();
+		var month=date.getMonth()+1;
+		var day=date.getDate();
+		var hour=date.getHours();
+		var minute=date.getMinutes();
+		var second=date.getSeconds();
+		//first day of year
+		if (pattern.match(/^first-of-year$/g)) {month=1;day=1};
+		//first day of month
+		if (pattern.match(/^first-of-month$/g)) day=1;
+		//add years
+		if (pattern.match(/^-?[0-9]+[ ]*year$/g)) year+=parseInt(pattern.match(/^-?[0-9]+/g));
+		//add months
+		if (pattern.match(/^-?[0-9]+[ ]*month$/g))
 		{
-			check=new Date(year,month,1);
-			check.setDate(0);
-			day=check.getDate();
+			month+=parseInt(pattern.match(/^-?[0-9]+/g));
+			//check of next year
+			while (month<1) {year--;month+=12;}
+			while (month>12) {year++;month-=12;}
+			//check of next month
+			var check=new Date(year,(month-1),day);
+			if (check.getMonth()+1!=month)
+			{
+				check=new Date(year,month,1);
+				check.setDate(0);
+				day=check.getDate();
+			}
 		}
-	}
-	//add day
-	if (pattern.match(/^-?[0-9]+ day$/g)) day+=parseInt(pattern.match(/^-?[0-9]+/g));
-	//add hour
-	if (pattern.match(/^-?[0-9]+ hour/g)) hour+=parseInt(pattern.match(/^-?[0-9]+/g));
-	//add minute
-	if (pattern.match(/^-?[0-9]+ minute/g)) minute+=parseInt(pattern.match(/^-?[0-9]+/g));
-	//add second
-	if (pattern.match(/^-?[0-9]+ second/g)) second+=parseInt(pattern.match(/^-?[0-9]+/g));
-	return new Date(year,(month-1),day,hour,minute,second);
+		//add day
+		if (pattern.match(/^-?[0-9]+[ ]*day$/g)) day+=parseInt(pattern.match(/^-?[0-9]+/g));
+		//add hour
+		if (pattern.match(/^-?[0-9]+[ ]*hour$/g)) hour+=parseInt(pattern.match(/^-?[0-9]+/g));
+		//add minute
+		if (pattern.match(/^-?[0-9]+[ ]*minute$/g)) minute+=parseInt(pattern.match(/^-?[0-9]+/g));
+		//add second
+		if (pattern.match(/^-?[0-9]+[ ]*second$/g)) second+=parseInt(pattern.match(/^-?[0-9]+/g));
+		date=new Date(year,(month-1),day,hour,minute,second);
+	});
+	return date;
 }
 Date.prototype.format=function(pattern){
 	var year=this.getFullYear().toString();

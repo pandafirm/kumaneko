@@ -2116,10 +2116,17 @@ pd.modules={
 										{
 											action.disabled.fields.each((disabled,index) => {
 												if (disabled.field in fieldinfos)
+												{
 													((fieldinfo) => {
 														if (fieldinfo.tableid) result[fieldinfo.tableid].value.each((row,index) => row[fieldinfo.id].disabled=true);
 														else result[fieldinfo.id].disabled=true;
 													})(fieldinfos[disabled.field]);
+												}
+												else
+												{
+													if (disabled.field in this.app.fields)
+														if (this.app.fields[disabled.field].type=='table') result[this.app.fields[disabled.field].id].disabled=true;
+												}
 											});
 										}
 										action.hidden.each((hidden,index) => {
@@ -2130,6 +2137,7 @@ pd.modules={
 											else
 											{
 												if (hidden.field in fieldinfos)
+												{
 													((fieldinfo) => {
 														switch (fieldinfo.type)
 														{
@@ -2142,6 +2150,12 @@ pd.modules={
 																break;
 														}
 													})(fieldinfos[hidden.field]);
+												}
+												else
+												{
+													if (hidden.field in this.app.fields)
+														if (this.app.fields[hidden.field].type=='table') result[this.app.fields[hidden.field].id].hidden=true;
+												}
 											}
 										});
 									}
@@ -2611,7 +2625,7 @@ pd.modules={
 									this.record.bulk({
 										app:this.app.id,
 										query:((date,query) => {
-											var res=view.fields.date+' >= "'+date.format('Y-m-d')+'" and '+view.fields.date+' <= "'+date.calc('1 month').calc('-1 day').format('Y-m-d')+'"';
+											var res=view.fields.date+' >= "'+date.format('Y-m-d')+'" and '+view.fields.date+' <= "'+date.calc('1 month,-1 day').format('Y-m-d')+'"';
 											return res+((query)?' and ('+query+')':'');
 										})(new Date(view.monitor.text()+'-01'),(typeof query==='string')?query:view.query),
 										sort:(typeof sort==='string')?sort:view.sort,
@@ -3579,7 +3593,7 @@ pd.modules={
 																		break;
 																}
 																return fieldinfo;
-															})(pd.extend({id:'field_'+resp.id.toString()},fieldinfo)))
+															})(pd.extend({id:'field_'+resp.id.toString()+'_'},fieldinfo)))
 														),
 														parent.nextElementSibling
 													);
@@ -4548,7 +4562,7 @@ pd.modules={
 															{
 																pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'field'},true)
 																.then((resp) => {
-																	keep.fieldinfo.id='field_'+resp.id.toString();
+																	keep.fieldinfo.id='field_'+resp.id.toString()+'_';
 																	resolve(menu.lib.create(keep.fieldinfo));
 																})
 																.catch((error) => {
@@ -6988,7 +7002,7 @@ pd.modules={
 			set(){
 				return new Promise((resolve,reject) => {
 					((fieldinfos) => {
-						var fields=(addcontainer,excludefields,excludetypes) => {
+						var fields=(addcontainer,addtable,excludefields,excludetypes) => {
 							var res=[];
 							res.push({
 								id:{value:''},
@@ -7006,6 +7020,13 @@ pd.modules={
 										caption:{value:fieldinfos[key].caption}
 									});
 								}
+							if (addtable)
+								for (var key in this.keep.fields)
+									if (this.keep.fields[key].type=='table')
+										res.push({
+											id:{value:key},
+											caption:{value:this.keep.fields[key].caption}
+										});
 							if (addcontainer)
 								this.keep.layout.each((layout,index) => {
 									if (layout.type=='box')
@@ -7023,7 +7044,7 @@ pd.modules={
 								user:{value:this.keep.action.user}
 							};
 							this.keep.sections.formula.table.clearrows();
-							this.keep.sections.formula.table.template.elm('[field-id=field]').elm('select').empty().assignoption(fields(false,(() => {
+							this.keep.sections.formula.table.template.elm('[field-id=field]').elm('select').empty().assignoption(fields(false,false,(() => {
 								var res=[];
 								for (var key in fieldinfos)
 									((fieldinfo) => {
@@ -7249,7 +7270,7 @@ pd.modules={
 									res['style']={value:((styles) => {
 										var res=[];
 										this.keep.sections.style.table.clearrows();
-										this.keep.sections.style.table.template.elm('[field-id=field]').elm('select').empty().assignoption(fields(false),'caption','id');
+										this.keep.sections.style.table.template.elm('[field-id=field]').elm('select').empty().assignoption(fields(false,false),'caption','id');
 										this.keep.sections.style.table.addrow();
 										styles.each((style,index) => {
 											if (style.field in fieldinfos)
@@ -7264,26 +7285,30 @@ pd.modules={
 									res['disabled']={value:((disableds) => {
 										var res=[];
 										this.keep.sections.disabled.table.clearrows();
-										this.keep.sections.disabled.table.template.elm('[field-id=field]').elm('select').empty().assignoption(fields(false),'caption','id');
+										this.keep.sections.disabled.table.template.elm('[field-id=field]').elm('select').empty().assignoption(fields(false,true),'caption','id');
 										this.keep.sections.disabled.table.addrow();
 										disableds.each((disabled,index) => {
-											if (disabled.field in fieldinfos)
-												res.push({
-													field:{value:disabled.field}
-												});
+											((containers) => {
+												if ((disabled.field in fieldinfos) || containers.some((item) => (item.id==disabled.field && ['table'].includes(item.type))))
+													res.push({
+														field:{value:disabled.field}
+													});
+											})(Object.values(this.keep.fields));
 										});
 										return res;
 									})(this.keep.action.disabled.fields)};
 									res['hidden']={value:((hiddens) => {
 										var res=[];
 										this.keep.sections.hidden.table.clearrows();
-										this.keep.sections.hidden.table.template.elm('[field-id=field]').elm('select').empty().assignoption(fields(true),'caption','id');
+										this.keep.sections.hidden.table.template.elm('[field-id=field]').elm('select').empty().assignoption(fields(true,true),'caption','id');
 										this.keep.sections.hidden.table.addrow();
 										hiddens.each((hidden,index) => {
-											if ((hidden.field in fieldinfos) || this.keep.layout.some((item) => (item.id==hidden.field && item.type=='box')))
-												res.push({
-													field:{value:hidden.field}
-												});
+											((containers) => {
+												if ((hidden.field in fieldinfos) || containers.some((item) => (item.id==hidden.field && ['box','table'].includes(item.type))))
+													res.push({
+														field:{value:hidden.field}
+													});
+											})(Object.values(this.keep.fields).concat(this.keep.layout));
 										});
 										return res;
 									})(this.keep.action.hidden)};
@@ -10061,7 +10086,7 @@ pd.modules={
 											var res=menu.tables.value.tr.shape((item) => {
 												return (item.elm('[field-id=valueid]').elm('.pd-field-value').text())?parseInt(item.elm('[field-id=valueid]').elm('.pd-field-value').text().replace(/[^0-9]+/g,'')):PD_THROW;
 											});
-											return 'F'+((res.length>0)?(res.numbersort().last()+1).toString():'1');
+											return 'F'+((res.length>0)?(res.numbersort().last()+1).toString():'1')+'_';
 										})());
 										cells.func.elm('select')
 										.append(pd.create('option').attr('value','CNT').html(pd.constants.common.caption.function.count[pd.lang]))
