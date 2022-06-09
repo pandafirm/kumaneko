@@ -1944,7 +1944,7 @@ class panda_datepicker extends panda_dialog{
 		.css({left:'0px'})
 		.on('click',(e) => {
 			/* calc months */
-			this.month=this.month.calc('-1 month').calc('first-of-month');
+			this.month=this.month.calc('-1 month,first-of-month');
 			/* show calendar */
 			this.show();
 		});
@@ -1952,7 +1952,7 @@ class panda_datepicker extends panda_dialog{
 		.css({right:'0px'})
 		.on('click',(e) => {
 			/* calc months */
-			this.month=this.month.calc('1 month').calc('first-of-month');
+			this.month=this.month.calc('1 month,first-of-month');
 			/* show calendar */
 			this.show();
 		});
