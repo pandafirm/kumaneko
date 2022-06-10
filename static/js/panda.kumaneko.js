@@ -6290,9 +6290,17 @@ pd.modules={
 															{
 																pd.request(pd.ui.baseuri()+'/report.php','GET',{'X-Requested-By':'panda'},{spreadsheet:res.closest('.pd-spreadsheet').elm('input').val()},true)
 																.then((resp) => {
-																	for (var key in resp.sheets) templates.template.elm('select').append(pd.create('option').attr('value',key).html(resp.sheets[key]));
+																	var sheets=((sheets) => {
+																		if (Array.isArray(sheets))
+																			sheets=sheets.reduce((result,current,index) => {
+																				result[index.toString()]=current;
+																				return result;
+																			},{});
+																		return sheets;
+																	})(resp.sheets);
+																	for (var key in sheets) templates.template.elm('select').append(pd.create('option').attr('value',key).html(sheets[key]));
 																	templates.addrow();
-																	resolve(resp.sheets);
+																	resolve(sheets);
 																})
 																.catch((error) => {
 																	pd.alert(error.message);
