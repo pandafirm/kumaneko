@@ -172,7 +172,8 @@ function setupsheet($arg_sheet,$arg_last)
 		foreach ($arg_sheet->data as $data)
 			if (is_array($data->rowData))
 				foreach ($data->rowData as $rowindex=>$rowdata)
-					if (is_array($rowdata->values)) $rows=array_merge($rows,setuprow($rowdata->values,$rowindex,$arg_sheet->properties->sheetId));
+					if (property_exists($rowdata,"values"))
+						if (is_array($rowdata->values)) $rows=array_merge($rows,setuprow($rowdata->values,$rowindex,$arg_sheet->properties->sheetId));
 	if ($config["edited"]!="")
 	{
 		$res=array_merge($res,$rows);
