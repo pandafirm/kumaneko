@@ -31,7 +31,7 @@ function setupcell($arg_field,$arg_source)
 	switch ($arg_field["type"])
 	{
 		case "checkbox":
-			$res=preg_replace("/<br[ \/].>/u","\n",strip_tags(implode(",",$arg_source[$arg_field["id"]]["value"])));
+			$res=strip_tags(preg_replace("/<br[ \/].>/u","\n",implode(",",$arg_source[$arg_field["id"]]["value"])));
 			break;
 		case "creator":
 		case "modifier":
@@ -68,8 +68,11 @@ function setupcell($arg_field,$arg_source)
 			}
 			$res=implode(",",$res);
 			break;
+		case "lookup":
+			$res=strip_tags(preg_replace("/<br[ \/].>/u","\n",$arg_source[$arg_field["id"]]["search"]));
+			break;
 		default:
-			$res=preg_replace("/<br[ \/].>/u","\n",strip_tags($arg_source[$arg_field["id"]]["value"]));
+			$res=strip_tags(preg_replace("/<br[ \/].>/u","\n",$arg_source[$arg_field["id"]]["value"]));
 			break;
 	}
 	return $res;
@@ -113,7 +116,7 @@ function setuprow($arg_cells,$arg_rowindex,$arg_sheetindex)
 								return $res;
 							},$cellvalue);
 						}
-					$cellvalue=preg_replace("/<br[ \/].>/u","\n",strip_tags($cellvalue));
+					$cellvalue=strip_tags(preg_replace("/<br[ \/].>/u","\n",$cellvalue));
 					switch ($type)
 					{
 						case 'DATE':
