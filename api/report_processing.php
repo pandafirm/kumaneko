@@ -164,11 +164,10 @@ function setuprow($arg_cells,$arg_rowindex,$arg_sheetindex)
 	}
 	return $res;
 }
-function setupsheet($arg_sheet,$arg_last)
+function setupsheet($arg_sheet,$arg_last,$arg_id=0)
 {
 	global $config,$fields,$tables;
-	$id=0;
-	$res=[];
+	$res=["delete"=>[],"update"=>[]];
 	$rows=[];
 	$config["edited"]="";
 	if (is_array($arg_sheet->data))
@@ -179,27 +178,30 @@ function setupsheet($arg_sheet,$arg_last)
 						if (is_array($rowdata->values)) $rows=array_merge($rows,setuprow($rowdata->values,$rowindex,$arg_sheet->properties->sheetId));
 	if ($config["edited"]!="")
 	{
-		$res=array_merge($res,$rows);
-		$id++;
+		$res["update"]=array_merge($res["update"],$rows);
+		$arg_id++;
 	}
-	else $res[]=["deleteSheet"=>["sheetId"=>$arg_sheet->properties->sheetId]];
+	else $res["delete"][]=["deleteSheet"=>["sheetId"=>$arg_sheet->properties->sheetId]];
 	if ($arg_last)
 		if ($config["edited"]=="table")
 			foreach ($tables as $key=>$value)
 				if (in_array("processing",array_column(array_values($value),"status"),true))
 				{
-					$res[]=[
+					$res["update"][]=[
 						"duplicateSheet"=>[
 							"sourceSheetId"=>$arg_sheet->properties->sheetId,
-							"insertSheetIndex"=>$id,
-							"newSheetId"=>$id,
-							"newSheetName"=>$arg_sheet->properties->title.'_'.strval($id)
+							"insertSheetIndex"=>$arg_sheet->properties->index,
+							"newSheetId"=>$arg_id,
+							"newSheetName"=>$arg_sheet->properties->title.'_'.strval($arg_id)
 						]
 					];
-					$res=array_merge($res,setupsheet($arg_sheet,$arg_last));
+					$arg_sheet->properties->index++;
+					[$delete,$update]=setupsheet($arg_sheet,$arg_last,$arg_id);
+					if (count($delete)!=0) $res["delete"]=array_merge($res["delete"],$delete);
+					if (count($update)!=0) $res["update"]=array_merge($res["update"],$update);
 					break;
 				}
-	return $res;
+	return [$res["delete"],$res["update"]];
 }
 if (count($argv)>1)
 {
@@ -237,7 +239,7 @@ if (count($argv)>1)
 							$res["fields"][$key]=$value;
 							break;
 					}
-				return array($res["fields"],$res["tables"]);
+				return [$res["fields"],$res["tables"]];
 			})(json_decode(mb_convert_encoding(file_get_contents(dirname(__FILE__)."/storage/json/config.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true)["apps"]["user"][$config["app"]]["fields"]);
 			$service=new clsSheet(
 				dirname(__FILE__)."/storage/google/".$config["servicekey"],
@@ -253,13 +255,18 @@ if (count($argv)>1)
 				$response=$service->get($fileid,true);
 				if ($response->spreadsheetId!="")
 				{
-					$requests=[];
+					$requests=["delete"=>[],"update"=>[]];
 					$sheets=[];
 					foreach ($response->sheets as $sheet)
 						if (in_array(strval($sheet->properties->sheetId),$config["template"],true)) $sheets[]=$sheet;
-						else $requests[]=["deleteSheet"=>["sheetId"=>$sheet->properties->sheetId]];
-					foreach ($sheets as $sheet) $requests=array_merge($requests,setupsheet($sheet,$sheet===end($sheets)));
-					$response=$service->update($fileid,["requests"=>$requests]);
+						else $requests["delete"][]=["deleteSheet"=>["sheetId"=>$sheet->properties->sheetId]];
+					foreach ($sheets as $sheet)
+					{
+						[$delete,$update]=setupsheet($sheet,$sheet===end($sheets));
+						if (count($delete)!=0) $requests["delete"]=array_merge($requests["delete"],$delete);
+						if (count($update)!=0) $requests["update"]=array_merge($requests["update"],$update);
+					}
+					$response=$service->update($fileid,["requests"=>array_merge($requests["update"],$requests["delete"])]);
 					if ($response->spreadsheetId!="")
 					{
 						$options=[
