@@ -681,11 +681,9 @@ class panda_kumaneko{
 						load(0,() => {
 							((contents,tab,nav) => {
 								/* build applications */
-								this.config.apps.sort.filter((item) => (item in this.config.apps.user)).concat(Object.keys(this.config.apps.user).filter((item) => !this.config.apps.sort.includes(item))).each((app) => {
-									((app) => {
-										this.apps[app.id]=new pd.modules.app(app,contents,tab,nav);
-										if (this.permit(app.permissions)=='denied') pd.elm('[nav-id=nav_'+app.id+']').hide();
-									})(this.config.apps.user[app]);
+								this.sort(this.config.apps.user,this.config.apps.sort).each((app,index) => {
+									this.apps[app.id]=new pd.modules.app(app,contents,tab,nav);
+									if (this.permit(app.permissions)=='denied') pd.elm('[nav-id=nav_'+app.id+']').hide();
 								});
 								for (var key in this.config.apps.system)
 									((app) => {
@@ -822,6 +820,10 @@ class panda_kumaneko{
 		if ('denied' in permissions)
 			if (calculate(permissions.denied)!=0) return 'denied';
 		return res;
+	}
+	/* sort */
+	sort(apps,sort){
+		return sort.filter((item) => (item in apps)).concat(Object.keys(apps).filter((item) => !sort.includes(item))).map((item) => apps[item]);
 	}
 	/* task */
 	task(action,queues){
@@ -1895,11 +1897,8 @@ pd.modules={
 															};
 															var finish=() => {
 																increments.progress.record++;
-																if (increments.progress.record<increments.record)
-																{
-																	pd.progressupdate();
-																	execute();
-																}
+																pd.progressupdate();
+																if (increments.progress.record<increments.record) execute();
 																else
 																{
 																	if (action.transfer.app in pd.kumaneko.apps)
@@ -1935,16 +1934,16 @@ pd.modules={
 																		else
 																		{
 																			if (action.transfer.pattern=='upsert')
-																			{
-																				res.push(create.record((() => {
-																					var res=pd.record.create(target);
-																					criterias.each((criteria,index) => {
-																						if (criteria.external.tableid) res[criteria.external.tableid]={value:[]};
-																						else res[criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.record));
-																					});
-																					return res;
-																				})()));
-																			}
+																				((criterias) => {
+																					res.push(create.record((() => {
+																						var res=pd.record.create(target);
+																						criterias.each((criteria,index) => {
+																							if (criteria.external.tableid) res[criteria.external.tableid]={value:[]};
+																							else res[criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.record));
+																						});
+																						return res;
+																					})()));
+																				})(criterias.filter((item) => !['id','autonumber','creator','createdtime','modifier','modifiedtime'].includes(item.external.type)));
 																		}
 																		return res;
 																	})(records);
@@ -2050,7 +2049,9 @@ pd.modules={
 								};
 								actions.formula().then(() => {
 									actions.report().then(() => {
+										pd.loadend();
 										actions.transfer().then(() => {
+											pd.loadstart();
 											actions.mail().then(() => {
 												resolve((actions.call)?{record:record}:{});
 											}).catch(() => reject({}));
@@ -7170,13 +7171,12 @@ pd.modules={
 												id:{value:''},
 												caption:{value:pd.constants.action.prompt.transfer.app[pd.lang]}
 											});
-											for (var key in this.keep.config.apps.user)
-												((app) => {
-													res.push({
-														id:{value:app.id},
-														caption:{value:app.name}
-													});
-												})(this.keep.config.apps.user[key]);
+											pd.kumaneko.sort(this.keep.config.apps.user,this.keep.config.apps.sort).each((app,index) => {
+												res.push({
+													id:{value:app.id},
+													caption:{value:app.name}
+												});
+											});
 											return res;
 										})(),'caption','id').val(this.keep.action.transfer.app).rebuild().then((fields) => {
 											elements.tables.criteria.clearrows();
@@ -8409,13 +8409,12 @@ pd.modules={
 													id:{value:''},
 													caption:{value:''}
 												});
-												for (var key in this.keep.config.apps.user)
-													((app) => {
-														res.push({
-															id:{value:app.id},
-															caption:{value:app.name}
-														});
-													})(this.keep.config.apps.user[key]);
+												pd.kumaneko.sort(this.keep.config.apps.user,this.keep.config.apps.sort).each((app,index) => {
+													res.push({
+														id:{value:app.id},
+														caption:{value:app.name}
+													});
+												});
 												return res;
 											})(),'caption','id').val(this.fieldinfo.app).rebuild().then((fields) => {
 												if (this.fieldinfo.search in fields) elements.search.val(this.fieldinfo.search);
@@ -9000,13 +8999,12 @@ pd.modules={
 									id:{value:''},
 									caption:{value:''}
 								});
-								for (var key in this.keep.config.apps.user)
-									((app) => {
-										res.push({
-											id:{value:app.id},
-											caption:{value:app.name}
-										});
-									})(this.keep.config.apps.user[key]);
+								pd.kumaneko.sort(this.keep.config.apps.user,this.keep.config.apps.sort).each((app,index) => {
+									res.push({
+										id:{value:app.id},
+										caption:{value:app.name}
+									});
+								});
 								return res;
 							})(),'caption','id').val(this.keep.linkage.app).rebuild().then((fields) => {
 								elements.tables.criteria.clearrows();
@@ -11145,8 +11143,8 @@ pd.modules={
 			/* set configuration */
 			set(){
 				return new Promise((resolve,reject) => {
-					this.sort.filter((item) => (item in this.apps)).concat(Object.keys(this.apps).filter((item) => !this.sort.includes(item))).each((app) => {
-						this.contents.elm('.pd-kumaneko-drag-vertical').append(this.lib.create(this.apps[app]));
+					pd.kumaneko.sort(this.apps,this.sort).each((app,index) => {
+						this.contents.elm('.pd-kumaneko-drag-vertical').append(this.lib.create(app));
 					});
 					resolve();
 				});
