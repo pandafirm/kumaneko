@@ -359,6 +359,7 @@ class panda{
 	}
 	/* show loader */
 	loadstart(){
+		this.progressend();
 		this.window.loader.show();
 	}
 	/* show panelizer */
@@ -404,6 +405,7 @@ class panda{
 	}
 	/* show progress */
 	progressstart(max){
+		this.loadend();
 		this.window.progress.show(max);
 	}
 	/* update progress */
@@ -3022,7 +3024,7 @@ class panda_progress{
 	/* update */
 	update(){
 		this.counter++;
-		this.monitor.html(Math.ceil(this.counter/this.max).toString()+' complete');
+		this.monitor.html(Math.ceil((this.counter/this.max)*100).toString()+'% complete');
 		this.progress.css({width:'calc(100% * '+(this.counter/this.max).toString()+')'});
 	}
 	/* show */

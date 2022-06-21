@@ -1122,7 +1122,7 @@ pd.modules={
 									),
 									res.header.firstChild
 								);
-								if (view.type!='edit')
+								if (!['customize','edit'].includes(view.type))
 									((actions) => {
 										actions.each((action,index) => {
 											((button) => {
@@ -1143,12 +1143,14 @@ pd.modules={
 																		if ('record' in param) records[index]=this.actions.value(param.record);
 																		else records[index]=null;
 																		index++;
+																		pd.progressupdate();
 																		if (index<records.length) setup(index,callback);
 																		else callback(records.filter((item) => item));
-																	}).catch(() => pd.loadend());
+																	}).catch(() => pd.progressend());
 																};
 																if (records.length!=0)
 																{
+																	pd.progressstart(records.length);
 																	setup(0,(records) => {
 																		if (records.length!=0)
 																		{
@@ -1174,7 +1176,7 @@ pd.modules={
 																						.then((param) => {
 																							if (!param.error)
 																							{
-																								pd.loadend();
+																								pd.progressend();
 																								pd.alert('Done!',() => {
 																									this.notify().then(() => {
 																										this.view.load(viewid).then(() => {
@@ -1184,20 +1186,20 @@ pd.modules={
 																									});
 																								});
 																							}
-																							else pd.loadend();
+																							else pd.progressend();
 																						});
 																					})
 																					.catch((error) => {
-																						pd.loadend();
+																						pd.progressend();
 																						pd.alert(error.message);
 																					});
 																				}
-																				else pd.loadend();
+																				else pd.progressend();
 																			});
 																		}
 																		else
 																		{
-																			pd.loadend();
+																			pd.progressend();
 																			pd.alert('Done!');
 																		}
 																	});
@@ -1235,6 +1237,7 @@ pd.modules={
 								{
 									res.header.elm('.pd-kumaneko-app-header-space').append(button.html(action.caption).on('click',(e) => {
 										pd.confirm(action.message,() => {
+											pd.loadstart();
 											this.actions.button(action,pd.record.get(this.record.ui.body,this.app,true).record).then((param) => {
 												pd.loadend();
 												pd.alert('Done!',() => {
@@ -1484,20 +1487,20 @@ pd.modules={
 													var assign=(target,record,row) => {
 														target=target.replace(/\r/g,'').replace(/\n/g,'<br>');
 														((handler) => {
-															for (var key in record) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],record[key].value));
-															for (var key in row) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],row[key].value));
+															for (var key in record) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],record[key]));
+															for (var key in row) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],row[key]));
 														})((fieldinfo,value) => {
 															var res='';
 															if (fieldinfo)
 																switch (fieldinfo.type)
 																{
 																	case 'checkbox':
-																		if (Array.isArray(value)) res=value.join(',');
+																		if (Array.isArray(value.value)) res=value.value.join(',');
 																		break;
 																	case 'creator':
 																	case 'modifier':
 																	case 'user':
-																		res=value.shape((item) => {
+																		res=value.value.shape((item) => {
 																			var id=item;
 																			var res=systems.user.filter((item) => {
 																				return item.__id.value=id;
@@ -1506,7 +1509,7 @@ pd.modules={
 																		}).join(',');
 																		break;
 																	case 'department':
-																		res=value.shape((item) => {
+																		res=value.value.shape((item) => {
 																			var id=item;
 																			var res=systems.department.filter((item) => {
 																				return item.__id.value=id;
@@ -1515,15 +1518,18 @@ pd.modules={
 																		}).join(',');
 																		break;
 																	case 'file':
-																		res=value.shape((item) => {
+																		res=value.value.shape((item) => {
 																			return (item.name)?item.name:PD_THROW;
 																		}).join(',');
+																		break;
+																	case 'lookup':
+																		res=value.search;
 																		break;
 																	case 'spacer':
 																	case 'table':
 																		break;
 																	case 'group':
-																		res=value.shape((item) => {
+																		res=value.value.shape((item) => {
 																			var id=item;
 																			var res=systems.group.filter((item) => {
 																				return item.__id.value=id;
@@ -1532,14 +1538,13 @@ pd.modules={
 																		}).join(',');
 																		break;
 																	default:
-																		res=value;
+																		res=value.value;
 																		break;
 																}
 															return res;
 														});
 														return target;
 													};
-													pd.loadstart();
 													pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'departments',query:'',offset:0,limit:0},true)
 													.then((resp) => {
 														systems.department=resp.records;
@@ -1657,7 +1662,6 @@ pd.modules={
 											{
 												if (action.report.saveas in fieldinfos)
 												{
-													pd.loadstart();
 													pd.request(
 														pd.ui.baseuri()+'/report.php','POST',{'X-Requested-By':'panda'},
 														{
@@ -1897,7 +1901,6 @@ pd.modules={
 															};
 															var finish=() => {
 																increments.progress.record++;
-																pd.progressupdate();
 																if (increments.progress.record<increments.record) execute();
 																else
 																{
@@ -2025,7 +2028,6 @@ pd.modules={
 														{
 															increments.progress.record=0;
 															increments.progress.row=0;
-															pd.progressstart(increments.record);
 															execute();
 														}
 														else
@@ -2049,9 +2051,7 @@ pd.modules={
 								};
 								actions.formula().then(() => {
 									actions.report().then(() => {
-										pd.loadend();
 										actions.transfer().then(() => {
-											pd.loadstart();
 											actions.mail().then(() => {
 												resolve((actions.call)?{record:record}:{});
 											}).catch(() => reject({}));
@@ -2594,6 +2594,8 @@ pd.modules={
 								})(pd.extend({},app.fields[view.fields.title]))
 							});
 							break;
+						case 'customize':
+							break;
 						default:
 							view.body.elm('.pd-view').clearrows();
 							if (option.readonly) view.body.elm('.pd-view').elms('thead tr').each((element,index) => element.elms('.pd-view-button').last().addclass('pd-hidden'));
@@ -3011,6 +3013,8 @@ pd.modules={
 										}
 									);
 								})(pd.create('div').addclass('pd-kumaneko-map'));
+								break;
+							case 'customize':
 								break;
 							default:
 								if (!Object.values(this.app.fields).some((item) => item.type=='table'))
@@ -4173,6 +4177,9 @@ pd.modules={
 					delete:[]
 				};
 				/* modify elements */
+				this.header.addclass('pd-kumaneko-builder-header')
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('App Settings'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
 				this.container.css({
 					height:'calc(100% - 1em)',
 					width:'calc(100% - 1em)'
@@ -4632,6 +4639,7 @@ pd.modules={
 													{option:{value:'timeseries'}}
 												];
 												if (map) res.push({option:{value:'map'}});
+												res.push({option:{value:'customize'}});
 												return res;
 											})(pd.map.loaded)
 										}
@@ -4651,78 +4659,77 @@ pd.modules={
 										pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.app.caption.button.add.view[pd.lang]).on('click',(e) => {
 											/* show viewbuilder */
 											((type) => {
-												menu.builder.show(this.app.id,(() => {
-													var res={
-														id:'',
-														name:'New '+pd.constants.app.caption.view.name[type][pd.lang],
-														type:type,
-														fields:[],
-														query:'',
-														sort:''
-													};
-													switch (type)
-													{
-														case 'calendar':
-															res.fields={
-																date:'',
-																title:''
-															};
-															break;
-														case 'crosstab':
-															delete res.sort;
-															res.chart={
-																type:'table'
-															};
-															res.fields={
-																column:{
-																	field:'',
-																	format:'',
-																	sort:'asc'
-																},
-																rows:[],
-																value:{
-																	field:'',
-																	func:'CNT'
-																}
-															};
-															break;
-														case 'timeseries':
-															delete res.sort;
-															res.chart={
-																type:'table'
-															};
-															res.fields={
-																column:{
-																	field:'',
-																	period:''
-																},
-																rows:[],
-																values:[]
-															};
-															break;
-														case 'map':
-															res.fields={
-																lat:'',
-																lng:'',
-																title:'',
-																color:'',
-																address:'',
-																postalcode:'',
-																handover:false
-															};
-															break;
-													}
-													return res;
-												})(),this.app.fields,(view) => {
-													pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'view'},true)
-													.then((resp) => {
-														view.id=resp.id.toString();
+												pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'view'},true)
+												.then((resp) => {
+													menu.builder.show(this.app.id,(() => {
+														var res={
+															id:resp.id.toString(),
+															name:'New '+pd.constants.app.caption.view.name[type][pd.lang],
+															type:type,
+															fields:[],
+															query:'',
+															sort:''
+														};
+														switch (type)
+														{
+															case 'calendar':
+																res.fields={
+																	date:'',
+																	title:''
+																};
+																break;
+															case 'crosstab':
+																delete res.sort;
+																res.chart={
+																	type:'table'
+																};
+																res.fields={
+																	column:{
+																		field:'',
+																		format:'',
+																		sort:'asc'
+																	},
+																	rows:[],
+																	value:{
+																		field:'',
+																		func:'CNT'
+																	}
+																};
+																break;
+															case 'timeseries':
+																delete res.sort;
+																res.chart={
+																	type:'table'
+																};
+																res.fields={
+																	column:{
+																		field:'',
+																		period:''
+																	},
+																	rows:[],
+																	values:[]
+																};
+																break;
+															case 'map':
+																res.fields={
+																	lat:'',
+																	lng:'',
+																	title:'',
+																	color:'',
+																	address:'',
+																	postalcode:'',
+																	handover:false
+																};
+																break;
+														}
+														return res;
+													})(),this.app.fields,(view) => {
 														menu.contents.elm('.pd-kumaneko-drag-vertical').append(menu.lib.create(view));
 														menu.lib.remodel();
-													})
-													.catch((error) => {
-														pd.alert(error.message);
 													});
+												})
+												.catch((error) => {
+													pd.alert(error.message);
 												});
 											})(pd.record.get(menu.contents,menu.app,true).record.type.value)
 										})
@@ -4741,24 +4748,23 @@ pd.modules={
 									.append(
 										pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.app.caption.button.add.linkage[pd.lang]).on('click',(e) => {
 											/* show linkagebuilder */
-											menu.builder.show({
-												id:'',
-												name:'New '+pd.constants.app.caption.linkage[pd.lang],
-												app:'',
-												query:'',
-												sort:'',
-												criteria:[],
-												display:[]
-											},this.app.fields,this.app.layout,(linkage) => {
-												pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'linkage'},true)
-												.then((resp) => {
-													linkage.id=resp.id.toString();
+											pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'linkage'},true)
+											.then((resp) => {
+												menu.builder.show({
+													id:resp.id.toString(),
+													name:'New '+pd.constants.app.caption.linkage[pd.lang],
+													app:'',
+													query:'',
+													sort:'',
+													criteria:[],
+													display:[]
+												},this.app.fields,this.app.layout,(linkage) => {
 													menu.contents.elm('.pd-kumaneko-drag-vertical').append(menu.lib.create(linkage));
 													menu.lib.remodel();
-												})
-												.catch((error) => {
-													pd.alert(error.message);
 												});
+											})
+											.catch((error) => {
+												pd.alert(error.message);
 											});
 										})
 									)
@@ -4869,68 +4875,67 @@ pd.modules={
 										pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.app.caption.button.add.action[pd.lang]).on('click',(e) => {
 											/* show actionbuilder */
 											((trigger) => {
-												menu.builder.show((() => {
-													var res={
-														id:'',
-														name:'New '+pd.constants.app.caption.action.name[trigger][pd.lang],
-														trigger:trigger,
-														filter:'',
-														user:[],
-														formula:[]
-													};
-													switch (trigger)
-													{
-														case 'button':
-															res=pd.extend({
-																caption:'',
-																message:'',
-																report:{
-																	spreadsheet:'',
-																	saveas:'',
-																	store:'',
-																	size:'',
-																	orientation:'',
-																	template:[]
-																},
-																transfer:{
-																	app:'',
-																	pattern:'insert',
-																	criteria:[],
-																	mapping:[]
-																},
-																mail:{
-																	from:'',
-																	to:'',
-																	cc:'',
-																	bcc:'',
-																	attachment:'',
-																	subject:'',
-																	body:''
-																}
-															},res);
-															break;
-														case 'value':
-															res=pd.extend({
-																style:[],
-																disabled:{
-																	record:false,
-																	fields:[]
-																},
-																hidden:[]
-															},res);
-															break;
-													}
-													return res;
-												})(),this.app.fields,this.app.layout,(action) => {
-													pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'action'},true)
-													.then((resp) => {
-														action.id=resp.id.toString();
+												pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'action'},true)
+												.then((resp) => {
+													menu.builder.show((() => {
+														var res={
+															id:resp.id.toString(),
+															name:'New '+pd.constants.app.caption.action.name[trigger][pd.lang],
+															trigger:trigger,
+															filter:'',
+															user:[],
+															formula:[]
+														};
+														switch (trigger)
+														{
+															case 'button':
+																res=pd.extend({
+																	caption:'',
+																	message:'',
+																	report:{
+																		spreadsheet:'',
+																		saveas:'',
+																		store:'',
+																		size:'',
+																		orientation:'',
+																		template:[]
+																	},
+																	transfer:{
+																		app:'',
+																		pattern:'insert',
+																		criteria:[],
+																		mapping:[]
+																	},
+																	mail:{
+																		from:'',
+																		to:'',
+																		cc:'',
+																		bcc:'',
+																		attachment:'',
+																		subject:'',
+																		body:''
+																	}
+																},res);
+																break;
+															case 'value':
+																res=pd.extend({
+																	style:[],
+																	disabled:{
+																		record:false,
+																		fields:[]
+																	},
+																	hidden:[]
+																},res);
+																break;
+														}
+														return res;
+													})(),this.app.fields,this.app.layout,(action) => {
 														menu.contents.elm('.pd-kumaneko-drag-vertical').append(menu.lib.create(action));
 														menu.lib.remodel();
-													})
-													.catch((error) => {
-														pd.alert(error.message);
 													});
+												})
+												.catch((error) => {
+													pd.alert(error.message);
 												});
 											})(pd.record.get(menu.contents,menu.app,true).record.trigger.value)
 										})
@@ -5112,14 +5117,14 @@ pd.modules={
 					pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
 					.then((resp) => {
 						var config=resp.file;
-						if (!this.contents.elm('[field-id=name]').elm('input').val())
+						if (!this.contents.elm('.pd-kumaneko-appbuilder-name').elm('input').val())
 						{
 							res.error=true;
 							pd.alert(pd.constants.app.message.invalid.name[pd.lang],() => {
 								resolve(res);
 							})
 						}
-						res.app.name=this.contents.elm('[field-id=name]').elm('input').val();
+						res.app.name=this.contents.elm('.pd-kumaneko-appbuilder-name').elm('input').val();
 						((app,fieldinfos) => {
 							var error='';
 							/* get fields */
@@ -5504,7 +5509,12 @@ pd.modules={
 			/* set configuration */
 			set(){
 				return new Promise((resolve,reject) => {
-					this.contents.elm('[field-id=name]').elm('input').val(this.app.name);
+					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.app.id.toString()).on('click',(e) => {
+						navigator.clipboard.writeText(this.app.id.toString()).then(() => {
+							pd.alert(pd.constants.common.message.clipboard[pd.lang]);
+						})
+					});
+					this.contents.elm('.pd-kumaneko-appbuilder-name').elm('input').val(this.app.name);
 					/* setup fields */
 					((form,fieldinfos) => {
 						var setup=(index,row,parent,fields) => {
@@ -5560,6 +5570,16 @@ pd.modules={
 			show(app){
 				if (app instanceof Object)
 				{
+					var show=() => {
+						this.queues.delete=[];
+						/* set configuration */
+						this.set().then(() => {
+							/* show */
+							super.show();
+							/* activate */
+							this.menus.form.tab.container.click();
+						});
+					};
 					/* initialize elements */
 					this.menus.form.lib.init();
 					this.menus.views.lib.init();
@@ -5568,32 +5588,32 @@ pd.modules={
 					/* setup properties */
 					if (Object.keys(app).length==0)
 					{
-						this.app={
-							id:'',
-							name:'new application',
-							fields:{},
-							styles:{},
-							layout:[],
-							views:[],
-							linkages:[],
-							permissions:{'owner':[pd.operator.__id.value.toString()],'admin':[],'denied':[]},
-							customize:[],
-							actions:[]
-						};
+						pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'app'},true)
+						.then((resp) => {
+							this.app={
+								id:resp.id.toString(),
+								name:'new application',
+								fields:{},
+								styles:{},
+								layout:[],
+								views:[],
+								linkages:[],
+								permissions:{'owner':[pd.operator.__id.value.toString()],'admin':[],'denied':[]},
+								customize:[],
+								actions:[]
+							};
+							show();
+						})
+						.catch((error) => {
+							pd.alert(error.message);
+						});
 					}
 					else
 					{
 						this.app=pd.extend({},app);
 						this.app.views=this.app.views.filter((item) => item.id!='0');
+						show();
 					}
-					this.queues.delete=[];
-					/* set configuration */
-					this.set().then(() => {
-						/* show */
-						super.show();
-						/* activate */
-						this.menus.form.tab.container.click();
-					});
 				}
 				else pd.alert(pd.constants.common.message.invalid.config.corrupted[pd.lang]);
 			}
@@ -6226,7 +6246,9 @@ pd.modules={
 				this.keep.sections.style.table=pd.ui.table.activate(pd.ui.table.create(this.app.fields.style),this.app);
 				this.keep.sections.disabled.table=pd.ui.table.activate(pd.ui.table.create(this.app.fields.disabled),this.app);
 				this.keep.sections.hidden.table=pd.ui.table.activate(pd.ui.table.create(this.app.fields.hidden),this.app);
-				this.header.css({paddingLeft:'0.25em',textAlign:'left'}).html('Action Settings');
+				this.header.addclass('pd-kumaneko-builder-header')
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('Action Settings'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
 				this.container.addclass('pd-kumaneko-main').css({
 					height:'calc(100% - 1em)',
 					width:'55em'
@@ -7046,6 +7068,11 @@ pd.modules={
 								});
 							return res;
 						};
+						this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.action.id.toString()).on('click',(e) => {
+							navigator.clipboard.writeText(this.keep.action.id.toString()).then(() => {
+								pd.alert(pd.constants.common.message.clipboard[pd.lang]);
+							})
+						});
 						pd.record.set(this.contents,this.app,(() => {
 							var formulainfos=pd.extend({},fieldinfos);
 							var res={
@@ -7705,7 +7732,11 @@ pd.modules={
 						.append(
 							((res) => {
 								res.elm('input').val(this.fieldinfo.id);
-								res.elm('.pd-guide').html(this.fieldinfo.id);
+								res.elm('.pd-guide').css({cursor:'pointer'}).html(this.fieldinfo.id).on('click',(e) => {
+									navigator.clipboard.writeText(this.fieldinfo.id).then(() => {
+										pd.alert(pd.constants.common.message.clipboard[pd.lang]);
+									})
+								});
 								return res;
 							})(pd.ui.field.activate(pd.ui.field.create(this.app.fields.id).addclass('pd-readonly').css({width:'100%'}),this.app))
 						)
@@ -8763,7 +8794,9 @@ pd.modules={
 				},(table,index) => {
 					if (table.tr.length==0) table.addrow();
 				},false);
-				this.header.css({paddingLeft:'0.25em',textAlign:'left'}).html('Linkage View Settings');
+				this.header.addclass('pd-kumaneko-builder-header')
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('Linkage View Settings'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
 				this.container.addclass('pd-kumaneko-main').css({
 					height:'calc(100% - 1em)',
 					width:'55em'
@@ -8988,6 +9021,11 @@ pd.modules={
 			/* set configuration */
 			set(){
 				return new Promise((resolve,reject) => {
+					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.linkage.id.toString()).on('click',(e) => {
+						navigator.clipboard.writeText(this.keep.linkage.id.toString()).then(() => {
+							pd.alert(pd.constants.common.message.clipboard[pd.lang]);
+						})
+					});
 					pd.record.set(this.contents,this.app,(() => {
 						var res={
 							name:{value:this.keep.linkage.name}
@@ -9261,7 +9299,7 @@ pd.modules={
 											},view.fields)
 										)
 										.then((resp) => {
-											this.menus.crosstab.preview.show(resp,pd.extend({name:this.contents.elm('[field-id=name]').elm('input').val()},view));
+											this.menus.crosstab.preview.show(resp,pd.extend({name:this.contents.elm('.pd-kumaneko-viewbuilder-name').elm('input').val()},view));
 										})
 										.catch((error) => {
 											pd.alert(error.message);
@@ -9342,7 +9380,7 @@ pd.modules={
 											},view.fields)
 										)
 										.then((resp) => {
-											this.menus.timeseries.preview.show(resp,pd.extend({name:this.contents.elm('[field-id=name]').elm('input').val()},view));
+											this.menus.timeseries.preview.show(resp,pd.extend({name:this.contents.elm('.pd-kumaneko-viewbuilder-name').elm('input').val()},view));
 										})
 										.catch((error) => {
 											pd.alert(error.message);
@@ -9401,10 +9439,17 @@ pd.modules={
 						app:{},
 						contents:null,
 						map:null
+					},
+					customize:{
+						id:'customize',
+						app:{},
+						contents:null
 					}
 				};
 				/* modify elements */
-				this.header.css({paddingLeft:'0.25em',textAlign:'left'}).html('View Settings');
+				this.header.addclass('pd-kumaneko-builder-header')
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('View Settings'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
 				this.container.css({
 					height:'calc(100% - 1em)',
 					width:'calc(100% - 1em)'
@@ -10393,6 +10438,27 @@ pd.modules={
 								);
 								if (pd.lang!='ja') menu.contents.elm('[field-id=postalcode]').hide();
 								break;
+							case 'customize':
+								menu.contents
+								.append(
+									((res) => {
+										res.elm('.pd-field-value')
+										.append(pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
+											this.keep.filter.show();
+											e.stopPropagation();
+											e.preventDefault();
+										}))
+										.append(pd.create('span').addclass('pd-kumaneko-filter-monitor'));
+										return res;
+									})(pd.ui.field.create({
+										id:'monitor',
+										type:'spacer',
+										caption:pd.constants.view.caption.customize.filter[pd.lang],
+										required:false,
+										nocaption:false
+									}).css({width:'100%'}))
+								)
+								break;
 						}
 						this.contents.elm('#pd-kumaneko-viewbuilder-space-contents').append(menu.contents);
 					})(this.menus[key]);
@@ -10405,14 +10471,14 @@ pd.modules={
 						error:false,
 						view:this.keep.view
 					};
-					if (!this.contents.elm('[field-id=name]').elm('input').val())
+					if (!this.contents.elm('.pd-kumaneko-viewbuilder-name').elm('input').val())
 					{
 						res.error=true;
 						pd.alert(pd.constants.view.message.invalid.name[pd.lang],() => {
 							resolve(res);
 						});
 					}
-					res.view.name=this.contents.elm('[field-id=name]').elm('input').val();
+					res.view.name=this.contents.elm('.pd-kumaneko-viewbuilder-name').elm('input').val();
 					switch (res.view.type)
 					{
 						case 'calendar':
@@ -10486,6 +10552,8 @@ pd.modules={
 								return res.error;
 							})(pd.record.get(this.menus.map.contents,this.menus.map.app),res.view);
 							break;
+						case 'customize':
+							break;
 						default:
 							if (res.view.fields.length==0)
 							{
@@ -10509,7 +10577,16 @@ pd.modules={
 			/* set configuration */
 			set(){
 				return new Promise((resolve,reject) => {
-					this.contents.elm('[field-id=name]').elm('input').val(this.keep.view.name);
+					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.view.id.toString()).on('click',(e) => {
+						navigator.clipboard.writeText(this.keep.view.id.toString()).then(() => {
+							pd.alert(pd.constants.common.message.clipboard[pd.lang]);
+						})
+					});
+					this.container.css({
+						height:(this.keep.view.type=='customize')?'calc(12em + 1px)':'calc(100% - 1em)',
+						width:(this.keep.view.type=='customize')?'55em':'calc(100% - 1em)'
+					});
+					this.contents.elm('.pd-kumaneko-viewbuilder-name').elm('input').val(this.keep.view.name);
 					switch (this.keep.view.type)
 					{
 						case 'calendar':
@@ -10615,7 +10692,11 @@ pd.modules={
 							}
 							this.keep.filter.monitor=this.menus.crosstab.contents.elm('.pd-kumaneko-filter-monitor');
 							if (this.keep.view.fields.column.field) this.menus.crosstab.lib.load(this.keep.view);
-							else this.menus.crosstab.preview.hide();
+							else
+							{
+								this.menus.crosstab.preview.hide();
+								this.menus.crosstab.preview.chart.hide();
+							}
 							break;
 						case 'timeseries':
 							pd.record.set(this.menus.timeseries.contents,this.menus.timeseries.app,((elements) => {
@@ -10676,7 +10757,11 @@ pd.modules={
 							}
 							this.keep.filter.monitor=this.menus.timeseries.contents.elms('.pd-kumaneko-filter-monitor').last();
 							if (this.keep.view.fields.column.field) this.menus.timeseries.lib.load(this.keep.view);
-							else this.menus.timeseries.preview.hide();
+							else
+							{
+								this.menus.timeseries.preview.hide();
+								this.menus.timeseries.preview.chart.hide();
+							}
 							break;
 						case 'map':
 							pd.record.set(this.menus.map.contents,this.menus.map.app,(() => {
@@ -10745,6 +10830,14 @@ pd.modules={
 								else this.menus[key].contents.hide();
 							}
 							this.keep.filter.monitor=this.menus.map.contents.elm('.pd-kumaneko-filter-monitor');
+							break;
+						case 'customize':
+							this.keep.filter.monitor=this.menus.customize.contents.elm('.pd-kumaneko-filter-monitor');
+							for (var key in this.menus)
+							{
+								if (key==this.keep.view.type) this.menus[key].contents.show();
+								else this.menus[key].contents.hide();
+							}
 							break;
 						default:
 							((nav) => {
@@ -11449,7 +11542,7 @@ pd.modules={
 															var rect=item.getBoundingClientRect();
 															if (!item.hasclass('pd-kumaneko-drag-guide'))
 															{
-																if (pd.children(item).filter((item) => item.visible()).length==0) item.hide();
+																if (pd.children(item).filter((item) => item.visible()).length==0) item.addclass('pd-hidden');
 																res=(e.pageY<rect.top+rect.height*0.5);
 															}
 															return res;
@@ -11551,43 +11644,42 @@ pd.modules={
 			set(){
 				return new Promise((resolve,reject) => {
 					((nav) => {
-						for (var key in this.keep.config.apps.user)
-							((app) => {
-								nav.append(
-									((res) => {
-										res
+						pd.kumaneko.sort(this.keep.config.apps.user,this.keep.config.apps.sort).each((app,index) => {
+							nav.append(
+								((res) => {
+									res
+									.append(
+										pd.create('span').addclass('pd-kumaneko-nav-button-item')
+										.append(pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-down'))
+										.append(pd.create('span').addclass('pd-kumaneko-nav-button-item-label').html(app.name))
+										.on('click',(e) => {
+											if (res.elm('.pd-kumaneko-nav-button-details').visible())
+											{
+												res.elm('.pd-kumaneko-nav-button-details').hide();
+												res.elm('.pd-icon-arrow').removeclass('pd-icon-arrow-up').addclass('pd-icon-arrow-down');
+											}
+											else
+											{
+												res.elm('.pd-kumaneko-nav-button-details').show();
+												res.elm('.pd-icon-arrow').removeclass('pd-icon-arrow-down').addclass('pd-icon-arrow-up');
+											}
+										})
+									)
+									.append(pd.create('div').addclass('pd-kumaneko-nav-button-details').hide());
+									app.views.shape((item) => (!['customize','edit'].includes(item.type))?item:PD_THROW).each((view,index) => {
+										res.elm('.pd-kumaneko-nav-button-details')
 										.append(
-											pd.create('span').addclass('pd-kumaneko-nav-button-item')
-											.append(pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-down'))
-											.append(pd.create('span').addclass('pd-kumaneko-nav-button-item-label').html(app.name))
-											.on('click',(e) => {
-												if (res.elm('.pd-kumaneko-nav-button-details').visible())
-												{
-													res.elm('.pd-kumaneko-nav-button-details').hide();
-													res.elm('.pd-icon-arrow').removeclass('pd-icon-arrow-up').addclass('pd-icon-arrow-down');
-												}
-												else
-												{
-													res.elm('.pd-kumaneko-nav-button-details').show();
-													res.elm('.pd-icon-arrow').removeclass('pd-icon-arrow-down').addclass('pd-icon-arrow-up');
-												}
-											})
-										)
-										.append(pd.create('div').addclass('pd-kumaneko-nav-button-details').hide());
-										app.views.shape((item) => (item.type!='edit')?item:PD_THROW).each((view,index) => {
-											res.elm('.pd-kumaneko-nav-button-details')
-											.append(
-												((res) => {
-													this.keep.nav[app.id+'_'+view.id]=res;
-													return this.lib.activate(res,{type:'panel',app:app.id,view:view.id,styles:{width:'235px'}})
-													.append(pd.create('span').addclass('pd-kumaneko-nav-button-details-item-label').html(view.name));
-												})(pd.create('span').addclass('pd-kumaneko-nav-button-details-item'))
-											);
-										});
-										return res;
-									})(pd.create('div').addclass('pd-kumaneko-nav-button pd-kumaneko-border-bottom'))
-								);
-							})(this.keep.config.apps.user[key]);
+											((res) => {
+												this.keep.nav[app.id+'_'+view.id]=res;
+												return this.lib.activate(res,{type:'panel',app:app.id,view:view.id,styles:{width:'235px'}})
+												.append(pd.create('span').addclass('pd-kumaneko-nav-button-details-item-label').html(view.name));
+											})(pd.create('span').addclass('pd-kumaneko-nav-button-details-item'))
+										);
+									});
+									return res;
+								})(pd.create('div').addclass('pd-kumaneko-nav-button pd-kumaneko-border-bottom'))
+							);
+						});
 						return nav;
 					})(this.contents.elm('.pd-kumaneko-nav-main').empty());
 					((form) => {
@@ -12378,6 +12470,10 @@ pd.constants=pd.extend({
 			}
 		},
 		message:{
+			clipboard:{
+				en:'Copied it to the clipboard',
+				ja:'クリップボードにコピーしました'
+			},
 			confirm:{
 				changed:{
 					en:'Your changes have not been saved.<br>Can I continue?',
@@ -12949,6 +13045,10 @@ pd.constants=pd.extend({
 					map:{
 						en:'map',
 						ja:'地図'
+					},
+					customize:{
+						en:'customize',
+						ja:'カスタム'
 					}
 				},
 				name:{
@@ -12971,6 +13071,10 @@ pd.constants=pd.extend({
 					map:{
 						en:'Map view',
 						ja:'地図'
+					},
+					customize:{
+						en:'Customize view',
+						ja:'カスタマイズ'
 					}
 				},
 				title:{
@@ -12993,6 +13097,10 @@ pd.constants=pd.extend({
 					map:{
 						en:'Map view',
 						ja:'地図形式'
+					},
+					customize:{
+						en:'Customize view',
+						ja:'カスタマイズ形式'
 					}
 				}
 			}
@@ -13514,6 +13622,12 @@ pd.constants=pd.extend({
 				type:{
 					en:'Chart Type',
 					ja:'グラフの種類'
+				}
+			},
+			customize:{
+				filter:{
+					en:'Filter Setting',
+					ja:'取得するレコードの絞り込み条件'
 				}
 			},
 			list:{

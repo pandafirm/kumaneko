@@ -2557,6 +2557,7 @@ class panda_user_interface{
 								break;
 						}
 					};
+					table.chart=chart;
 					return table;
 				})(pd.create('table').addclass('pd-crosstab'),pd.create('div').css({overflow:'hidden'}));
 			},
