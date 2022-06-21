@@ -184,7 +184,7 @@ class clsRequest extends clsBase
 				}
 				restore_error_handler();
 			}
-			else $this->callrequesterror(400);
+			else $this->callrequesterror(500,"The field specified in the \"Column\" section is not registered with the server.");
 		}
 		else $this->callrequesterror(500,"Please specify a date less than 29 days.");
 		header("HTTP/1.1 200 OK");

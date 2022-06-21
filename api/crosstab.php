@@ -140,7 +140,7 @@ class clsRequest extends clsBase
 			}
 			$this->response["records"]=$this->createrecords(0,$this->body["value"],$this->records,$users,$departments,$groups);
 		}
-		else $this->callrequesterror(400);
+		else $this->callrequesterror(500,"The field specified in the \"Column\" section is not registered with the server.");
 		header("HTTP/1.1 200 OK");
 		header('Content-Type: application/json; charset=utf-8');
 		echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
