@@ -38,6 +38,7 @@ set_error_handler(function($arg_errno,$arg_errstr,$arg_errfile,$arg_errline,$arg
 });
 abstract class clsBase
 {
+	protected $operator;
 	abstract protected function GET();
 	abstract protected function POST();
 	abstract protected function PUT();
@@ -73,25 +74,44 @@ abstract class clsBase
 	{
 		if ($_SERVER["REQUEST_METHOD"]!="OPTIONS")
 		{
-			if (!isset($_SERVER['HTTP_X_REQUESTED_BY'])) $this->callrequesterror(400);
+			if (!isset($_SERVER['HTTP_X_AUTHORIZATION'])) $this->callrequesterror(500,"Authorization failed");
 			else
 			{
-				if (strtolower($_SERVER['HTTP_X_REQUESTED_BY'])!='panda') $this->callrequesterror(400);
-				switch ($_SERVER["REQUEST_METHOD"])
+				$token=explode(":",base64_decode($_SERVER['HTTP_X_AUTHORIZATION']));
+				if (count($token)==2)
 				{
-					case "GET":
-						$this->GET();
-						break;
-					case "POST":
-						$this->POST();
-						break;
-					case "PUT":
-						$this->PUT();
-						break;
-					case "DELETE":
-						$this->DELETE();
-						break;
+					if (file_exists(dirname(__DIR__)."/storage/json/users.json"))
+					{
+						$account=$token[0];
+						$pwd=$token[1];
+						$users=json_decode(mb_convert_encoding(file_get_contents(dirname(__DIR__)."/storage/json/users.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
+						$users=array_filter($users,function($values,$key) use ($account,$pwd){
+							return $values["account"]["value"]==$account && $values["pwd"]["value"]==$pwd && $values["available"]["value"]=="available";
+						},ARRAY_FILTER_USE_BOTH);
+						if (count($users)==1)
+						{
+							$this->operator=array_key_first($users);
+							switch ($_SERVER["REQUEST_METHOD"])
+							{
+								case "GET":
+									$this->GET();
+									break;
+								case "POST":
+									$this->POST();
+									break;
+								case "PUT":
+									$this->PUT();
+									break;
+								case "DELETE":
+									$this->DELETE();
+									break;
+							}
+						}
+						else $this->callrequesterror(500,"Authentication information is incorrect");
+					}
+					else $this->callrequesterror(500,"User is not registered");
 				}
+				else $this->callrequesterror(500,"Authorization failed");
 			}
 		}
 	}
