@@ -62,7 +62,7 @@ class clsRequest extends clsBase
 			"",
 			0,
 			(isset($this->body["limit"]))?$this->body["limit"]:0,
-			(isset($this->body["operator"]))?$this->body["operator"]:""
+			$this->operator
 		);
 		$this->response["fields"]=[];
 		$this->response["records"]=[];

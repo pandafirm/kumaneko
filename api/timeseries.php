@@ -102,7 +102,7 @@ class clsRequest extends clsBase
 				"",
 				0,
 				(isset($this->body["limit"]))?$this->body["limit"]:0,
-				(isset($this->body["operator"]))?$this->body["operator"]:""
+				$this->operator
 			);
 			$this->response["fields"]=[
 				[
@@ -160,7 +160,7 @@ class clsRequest extends clsBase
 						"nocaption"=>true,
 						"format"=>"text"
 					];
-					$values[$key]=$this->createvalues($this->body["values"],$query,$this->records,(isset($this->body["operator"]))?$this->body["operator"]:"");
+					$values[$key]=$this->createvalues($this->body["values"],$query,$this->records,$this->operator);
 				}
 				set_error_handler(function(){
 					throw new Exception('Formula Error!');

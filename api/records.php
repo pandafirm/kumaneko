@@ -42,7 +42,7 @@ class clsRequest extends clsBase
 				(isset($this->body["sort"]))?$this->body["sort"]:"",
 				(isset($this->body["offset"]))?$this->body["offset"]:0,
 				(isset($this->body["limit"]))?$this->body["limit"]:0,
-				(isset($this->body["operator"]))?$this->body["operator"]:""
+				$this->operator
 			);
 			$this->response["total"]=$this->driver->recordcount();
 			if (!is_array($this->response["records"])) $this->callrequesterror(500,$this->driver->queryerror());
@@ -59,7 +59,7 @@ class clsRequest extends clsBase
 		$this->driver=new clsDriver(dirname(__FILE__)."/storage/json/",isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
 		if (!isset($this->body["app"])) $this->callrequesterror(400);
 		if (!isset($this->body["records"])) $this->callrequesterror(400);
-		if ($this->driver->insert($this->body["app"],$this->body["records"],(isset($this->body["operator"]))?$this->body["operator"]:""))
+		if ($this->driver->insert($this->body["app"],$this->body["records"],$this->operator))
 		{
 			$this->response["id"]=$this->driver->insertid();
 			$this->response["autonumbers"]=$this->driver->autonumbers();
@@ -76,7 +76,7 @@ class clsRequest extends clsBase
 		$this->driver=new clsDriver(dirname(__FILE__)."/storage/json/",isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
 		if (!isset($this->body["app"])) $this->callrequesterror(400);
 		if (!isset($this->body["records"])) $this->callrequesterror(400);
-		if ($this->driver->update($this->body["app"],$this->body["records"],(isset($this->body["operator"]))?$this->body["operator"]:""))
+		if ($this->driver->update($this->body["app"],$this->body["records"],$this->operator))
 		{
 			$this->response["autonumbers"]=$this->driver->autonumbers();
 			header("HTTP/1.1 200 OK");
@@ -104,7 +104,7 @@ class clsRequest extends clsBase
 		}
 		if (isset($this->body["query"]))
 		{
-			if ($this->driver->deletes($this->body["app"],mb_convert_encoding($this->body["query"],'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),(isset($this->body["operator"]))?$this->body["operator"]:""))
+			if ($this->driver->deletes($this->body["app"],mb_convert_encoding($this->body["query"],'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),$this->operator))
 			{
 				header("HTTP/1.1 200 OK");
 				header('Content-Type: application/json; charset=utf-8');
