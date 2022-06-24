@@ -17,6 +17,7 @@ class panda_kumaneko{
 		this.config={};
 		this.dashboard={};
 		this.project={
+			key:((url) => url.hostname)(new URL(baseuri)),
 			name:'',
 			scripts:[]
 		};
@@ -27,732 +28,760 @@ class panda_kumaneko{
 		/* initialize */
 		pd.elm('body').addclass(pd.theme);
 		pd.ui.baseuri(baseuri);
-		/* load configuration file */
-		pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{})
-		.then((resp) => {
-			try
-			{
-				var auth=() => {
-					var dialog=new pd.modules.auth(pd.extend({},this.config.apps.system.users));
-					if (sessionStorage.getItem(this.project.name+'_loginid'))
-					{
-						pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'users',query:(() => {
-							return '__id = '+sessionStorage.getItem(this.project.name+'_loginid')+' and pwd = "'+sessionStorage.getItem(this.project.name+'_loginpwd')+'" and available = "available"';
-						})()})
-						.then((resp) => {
-							var records=resp.records;
-							if (records.length!=0)
-							{
-								pd.operator=records.first();
-								pd.filter.record.load().then(() => build());
-							}
-							else dialog.show();
-						})
-						.catch((error) => pd.alert(error.message));
-					}
-					else dialog.show();
-					/* event */
-					pd.event.on('0','pd.auth.submit',(e) => {
-						pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'users',query:(() => {
-							return 'account = "'+e.record.account.value+'" and pwd = "'+e.record.pwd.value+'" and available = "available"';
-						})()})
-						.then((resp) => {
-							var records=resp.records;
-							if (records.length!=0)
-							{
-								dialog.hide();
-								sessionStorage.setItem(this.project.name+'_loginid',records.first().__id.value);
-								sessionStorage.setItem(this.project.name+'_loginname',records.first().name.value);
-								sessionStorage.setItem(this.project.name+'_loginpwd',records.first().pwd.value);
-								sessionStorage.setItem(this.project.name+'_loginauthority',records.first().authority.value);
-								pd.operator=records.first();
-								pd.filter.record.load().then(() => build());
-							}
-							else pd.alert(pd.constants.common.message.invalid.auth[pd.lang]);
-						})
-						.catch((error) => pd.alert(error.message));
-					});
-				};
-				var build=() => {
-					((apps) => {
-						var load=(index,callback) => {
-							var setup=(index,callback) => {
-								var finish=() => {
-									index++;
-									if (index<this.project.scripts.length) setup(index,callback);
-									else
-									{
-										this.project.scripts=[];
-										callback();
-									}
-								};
-								if (this.project.scripts.length!=0)
+		try
+		{
+			var auth=() => {
+				var dialog=new pd.modules.auth();
+				if (sessionStorage.getItem(this.project.key+'_loginaccount'))
+				{
+					pd.operator={account:{value:sessionStorage.getItem(this.project.key+'_loginaccount')},pwd:{value:sessionStorage.getItem(this.project.key+'_loginpwd')}};
+					pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'users',query:(() => {
+						return 'account = "'+pd.operator.account.value+'" and pwd = "'+pd.operator.pwd.value+'" and available = "available"';
+					})()})
+					.then((resp) => {
+						var records=resp.records;
+						if (records.length!=0)
+						{
+							pd.operator=records.first();
+							pd.filter.record.load().then((config) => load(config));
+						}
+						else dialog.show();
+					})
+					.catch((error) => pd.alert(error.message,() => dialog.show()));
+				}
+				else dialog.show();
+				/* event */
+				pd.event.on('0','pd.auth.submit',(e) => {
+					pd.operator={account:{value:e.record.account.value},pwd:{value:e.record.pwd.value}};
+					pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'users',query:(() => {
+						return 'account = "'+pd.operator.account.value+'" and pwd = "'+pd.operator.pwd.value+'" and available = "available"';
+					})()})
+					.then((resp) => {
+						var records=resp.records;
+						if (records.length!=0)
+						{
+							dialog.hide();
+							pd.operator=this.session(records.first());
+							pd.filter.record.load().then((config) => load(config));
+						}
+						else pd.alert(pd.constants.common.message.invalid.auth[pd.lang],() => dialog.show());
+					})
+					.catch((error) => pd.alert(error.message,() => dialog.show()));
+				});
+			};
+			var build=() => {
+				((apps) => {
+					var load=(index,callback) => {
+						var setup=(index,callback) => {
+							var finish=() => {
+								index++;
+								if (index<this.project.scripts.length) setup(index,callback);
+								else
 								{
-									pd.elm('body').append(
-										this.project.scripts[index].on('load',(e) => finish()).on('error',(e) => finish())
-									);
+									this.project.scripts=[];
+									callback();
 								}
-								else callback();
 							};
-							setup(0,() => {
-								if (apps.length!=0)
-								{
-									((app) => {
-										var setup=(index,callback) => {
-											var finish=() => {
-												index++;
-												if (index<app.scripts.length) setup(index,callback);
-												else callback();
-											};
-											if (app.scripts.length!=0)
-											{
-												pd.elm('body').append(
-													app.scripts[index].on('load',(e) => finish()).on('error',(e) => finish())
-												);
-											}
+							if (this.project.scripts.length!=0)
+							{
+								pd.elm('body').append(
+									this.project.scripts[index].on('load',(e) => finish()).on('error',(e) => finish())
+								);
+							}
+							else callback();
+						};
+						setup(0,() => {
+							if (apps.length!=0)
+							{
+								((app) => {
+									var setup=(index,callback) => {
+										var finish=() => {
+											index++;
+											if (index<app.scripts.length) setup(index,callback);
 											else callback();
 										};
-										pd.elm('body').append(pd.create('script').html('pd.APP_ID=\''+app.id+'\';'));
-										setup(0,() => {
-											index++;
-											if (index<apps.length) load(index,callback);
-											else
-											{
-												pd.elm('body').append(pd.create('script').html('delete pd.APP_ID;'));
-												callback();
-											}
-										});
-									})(apps[index]);
-								}
-								else callback();
-							});
-						};
-						/* build container */
-						pd.elm('body')
-						.append(
-							((res) => {
-								res
-								.append(pd.create('span').addclass('pd-kumaneko-header-title').html('kumaneko for '+this.project.name))
-								.append(
-									((res) => {
-										res
-										.append(pd.create('button').addclass('pd-icon pd-icon-language'))
-										.append(
-											pd.create('div').addclass('pd-dropdown pd-kumaneko-header-menu-lang')
-											.append(
-												((element) => {
-													element.assignoption([
-														{id:{value:'en'}},
-														{id:{value:'ja'}}
-													],'id','id')
-													.on('change',(e) => {
-														localStorage.setItem('kumaneko_lang',element.val());
-														pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
-															window.location.reload(true);
-														});
-													})
-													return element.val(pd.lang);
-												})(pd.create('select'))
-											)
-										)
-										.append(pd.create('button').addclass('pd-icon pd-icon-theme'))
-										.append(
-											pd.create('div').addclass('pd-dropdown pd-kumaneko-header-menu-theme')
-											.append(
-												((element) => {
-													element.assignoption([
-														{id:{value:'dark'}},
-														{id:{value:'light'}}
-													],'id','id')
-													.on('change',(e) => {
-														localStorage.setItem('kumaneko_theme',element.val());
-														pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
-															window.location.reload(true);
-														});
-													})
-													return element.val(pd.theme);
-												})(pd.create('select'))
-											)
-										);
-										if (pd.operator.authority.value=='Administrator')
-											res.append(
-												pd.create('button').addclass('pd-icon pd-icon-setting').on('click',(e) => {
-													pd.event.call(this.config.apps.system.project.id,'pd.edit.call',{recordid:'1'});
-												})
+										if (app.scripts.length!=0)
+										{
+											pd.elm('body').append(
+												app.scripts[index].on('load',(e) => finish()).on('error',(e) => finish())
 											);
-										return res;
-									})(pd.create('span').addclass('pd-kumaneko-header-menu'))
-								);
-								return res;
-							})(pd.create('header').addclass('pd-kumaneko-header'))
+										}
+										else callback();
+									};
+									pd.elm('body').append(pd.create('script').html('pd.APP_ID=\''+app.id+'\';'));
+									setup(0,() => {
+										index++;
+										if (index<apps.length) load(index,callback);
+										else
+										{
+											pd.elm('body').append(pd.create('script').html('delete pd.APP_ID;'));
+											callback();
+										}
+									});
+								})(apps[index]);
+							}
+							else callback();
+						});
+					};
+					/* build container */
+					pd.elm('body')
+					.append(
+						((res) => {
+							res
+							.append(pd.create('span').addclass('pd-kumaneko-header-title').html('kumaneko for '+this.project.name))
+							.append(
+								((res) => {
+									res
+									.append(pd.create('button').addclass('pd-icon pd-icon-language'))
+									.append(
+										pd.create('div').addclass('pd-dropdown pd-kumaneko-header-menu-lang')
+										.append(
+											((element) => {
+												element.assignoption([
+													{id:{value:'en'}},
+													{id:{value:'ja'}}
+												],'id','id')
+												.on('change',(e) => {
+													localStorage.setItem('kumaneko_lang',element.val());
+													pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
+														window.location.reload(true);
+													});
+												})
+												return element.val(pd.lang);
+											})(pd.create('select'))
+										)
+									)
+									.append(pd.create('button').addclass('pd-icon pd-icon-theme'))
+									.append(
+										pd.create('div').addclass('pd-dropdown pd-kumaneko-header-menu-theme')
+										.append(
+											((element) => {
+												element.assignoption([
+													{id:{value:'dark'}},
+													{id:{value:'light'}}
+												],'id','id')
+												.on('change',(e) => {
+													localStorage.setItem('kumaneko_theme',element.val());
+													pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
+														window.location.reload(true);
+													});
+												})
+												return element.val(pd.theme);
+											})(pd.create('select'))
+										)
+									);
+									if (pd.operator.authority.value=='Administrator')
+										res.append(
+											pd.create('button').addclass('pd-icon pd-icon-setting').on('click',(e) => {
+												pd.event.call(this.config.apps.system.project.id,'pd.edit.call',{recordid:'1'});
+											})
+										);
+									return res;
+								})(pd.create('span').addclass('pd-kumaneko-header-menu'))
+							);
+							return res;
+						})(pd.create('header').addclass('pd-kumaneko-header'))
+					)
+					.append(
+						pd.create('main').addclass('pd-kumaneko-main')
+						.append(
+							pd.create('nav').addclass('pd-kumaneko-nav')
+							.append(pd.create('div').addclass('pd-kumaneko-nav-main').attr('id','pd-kumaneko-space-nav'))
+							.append(
+								((res) => {
+									if (['Administrator','Manager'].includes(pd.operator.authority.value))
+										res.append(
+											pd.create('button').addclass('pd-icon pd-icon-new pd-kumaneko-nav-icon').on('click',(e) => {
+												this.appbuilder.show({});
+												e.stopPropagation();
+												e.preventDefault();
+											})
+										);
+									return res;
+								})(pd.create('div').addclass('pd-kumaneko-nav-footer pd-kumaneko-border-top pd-kumaneko-inset-top'))
+							)
 						)
 						.append(
-							pd.create('main').addclass('pd-kumaneko-main')
-							.append(
-								pd.create('nav').addclass('pd-kumaneko-nav')
-								.append(pd.create('div').addclass('pd-kumaneko-nav-main').attr('id','pd-kumaneko-space-nav'))
-								.append(
-									((res) => {
-										if (['Administrator','Manager'].includes(pd.operator.authority.value))
-											res.append(
-												pd.create('button').addclass('pd-icon pd-icon-new pd-kumaneko-nav-icon').on('click',(e) => {
-													this.appbuilder.show({});
-													e.stopPropagation();
-													e.preventDefault();
-												})
-											);
-										return res;
-									})(pd.create('div').addclass('pd-kumaneko-nav-footer pd-kumaneko-border-top pd-kumaneko-inset-top'))
-								)
-							)
-							.append(
-								pd.create('div').addclass('pd-kumaneko-block')
-								.append(pd.create('section').addclass('pd-kumaneko-tab pd-kumaneko-border-left').attr('id','pd-kumaneko-space-tab'))
-								.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-left pd-kumaneko-inset-left').attr('id','pd-kumaneko-space-contents'))
-							)
-						);
-						/* build appbuilder */
-						this.appbuilder=new pd.modules.builder.app();
-						/* build appmanager */
-						this.appmanager=new pd.modules.manager.app();
-						/* build dashboardmanager */
-						this.dashboardmanager=new pd.modules.manager.dashboard();
-						/* build importmanager */
-						this.importmanager=new pd.modules.manager.import();
-						/* build notificationmanager */
-						this.notificationmanager=new pd.modules.manager.notification();
-						/* event */
-						apps.map((item) => item.id).each((id,index) => {
-							pd.event.on(id,'pd.app.activate',(e) => {
-								this.dashboard.hide();
-								for (var key in this.apps)
-									((app) => {
-										if (key==id)
-										{
-											var bootup=id;
-											if ('viewid' in e)
-											{
-												app.view.show(e.viewid);
-												bootup+='_'+e.viewid;
-											}
-											else app.record.show();
-											if (!this.bootups.includes(bootup)) this.bootups.push(bootup);
-										}
-										else
-										{
-											app.view.hide();
-											app.record.hide();
-										}
-									})(this.apps[key]);
-							});
-							pd.event.on(id,'pd.app.deactivate',(e) => {
-								((index) => {
-									var bootup='';
-									var param={};
-									if (index==0)
+							pd.create('div').addclass('pd-kumaneko-block')
+							.append(pd.create('section').addclass('pd-kumaneko-tab pd-kumaneko-border-left').attr('id','pd-kumaneko-space-tab'))
+							.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-left pd-kumaneko-inset-left').attr('id','pd-kumaneko-space-contents'))
+						)
+					);
+					/* build appbuilder */
+					this.appbuilder=new pd.modules.builder.app();
+					/* build appmanager */
+					this.appmanager=new pd.modules.manager.app();
+					/* build dashboardmanager */
+					this.dashboardmanager=new pd.modules.manager.dashboard();
+					/* build importmanager */
+					this.importmanager=new pd.modules.manager.import();
+					/* build notificationmanager */
+					this.notificationmanager=new pd.modules.manager.notification();
+					/* event */
+					apps.map((item) => item.id).each((id,index) => {
+						pd.event.on(id,'pd.app.activate',(e) => {
+							this.dashboard.hide();
+							for (var key in this.apps)
+								((app) => {
+									if (key==id)
 									{
-										if (this.bootups.length==1)
+										var bootup=id;
+										if ('viewid' in e)
 										{
-											for (var key in this.apps)
-												((app) => {
-													app.view.hide();
-													app.record.hide();
-												})(this.apps[key]);
-											e.active=false;
+											app.view.show(e.viewid);
+											bootup+='_'+e.viewid;
 										}
-										else
-										{
-											param=((bootups) => {
-												bootup=bootups.first();
-												return (bootups.length==1)?{}:{viewid:bootups[1]};
-											})(this.bootups[1].split('_'));
-										}
+										else app.record.show();
+										if (!this.bootups.includes(bootup)) this.bootups.push(bootup);
+									}
+									else
+									{
+										app.view.hide();
+										app.record.hide();
+									}
+								})(this.apps[key]);
+						});
+						pd.event.on(id,'pd.app.deactivate',(e) => {
+							((index) => {
+								var bootup='';
+								var param={};
+								if (index==0)
+								{
+									if (this.bootups.length==1)
+									{
+										for (var key in this.apps)
+											((app) => {
+												app.view.hide();
+												app.record.hide();
+											})(this.apps[key]);
+										e.active=false;
 									}
 									else
 									{
 										param=((bootups) => {
 											bootup=bootups.first();
 											return (bootups.length==1)?{}:{viewid:bootups[1]};
-										})(this.bootups[index-1].split('_'));
+										})(this.bootups[1].split('_'));
 									}
-									this.bootups.splice(index,1);
-									if (e.active) pd.event.call(bootup,'pd.app.activate',param);
-									else
-									{
-										if (this.bootups.length==0) this.dashboard.show();
-									}
-								})(this.bootups.indexOf(id+(('viewid' in e)?'_'+e.viewid:'')));
-							});
-							pd.event.on(id,'pd.app.deleted',(e) => {
-								pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{})
-								.then((resp) => {
-									try
-									{
-										this.config=((config) => {
-											if (this.queues.app)
-											{
+								}
+								else
+								{
+									param=((bootups) => {
+										bootup=bootups.first();
+										return (bootups.length==1)?{}:{viewid:bootups[1]};
+									})(this.bootups[index-1].split('_'));
+								}
+								this.bootups.splice(index,1);
+								if (e.active) pd.event.call(bootup,'pd.app.activate',param);
+								else
+								{
+									if (this.bootups.length==0) this.dashboard.show();
+								}
+							})(this.bootups.indexOf(id+(('viewid' in e)?'_'+e.viewid:'')));
+						});
+						pd.event.on(id,'pd.app.deleted',(e) => {
+							pd.request(pd.ui.baseuri()+'/config.php','GET',{},{})
+							.then((resp) => {
+								try
+								{
+									this.config=((config) => {
+										if (this.queues.app)
+										{
+											this.queues.app.each((app,index) => {
+												if (app.id!=id) config.apps.user[app.id]=app;
+											});
+											this.queues.app=null;
+										}
+										if (this.queues.sort)
+										{
+											config.apps.sort=this.queues.sort;
+											this.queues.sort=null;
+										}
+										if (id)
+										{
+											delete config.apps.user[id];
+											config.apps.sort=config.apps.sort.filter((item) => item!=id);
+										}
+										return config;
+									})(resp.file);
+									pd.request(pd.ui.baseuri()+'/config.php','PUT',{},{config:this.config,app:id,type:'del'})
+									.then((resp) => {
+										if (resp.result=='ok')
+										{
+											var verify=() => {
+												pd.request(pd.ui.baseuri()+'/config.php','GET',{},{verify:'verify'},true)
+												.then((resp) => {
+													if (resp.result=='ok')
+													{
+														pd.loadend();
+														pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
+															window.location.reload(true);
+														});
+														pd.event.call('0','pd.queue.notify',{source:'config'});
+													}
+													else setTimeout(() => verify(),1000);
+												})
+												.catch((error) => pd.alert(error.message));
+											}
+											pd.loadstart();
+											setTimeout(() => verify(),1000);
+										}
+										else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
+									})
+									.catch((error) => pd.alert(error.message));
+								}
+								catch(e){pd.alert(e.message);}
+							})
+							.catch((error) => pd.alert(error.message));
+						});
+					});
+					pd.event.on('0','pd.app.altered',(e) => {
+						((app) => {
+							pd.request(pd.ui.baseuri()+'/config.php','GET',{},{})
+							.then((resp) => {
+								try
+								{
+									this.config=((config,id) => {
+										if (this.queues.app)
+										{
+											((id) => {
 												this.queues.app.each((app,index) => {
 													if (app.id!=id) config.apps.user[app.id]=app;
 												});
 												this.queues.app=null;
-											}
-											if (this.queues.sort)
-											{
-												config.apps.sort=this.queues.sort;
-												this.queues.sort=null;
-											}
-											if (id)
-											{
-												delete config.apps.user[id];
-												config.apps.sort=config.apps.sort.filter((item) => item!=id);
-											}
-											return config;
-										})(resp.file);
-										pd.request(pd.ui.baseuri()+'/config.php','PUT',{'X-Requested-By':'panda'},{config:this.config,app:id,type:'del'})
-										.then((resp) => {
-											if (resp.result=='ok')
-											{
-												var verify=() => {
-													pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{verify:'verify'},true)
-													.then((resp) => {
-														if (resp.result=='ok')
-														{
-															pd.loadend();
-															pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
-																window.location.reload(true);
-															});
-															pd.event.call('0','pd.queue.notify',{source:'config'});
-														}
-														else setTimeout(() => verify(),1000);
-													})
-													.catch((error) => pd.alert(error.message));
-												}
-												pd.loadstart();
-												setTimeout(() => verify(),1000);
-											}
-											else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
-										})
-										.catch((error) => pd.alert(error.message));
-									}
-									catch(e){pd.alert(e.message);}
-								})
-								.catch((error) => pd.alert(error.message));
-							});
-						});
-						pd.event.on('0','pd.app.altered',(e) => {
-							((app) => {
-								pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{})
-								.then((resp) => {
-									try
-									{
-										this.config=((config,id) => {
-											if (this.queues.app)
-											{
-												((id) => {
-													this.queues.app.each((app,index) => {
-														if (app.id!=id) config.apps.user[app.id]=app;
-													});
-													this.queues.app=null;
-												})(app.id);
-											}
-											if (this.queues.sort)
-											{
-												config.apps.sort=this.queues.sort;
-												this.queues.sort=null;
-											}
-											if (!app.id)
-											{
-												config.increments.app++;
-												app.id=config.increments.app.toString();
-												config.apps.sort.push(app.id);
-											}
-											config.apps.user[app.id]=app;
-											return config;
-										})(resp.file,app.id);
-										pd.request(pd.ui.baseuri()+'/config.php','PUT',{'X-Requested-By':'panda'},{config:this.config,app:app.id,type:'upd'})
-										.then((resp) => {
-											if (resp.result=='ok')
-											{
-												var verify=() => {
-													pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{verify:'verify'},true)
-													.then((resp) => {
-														if (resp.result=='ok')
-														{
-															pd.loadend();
-															pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
-																window.location.reload(true);
-															});
-															pd.event.call('0','pd.queue.notify',{source:'config'});
-														}
-														else setTimeout(() => verify(),1000);
-													})
-													.catch((error) => pd.alert(error.message));
-												}
-												pd.loadstart();
-												setTimeout(() => verify(),1000);
-											}
-											else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
-										})
-										.catch((error) => pd.alert(error.message));
-									}
-									catch(e){pd.alert(e.message);}
-								})
-								.catch((error) => pd.alert(error.message));
-							})(e.app);
-						});
-						pd.event.on('0','pd.apps.altered',(e) => {
-							((apps,sort) => {
-								pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{})
-								.then((resp) => {
-									try
-									{
-										this.config=resp.file;
-										this.config.apps.user=apps;
-										this.config.apps.sort=sort;
-										pd.request(pd.ui.baseuri()+'/config.php','PUT',{'X-Requested-By':'panda'},{config:this.config,type:'mgt'})
-										.then((resp) => {
-											if (resp.result=='ok')
-											{
-												pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
-													window.location.reload(true);
-												});
-												pd.event.call('0','pd.queue.notify',{source:'config'});
-											}
-											else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
-										})
-										.catch((error) => pd.alert(error.message));
-									}
-									catch(e){pd.alert(e.message);}
-								})
-								.catch((error) => pd.alert(error.message));
-							})(e.apps,e.sort);
-						});
-						pd.event.on('0','pd.dashboard.activate',(e) => {
-							for (var key in this.apps)
-								((app) => {
-									app.view.hide();
-									app.record.hide();
-								})(this.apps[key]);
-							this.dashboard.show();
-						});
-						pd.event.on('0','pd.dashboard.altered',(e) => {
-							((dashboard) => {
-								pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{})
-								.then((resp) => {
-									try
-									{
-										this.config=resp.file;
-										this.config.dashboard=dashboard;
-										pd.request(pd.ui.baseuri()+'/config.php','PUT',{'X-Requested-By':'panda'},{config:this.config,type:'mgt'})
-										.then((resp) => {
-											if (resp.result=='ok')
-											{
-												pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
-													window.location.reload(true);
-												});
-												pd.event.call('0','pd.queue.notify',{source:'config'});
-											}
-											else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
-										})
-										.catch((error) => pd.alert(error.message));
-									}
-									catch(e){pd.alert(e.message);}
-								})
-								.catch((error) => pd.alert(error.message));
-							})(e.dashboard);
-						});
-						pd.event.on('0','pd.queue.app',(e) => {
-							switch (e.action)
-							{
-								case 'add':
-									if (!Array.isArray(this.queues.app)) this.queues.app=[];
-									this.queues.app.push(e.app);
-									break;
-								case 'clear':
-									this.queues.app=null;
-									break;
-								case 'delete':
-									this.queues.app=this.queues.app.filter((item) => item.id!=e.app);
-									break;
-							}
-							return e;
-						});
-						pd.event.on('0','pd.queue.linkage',(e) => {
-							for (var key in this.config.apps.user)
-								if (this.bootups.includes(key))
-									((app,linkages) => {
-										linkages.each((linkage,index) => this.apps[app.id].queues.linkage.push(linkage.id));
-									})(this.config.apps.user[key],this.config.apps.user[key].linkages.filter((item) => item.app==e.app));
-							return e;
-						});
-						pd.event.on('0','pd.queue.notify',(e) => {
-							if (this.notificationmanager.enabled)
-							{
-								sessionStorage.setItem(this.project.name+'_notifier','yes');
-								this.notificationmanager.push('{\\"source\\":\\"'+e.source+'\\",\\"id\\":\\"'+(('id' in e)?e.id:'')+'\\"}');
-							}
-							return e;
-						});
-						pd.event.on('0','pd.queue.notify.pushed',(e) => {
-							if (this.notificationmanager.enabled)
-								if (e.data)
-								{
-									var resp=JSON.parse(e.data);
-									switch (resp.source)
-									{
-										case 'app':
-											if (sessionStorage.getItem(this.project.name+'_notifier')) sessionStorage.removeItem(this.project.name+'_notifier');
-											else
-											{
-												if (resp.id in this.apps) this.apps[resp.id].notify();
-											}
-											switch (resp.id)
-											{
-												case 'users':
-													pd.filter.record.load().then(() => {
-														((user) => {
-															if (user.length!=0) pd.operator=user.first();
-														})(pd.filter.record.user.filter((item) => item['__id'].value==pd.operator['__id'].value));
-													});
-													break;
-											}
-											break;
-										case 'config':
-											if (sessionStorage.getItem(this.project.name+'_notifier')) sessionStorage.removeItem(this.project.name+'_notifier');
-											else
-											{
-												pd.confirm(pd.constants.common.message.confirm.forced[pd.lang],() => {
-													window.location.reload(true);
-												});
-											}
-											break;
-									}
-								}
-							return e;
-						});
-						pd.event.on('0','pd.queue.sort',(e) => {
-							this.queues.sort=e.sort;
-							return e;
-						});
-						pd.event.on(this.config.apps.system.project.id,'pd.record.build',(e) => {
-							e.header
-							.append(
-								pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.dashboard[pd.lang]).on('click',(e) => {
-									pd.kumaneko.dashboardmanager.show();
-								})
-							)
-							.append(
-								pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.apps[pd.lang]).on('click',(e) => {
-									pd.kumaneko.appmanager.show();
-								})
-							)
-							.append(
-								pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.users[pd.lang]).on('click',(e) => {
-									pd.event.call(this.config.apps.system.users.id,'pd.app.activate',{viewid:'0'});
-								})
-							)
-							.append(
-								pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.departments[pd.lang]).on('click',(e) => {
-									pd.event.call(this.config.apps.system.departments.id,'pd.app.activate',{viewid:'0'});
-								})
-							)
-							.append(
-								pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.groups[pd.lang]).on('click',(e) => {
-									pd.event.call(this.config.apps.system.groups.id,'pd.app.activate',{viewid:'0'});
-								})
-							)
-							.append(
-								pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.storage[pd.lang]).on('click',(e) => {
-									pd.confirm(pd.constants.common.message.confirm.cleanup[pd.lang],() => {
-										pd.request(pd.ui.baseuri()+'/cleanup.php','POST',{'X-Requested-By':'panda'},{})
-										.then((resp) => {
-											if (resp.result=='ok')
-											{
-												var verify=() => {
-													pd.request(pd.ui.baseuri()+'/cleanup.php','GET',{'X-Requested-By':'panda'},{verify:'verify'},true)
-													.then((resp) => {
-														if (resp.result=='ok')
-														{
-															pd.loadend();
-															pd.alert(pd.constants.common.message.finished.cleanup[pd.lang]);
-														}
-														else setTimeout(() => verify(),1000);
-													})
-													.catch((error) => pd.alert(error.message));
-												}
-												pd.loadstart();
-												setTimeout(() => verify(),1000);
-											}
-											else pd.alert(pd.constants.common.message.invalid.cleanup.processing[pd.lang]);
-										})
-										.catch((error) => pd.alert(error.message));
-									});
-								})
-							)
-							.append(
-								pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.about[pd.lang]).on('click',(e) => {
-									pd.request(pd.ui.baseuri()+'/version.php','GET',{'X-Requested-By':'panda'},{})
+											})(app.id);
+										}
+										if (this.queues.sort)
+										{
+											config.apps.sort=this.queues.sort;
+											this.queues.sort=null;
+										}
+										if (!app.id)
+										{
+											config.increments.app++;
+											app.id=config.increments.app.toString();
+											config.apps.sort.push(app.id);
+										}
+										config.apps.user[app.id]=app;
+										return config;
+									})(resp.file,app.id);
+									pd.request(pd.ui.baseuri()+'/config.php','PUT',{},{config:this.config,app:app.id,type:'upd'})
 									.then((resp) => {
-										pd.create('div')
-										.append(
-											pd.create('div').addclass('pd-kumaneko-about')
-											.append(pd.create('p').addclass('pd-kumaneko-about-title').html('kumaneko'))
-											.append(
-												((container) => {
-													container.append(pd.create('p').html('version:'+resp.my));
-													if (resp.latest) container.append(pd.create('p').html(pd.constants.common.prompt.update[pd.lang].replace(/%version%/g,resp.latest)));
-													return container.append(
-														pd.create('p').html('Copyright '+new Date().format('Y')+' pandafirm LLC. All rights reserved.')
-													);
-												})(pd.create('p').addclass('pd-kumaneko-about-overview'))
-											)
-											.append(
-												pd.create('p').addclass('pd-kumaneko-about-buttons')
-												.append(
-													pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.update[pd.lang]).on('click',(e) => {
-														pd.confirm(pd.constants.common.message.confirm.update[pd.lang],() => {
-															pd.request(pd.ui.baseuri()+'/version.php','POST',{'X-Requested-By':'panda'},{})
-															.then((resp) => {
-																pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
-																	window.location.reload(true);
-																});
-															})
-															.catch((error) => pd.alert(error.message));
+										if (resp.result=='ok')
+										{
+											var verify=() => {
+												pd.request(pd.ui.baseuri()+'/config.php','GET',{},{verify:'verify'},true)
+												.then((resp) => {
+													if (resp.result=='ok')
+													{
+														pd.loadend();
+														pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
+															window.location.reload(true);
 														});
-													})
-												)
-											)
-										)
-										.popup('600','250').show();
+														pd.event.call('0','pd.queue.notify',{source:'config'});
+													}
+													else setTimeout(() => verify(),1000);
+												})
+												.catch((error) => pd.alert(error.message));
+											}
+											pd.loadstart();
+											setTimeout(() => verify(),1000);
+										}
+										else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
 									})
 									.catch((error) => pd.alert(error.message));
-								})
-							);
-						});
-						pd.event.on(this.config.apps.system.project.id,'pd.edit.submit',(e) => {
-							((smtps) => {
-								if (smtps.length!=0)
-								{
-									if (smtps.length!=Array.from(new Set(smtps.map((item) => item.smtp_mail.value))).length)
-									{
-										pd.alert(pd.constants.project.message.invalid.duplicates[pd.lang]);
-										e.error=true;
-									}
-									else
-									{
-										smtps.each((smtp,index) => {
-											if (!smtp.smtp_host.value)
-											{
-												pd.alert(pd.constants.project.message.invalid.host[pd.lang]);
-												e.error=true;
-											}
-											if (!smtp.smtp_port.value)
-											{
-												pd.alert(pd.constants.project.message.invalid.port[pd.lang]);
-												e.error=true;
-											}
-											if (!smtp.smtp_user.value)
-											{
-												pd.alert(pd.constants.project.message.invalid.user[pd.lang]);
-												e.error=true;
-											}
-											if (!smtp.smtp_pwd.value)
-											{
-												pd.alert(pd.constants.project.message.invalid.pwd[pd.lang]);
-												e.error=true;
-											}
-											if (!smtp.smtp_secure.value)
-											{
-												pd.alert(pd.constants.project.message.invalid.secure[pd.lang]);
-												e.error=true;
-											}
-										});
-									}
 								}
-							})(e.record.smtp.value.filter((item) => item.smtp_mail.value));
-							return e;
-						});
-						pd.event.on(this.config.apps.system.users.id,['pd.change.account','pd.change.pwd'],(e) => {
-							e.record.account.value=e.record.account.value.replace(/["']+/g,'');
-							e.record.pwd.value=e.record.pwd.value.replace(/["']+/g,'');
-							return e;
-						});
-						/* load scripts */
-						load(0,() => {
-							((contents,tab,nav) => {
-								/* build applications */
-								this.sort(this.config.apps.user,this.config.apps.sort).each((app,index) => {
-									this.apps[app.id]=new pd.modules.app(app,contents,tab,nav);
-									if (this.permit(app.permissions)=='denied') pd.elm('[nav-id=nav_'+app.id+']').hide();
-								});
-								for (var key in this.config.apps.system)
-									((app) => {
-										this.apps[app.id]=new pd.modules.app(app,contents,tab,null,(key=='project'));
-									})(this.config.apps.system[key]);
-								/* build dashboard */
-								this.dashboard=new pd.modules.dashboard(this.config.dashboard.frames.map((item) => {
-									item.panels=item.panels.map((panel) => {
-										((app) => {
-											panel.config={
-												app:app,
-												view:app.views.filter((item) => item.id==panel.view).first()
-											}
-											switch (panel.config.view.type)
-											{
-												case 'calendar':
-													panel.calendar=new panda_calendar(true);
-													break;
-												case 'crosstab':
-													panel.crosstab=pd.ui.chart.create(panel.config.view.type);
-													break;
-												case 'timeseries':
-													panel.timeseries=pd.ui.chart.create(panel.config.view.type);
-													break;
-												case 'map':
-													panel.map=new panda_map();
-													break;
-												default:
-													pd.event.on(app.id,'pd.edit.call',(e) => pd.event.call(panel.app,'pd.edit.call',e));
-													break;
-											}
-										})(pd.extend({id:'dashboard_'+panel.app},this.config.apps.user[panel.app]));
-										return panel;
-									});
-									return item;
-								}),contents,tab);
-								this.config.dashboard.frames.map((item) => item.panels).flat().each((panel,index) => this.apps[panel.app].view.load(panel.view,null,null,true).catch(() => {}));
-							})(pd.elm('#pd-kumaneko-space-contents'),pd.elm('#pd-kumaneko-space-tab'),pd.elm('#pd-kumaneko-space-nav'));
-						});
-					})((() => {
-						var res=[];
+								catch(e){pd.alert(e.message);}
+							})
+							.catch((error) => pd.alert(error.message));
+						})(e.app);
+					});
+					pd.event.on('0','pd.apps.altered',(e) => {
+						((apps,sort) => {
+							pd.request(pd.ui.baseuri()+'/config.php','GET',{},{})
+							.then((resp) => {
+								try
+								{
+									this.config=resp.file;
+									this.config.apps.user=apps;
+									this.config.apps.sort=sort;
+									pd.request(pd.ui.baseuri()+'/config.php','PUT',{},{config:this.config,type:'mgt'})
+									.then((resp) => {
+										if (resp.result=='ok')
+										{
+											pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
+												window.location.reload(true);
+											});
+											pd.event.call('0','pd.queue.notify',{source:'config'});
+										}
+										else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
+									})
+									.catch((error) => pd.alert(error.message));
+								}
+								catch(e){pd.alert(e.message);}
+							})
+							.catch((error) => pd.alert(error.message));
+						})(e.apps,e.sort);
+					});
+					pd.event.on('0','pd.dashboard.activate',(e) => {
+						for (var key in this.apps)
+							((app) => {
+								app.view.hide();
+								app.record.hide();
+							})(this.apps[key]);
+						this.dashboard.show();
+					});
+					pd.event.on('0','pd.dashboard.altered',(e) => {
+						((dashboard) => {
+							pd.request(pd.ui.baseuri()+'/config.php','GET',{},{})
+							.then((resp) => {
+								try
+								{
+									this.config=resp.file;
+									this.config.dashboard=dashboard;
+									pd.request(pd.ui.baseuri()+'/config.php','PUT',{},{config:this.config,type:'mgt'})
+									.then((resp) => {
+										if (resp.result=='ok')
+										{
+											pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
+												window.location.reload(true);
+											});
+											pd.event.call('0','pd.queue.notify',{source:'config'});
+										}
+										else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
+									})
+									.catch((error) => pd.alert(error.message));
+								}
+								catch(e){pd.alert(e.message);}
+							})
+							.catch((error) => pd.alert(error.message));
+						})(e.dashboard);
+					});
+					pd.event.on('0','pd.queue.app',(e) => {
+						switch (e.action)
+						{
+							case 'add':
+								if (!Array.isArray(this.queues.app)) this.queues.app=[];
+								this.queues.app.push(e.app);
+								break;
+							case 'clear':
+								this.queues.app=null;
+								break;
+							case 'delete':
+								this.queues.app=this.queues.app.filter((item) => item.id!=e.app);
+								break;
+						}
+						return e;
+					});
+					pd.event.on('0','pd.queue.linkage',(e) => {
 						for (var key in this.config.apps.user)
-							((app) => {
-								res.push({
-									id:app.id,
-									scripts:app.customize.map((item) => {
-										return pd.create('script')
-										.attr('src',pd.ui.baseuri()+'/storage/customize/'+item.filekey)
-										.attr('type','text/javascript')
+							if (this.bootups.includes(key))
+								((app,linkages) => {
+									linkages.each((linkage,index) => this.apps[app.id].queues.linkage.push(linkage.id));
+								})(this.config.apps.user[key],this.config.apps.user[key].linkages.filter((item) => item.app==e.app));
+						return e;
+					});
+					pd.event.on('0','pd.queue.notify',(e) => {
+						if (this.notificationmanager.enabled)
+						{
+							sessionStorage.setItem(this.project.key+'_notifier','yes');
+							this.notificationmanager.push('{\\"source\\":\\"'+e.source+'\\",\\"id\\":\\"'+(('id' in e)?e.id:'')+'\\"}');
+						}
+						return e;
+					});
+					pd.event.on('0','pd.queue.notify.pushed',(e) => {
+						if (this.notificationmanager.enabled)
+							if (e.data)
+							{
+								var resp=JSON.parse(e.data);
+								switch (resp.source)
+								{
+									case 'app':
+										if (sessionStorage.getItem(this.project.key+'_notifier')) sessionStorage.removeItem(this.project.key+'_notifier');
+										else
+										{
+											if (resp.id in this.apps) this.apps[resp.id].notify();
+										}
+										switch (resp.id)
+										{
+											case 'departments':
+											case 'groups':
+												pd.filter.record.load();
+												break;
+											case 'users':
+												pd.filter.record.load().then(() => {
+													((user) => {
+														if (user.length!=0) pd.operator=this.session(user.first());
+													})(pd.filter.record.user.filter((item) => item['__id'].value==pd.operator.__id.value));
+												});
+												break;
+										}
+										break;
+									case 'config':
+										if (sessionStorage.getItem(this.project.key+'_notifier')) sessionStorage.removeItem(this.project.key+'_notifier');
+										else
+										{
+											pd.confirm(pd.constants.common.message.confirm.forced[pd.lang],() => {
+												window.location.reload(true);
+											});
+										}
+										break;
+								}
+							}
+						return e;
+					});
+					pd.event.on('0','pd.queue.sort',(e) => {
+						this.queues.sort=e.sort;
+						return e;
+					});
+					pd.event.on(this.config.apps.system.project.id,'pd.record.build',(e) => {
+						e.header
+						.append(
+							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.dashboard[pd.lang]).on('click',(e) => {
+								pd.kumaneko.dashboardmanager.show();
+							})
+						)
+						.append(
+							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.apps[pd.lang]).on('click',(e) => {
+								pd.kumaneko.appmanager.show();
+							})
+						)
+						.append(
+							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.users[pd.lang]).on('click',(e) => {
+								pd.event.call(this.config.apps.system.users.id,'pd.app.activate',{viewid:'0'});
+							})
+						)
+						.append(
+							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.departments[pd.lang]).on('click',(e) => {
+								pd.event.call(this.config.apps.system.departments.id,'pd.app.activate',{viewid:'0'});
+							})
+						)
+						.append(
+							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.groups[pd.lang]).on('click',(e) => {
+								pd.event.call(this.config.apps.system.groups.id,'pd.app.activate',{viewid:'0'});
+							})
+						)
+						.append(
+							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.storage[pd.lang]).on('click',(e) => {
+								pd.confirm(pd.constants.common.message.confirm.cleanup[pd.lang],() => {
+									pd.request(pd.ui.baseuri()+'/cleanup.php','POST',{},{})
+									.then((resp) => {
+										if (resp.result=='ok')
+										{
+											var verify=() => {
+												pd.request(pd.ui.baseuri()+'/cleanup.php','GET',{},{verify:'verify'},true)
+												.then((resp) => {
+													if (resp.result=='ok')
+													{
+														pd.loadend();
+														pd.alert(pd.constants.common.message.finished.cleanup[pd.lang]);
+													}
+													else setTimeout(() => verify(),1000);
+												})
+												.catch((error) => pd.alert(error.message));
+											}
+											pd.loadstart();
+											setTimeout(() => verify(),1000);
+										}
+										else pd.alert(pd.constants.common.message.invalid.cleanup.processing[pd.lang]);
 									})
+									.catch((error) => pd.alert(error.message));
 								});
-							})(this.config.apps.user[key]);
-						for (var key in this.config.apps.system)
-							((app) => {
-								res.push({
-									id:app.id,
-									scripts:app.customize.map((item) => {
-										return pd.create('script')
-										.attr('src',pd.ui.baseuri()+'/storage/customize/'+item.filekey)
-										.attr('type','text/javascript')
+							})
+						)
+						.append(
+							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.about[pd.lang]).on('click',(e) => {
+								pd.request(pd.ui.baseuri()+'/version.php','GET',{},{})
+								.then((resp) => {
+									pd.create('div')
+									.append(
+										pd.create('div').addclass('pd-kumaneko-about')
+										.append(pd.create('p').addclass('pd-kumaneko-about-title').html('kumaneko'))
+										.append(
+											((container) => {
+												container.append(pd.create('p').html('version:'+resp.my));
+												if (resp.latest) container.append(pd.create('p').html(pd.constants.common.prompt.update[pd.lang].replace(/%version%/g,resp.latest)));
+												return container.append(
+													pd.create('p').html('Copyright '+new Date().format('Y')+' pandafirm LLC. All rights reserved.')
+												);
+											})(pd.create('p').addclass('pd-kumaneko-about-overview'))
+										)
+										.append(
+											pd.create('p').addclass('pd-kumaneko-about-buttons')
+											.append(
+												pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.update[pd.lang]).on('click',(e) => {
+													pd.confirm(pd.constants.common.message.confirm.update[pd.lang],() => {
+														pd.request(pd.ui.baseuri()+'/version.php','POST',{},{})
+														.then((resp) => {
+															pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
+																window.location.reload(true);
+															});
+														})
+														.catch((error) => pd.alert(error.message));
+													});
+												})
+											)
+										)
+									)
+									.popup('600','250').show();
+								})
+								.catch((error) => pd.alert(error.message));
+							})
+						);
+					});
+					pd.event.on(this.config.apps.system.project.id,'pd.edit.submit',(e) => {
+						((smtps) => {
+							if (smtps.length!=0)
+							{
+								if (smtps.length!=Array.from(new Set(smtps.map((item) => item.smtp_mail.value))).length)
+								{
+									pd.alert(pd.constants.project.message.invalid.duplicates[pd.lang]);
+									e.error=true;
+								}
+								else
+								{
+									smtps.each((smtp,index) => {
+										if (!smtp.smtp_host.value)
+										{
+											pd.alert(pd.constants.project.message.invalid.host[pd.lang]);
+											e.error=true;
+										}
+										if (!smtp.smtp_port.value)
+										{
+											pd.alert(pd.constants.project.message.invalid.port[pd.lang]);
+											e.error=true;
+										}
+										if (!smtp.smtp_user.value)
+										{
+											pd.alert(pd.constants.project.message.invalid.user[pd.lang]);
+											e.error=true;
+										}
+										if (!smtp.smtp_pwd.value)
+										{
+											pd.alert(pd.constants.project.message.invalid.pwd[pd.lang]);
+											e.error=true;
+										}
+										if (!smtp.smtp_secure.value)
+										{
+											pd.alert(pd.constants.project.message.invalid.secure[pd.lang]);
+											e.error=true;
+										}
+									});
+								}
+							}
+						})(e.record.smtp.value.filter((item) => item.smtp_mail.value));
+						return e;
+					});
+					pd.event.on(this.config.apps.system.users.id,'pd.change.account',(e) => {
+						return new Promise((resolve,reject) => {
+							e.record.account.value=e.record.account.value.replace(/["']+/g,'');
+							pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'users',query:(() => {
+								return 'account = "'+e.record.account.value+'" and __id != "'+e.record.__id.value+'"';
+							})()})
+							.then((resp) => {
+								var records=resp.records;
+								if (records.length!=0)
+								{
+									pd.alert(pd.constants.users.message.invalid.account[pd.lang],() => {
+										e.record.account.value='';
+										resolve(e);
 									})
+								}
+								else resolve(e);
+							})
+							.catch((error) => pd.alert(error.message));
+						});
+					});
+					pd.event.on(this.config.apps.system.users.id,'pd.change.pwd',(e) => {
+						e.record.pwd.value=e.record.pwd.value.replace(/["']+/g,'');
+						return e;
+					});
+					pd.event.on(this.config.apps.system.users.id,'pd.edit.submit.success',(e) => {
+						if (e.record['__id'].value==pd.operator.__id.value) pd.operator=this.session(e.record);
+						return e;
+					});
+					pd.event.on(this.config.apps.system.users.id,'pd.view.submit.success',(e) => {
+						((user) => {
+							if (user.length!=0) pd.operator=this.session(user.first());
+						})(e.records.put.filter((item) => item['__id'].value==pd.operator.__id.value));
+						return e;
+					});
+					/* load scripts */
+					load(0,() => {
+						((contents,tab,nav) => {
+							/* build applications */
+							this.sort(this.config.apps.user,this.config.apps.sort).each((app,index) => {
+								this.apps[app.id]=new pd.modules.app(app,contents,tab,nav);
+								if (this.permit(app.permissions)=='denied') pd.elm('[nav-id=nav_'+app.id+']').hide();
+							});
+							for (var key in this.config.apps.system)
+								((app) => {
+									this.apps[app.id]=new pd.modules.app(app,contents,tab,null,(key=='project'));
+								})(this.config.apps.system[key]);
+							/* build dashboard */
+							this.dashboard=new pd.modules.dashboard(this.config.dashboard.frames.map((item) => {
+								item.panels=item.panels.map((panel) => {
+									((app) => {
+										panel.config={
+											app:app,
+											view:app.views.filter((item) => item.id==panel.view).first()
+										}
+										switch (panel.config.view.type)
+										{
+											case 'calendar':
+												panel.calendar=new panda_calendar(true);
+												break;
+											case 'crosstab':
+												panel.crosstab=pd.ui.chart.create(panel.config.view.type);
+												break;
+											case 'timeseries':
+												panel.timeseries=pd.ui.chart.create(panel.config.view.type);
+												break;
+											case 'map':
+												panel.map=new panda_map();
+												break;
+											default:
+												pd.event.on(app.id,'pd.edit.call',(e) => pd.event.call(panel.app,'pd.edit.call',e));
+												break;
+										}
+									})(pd.extend({id:'dashboard_'+panel.app},this.config.apps.user[panel.app]));
+									return panel;
 								});
-							})(this.config.apps.system[key]);
-						return res;
-					})());
-				};
-				/* setup configuration */
-				this.config=resp.file;
-				pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'project',id:'1'})
+								return item;
+							}),contents,tab);
+							this.config.dashboard.frames.map((item) => item.panels).flat().each((panel,index) => this.apps[panel.app].view.load(panel.view,null,null,true).catch(() => {}));
+						})(pd.elm('#pd-kumaneko-space-contents'),pd.elm('#pd-kumaneko-space-tab'),pd.elm('#pd-kumaneko-space-nav'));
+					});
+				})((() => {
+					var res=[];
+					for (var key in this.config.apps.user)
+						((app) => {
+							res.push({
+								id:app.id,
+								scripts:app.customize.map((item) => {
+									return pd.create('script')
+									.attr('src',pd.ui.baseuri()+'/storage/customize/'+item.filekey)
+									.attr('type','text/javascript')
+								})
+							});
+						})(this.config.apps.user[key]);
+					for (var key in this.config.apps.system)
+						((app) => {
+							res.push({
+								id:app.id,
+								scripts:app.customize.map((item) => {
+									return pd.create('script')
+									.attr('src',pd.ui.baseuri()+'/storage/customize/'+item.filekey)
+									.attr('type','text/javascript')
+								})
+							});
+						})(this.config.apps.system[key]);
+					return res;
+				})());
+			};
+			var load=(config) => {
+				this.config=config;
+				pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'project',id:'1'})
 				.then((resp) => {
 					var apikey='';
 					if (resp.total!=0)
@@ -774,15 +803,15 @@ class panda_kumaneko{
 									break;
 							}
 					pd.chart.ready().then(() => {
-						if (apikey) pd.map.ready(apikey).then((map) => map.init()).then(() => auth()).catch((error) => pd.alert(error));
-						else auth();
+						if (apikey) pd.map.ready(apikey).then((map) => map.init()).then(() => build()).catch((error) => pd.alert(error));
+						else build();
 					}).catch((error) => pd.alert(error));
 				})
 				.catch((error) => pd.alert(error.message));
-			}
-			catch(e){pd.alert(e.message);}
-		})
-		.catch((error) => pd.alert(error.message));
+			};
+			auth();
+		}
+		catch(e){pd.alert(e.message);}
 	}
 	/* permission */
 	permit(permissions){
@@ -821,6 +850,12 @@ class panda_kumaneko{
 			if (calculate(permissions.denied)!=0) return 'denied';
 		return res;
 	}
+	/* session */
+	session(operator){
+		sessionStorage.setItem(this.project.key+'_loginaccount',operator.account.value);
+		sessionStorage.setItem(this.project.key+'_loginpwd',operator.pwd.value);
+		return operator;
+	}
 	/* sort */
 	sort(apps,sort){
 		return sort.filter((item) => (item in apps)).concat(Object.keys(apps).filter((item) => !sort.includes(item))).map((item) => apps[item]);
@@ -832,7 +867,7 @@ class panda_kumaneko{
 			{
 				case 'delete':
 					var run=(index) => {
-						pd.file(pd.ui.baseuri()+'/file.php','DELETE',{'X-Requested-By':'panda'},{dir:queues.delete[index].dir,filekey:queues.delete[index].filekey})
+						pd.file(pd.ui.baseuri()+'/file.php','DELETE',{},{dir:queues.delete[index].dir,filekey:queues.delete[index].filekey})
 						.then((resp) => {
 							index++;
 							if (index<queues.delete.length) run(index);
@@ -1166,7 +1201,7 @@ pd.modules={
 																				if (!param.error)
 																				{
 																					var reload=param.records.put.some((item) => item['__id'].value==this.record.id);
-																					pd.request(pd.ui.baseuri()+'/records.php','PUT',{'X-Requested-By':'panda'},{app:this.app.id,records:param.records.put},true)
+																					pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:this.app.id,records:param.records.put},true)
 																					.then((resp) => {
 																						pd.event.call(this.app.id,'pd.view.submit.success',{
 																							container:res.body.elm('.pd-view'),
@@ -1545,13 +1580,13 @@ pd.modules={
 														});
 														return target;
 													};
-													pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'departments',query:'',offset:0,limit:0},true)
+													pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'departments',query:'',offset:0,limit:0},true)
 													.then((resp) => {
 														systems.department=resp.records;
-														pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'groups',query:'',offset:0,limit:0},true)
+														pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'groups',query:'',offset:0,limit:0},true)
 														.then((resp) => {
 															systems.group=resp.records;
-															pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'users',query:'available = "available"',offset:0,limit:0},true)
+															pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'users',query:'available = "available"',offset:0,limit:0},true)
 															.then((resp) => {
 																systems.user=resp.records;
 																((bodies) => {
@@ -1560,7 +1595,7 @@ pd.modules={
 																		var download=(index,callback) => {
 																			if (body.attachment.length!=0)
 																			{
-																				pd.file(pd.ui.baseuri()+'/file.php','GET',{'X-Requested-By':'panda'},{dir:'attachment',filekey:body.attachment[index].key},true)
+																				pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'attachment',filekey:body.attachment[index].key},true)
 																				.then((resp) => {
 																					body.attachment[index].data=resp.file;
 																					index++;
@@ -1571,7 +1606,7 @@ pd.modules={
 																			else callback();
 																		}
 																		download(0,() => {
-																			pd.request(pd.ui.baseuri()+'/limit.php','GET',{'X-Requested-By':'panda'},{option:'memory_limit'},true)
+																			pd.request(pd.ui.baseuri()+'/limit.php','GET',{},{option:'memory_limit'},true)
 																			.then((resp) => {
 																				((size) => {
 																					if (size>resp.size)
@@ -1581,7 +1616,7 @@ pd.modules={
 																					}
 																					else
 																					{
-																						pd.request(pd.ui.baseuri()+'/mail/'+pd.lang+'.php','POST',{'X-Requested-By':'panda'},body,true)
+																						pd.request(pd.ui.baseuri()+'/mail/'+pd.lang+'.php','POST',{},body,true)
 																						.then((resp) => {
 																							index++;
 																							if (index<bodies.length) send(index);
@@ -1663,7 +1698,7 @@ pd.modules={
 												if (action.report.saveas in fieldinfos)
 												{
 													pd.request(
-														pd.ui.baseuri()+'/report.php','POST',{'X-Requested-By':'panda'},
+														pd.ui.baseuri()+'/report.php','POST',{},
 														{
 															app:this.app.id,
 															spreadsheet:action.report.spreadsheet,
@@ -1679,12 +1714,12 @@ pd.modules={
 														{
 															((filekey) => {
 																var verify=() => {
-																	pd.request(pd.ui.baseuri()+'/report.php','GET',{'X-Requested-By':'panda'},{verify:filekey},true)
+																	pd.request(pd.ui.baseuri()+'/report.php','GET',{},{verify:filekey},true)
 																	.then((resp) => {
 																		if (resp.result=='ok')
 																		{
 																			filekey+='.pdf';
-																			pd.file(pd.ui.baseuri()+'/file.php','GET',{'X-Requested-By':'panda'},{dir:'report',filekey:filekey},true)
+																			pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'report',filekey:filekey},true)
 																			.then((resp) => {
 																				var finish=(filename) => {
 																					filename+=(filename)?'.pdf':'report.pdf';
@@ -1692,7 +1727,7 @@ pd.modules={
 																						if (action.report.store in fieldinfos)
 																						{
 																							((files) => {
-																								pd.file(pd.ui.baseuri()+'/file.php','POST',{'X-Requested-By':'panda'},{dir:'attachment',files:files})
+																								pd.file(pd.ui.baseuri()+'/file.php','POST',{},{dir:'attachment',files:files})
 																								.then((resp) => {
 																									Array.prototype.push.apply(record[action.report.store].value,resp.files);
 																									actions.call=true;
@@ -1733,7 +1768,7 @@ pd.modules={
 																					});
 																				};
 																				finish(record[action.report.saveas].value).then(() => {
-																					pd.request(pd.ui.baseuri()+'/report.php','PUT',{'X-Requested-By':'panda'},{filekey:filekey},true)
+																					pd.request(pd.ui.baseuri()+'/report.php','PUT',{},{filekey:filekey},true)
 																					.then((resp) => {
 																						resolve();
 																					})
@@ -1782,7 +1817,7 @@ pd.modules={
 										return new Promise((resolve,reject) => {
 											if (action.transfer.app)
 											{
-												pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+												pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 												.then((resp) => {
 													var config=resp.file;
 													var target=config.apps.user[action.transfer.app];
@@ -1913,7 +1948,7 @@ pd.modules={
 															};
 															if (action.transfer.pattern=='insert')
 															{
-																pd.request(pd.ui.baseuri()+'/records.php','POST',{'X-Requested-By':'panda'},{app:action.transfer.app,records:[create.record(pd.record.create(target))]},true)
+																pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:[create.record(pd.record.create(target))]},true)
 																.then((resp) => finish())
 																.catch((error) => {
 																	pd.alert(error.message);
@@ -1950,9 +1985,9 @@ pd.modules={
 																		}
 																		return res;
 																	})(records);
-																	pd.request(pd.ui.baseuri()+'/records.php','POST',{'X-Requested-By':'panda'},{app:action.transfer.app,records:records.filter((item) => !item['__id'].value)},true)
+																	pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:records.filter((item) => !item['__id'].value)},true)
 																	.then((resp) => {
-																		pd.request(pd.ui.baseuri()+'/records.php','PUT',{'X-Requested-By':'panda'},{app:action.transfer.app,records:records.filter((item) => item['__id'].value)},true)
+																		pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:action.transfer.app,records:records.filter((item) => item['__id'].value)},true)
 																		.then((resp) => finish())
 																		.catch((error) => {
 																			pd.alert(error.message);
@@ -2171,7 +2206,7 @@ pd.modules={
 				load:(ids,record) => {
 					ids=((Array.isArray(ids))?pd.extend([],ids):ids.split(',')).filter((item) => item);
 					((linkages) => {
-						pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+						pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 						.then((resp) => {
 							var config=resp.file;
 							var build=(index) => {
@@ -2315,7 +2350,7 @@ pd.modules={
 			};
 			this.record={
 				bulk:(body,records,silent,success,fail) => {
-					pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},body,silent)
+					pd.request(pd.ui.baseuri()+'/records.php','GET',{},body,silent)
 					.then((resp) => {
 						if (resp.records.length!=0)
 						{
@@ -2371,7 +2406,7 @@ pd.modules={
 				},
 				delete:(recordid) => {
 					return new Promise((resolve,reject) => {
-						pd.request(pd.ui.baseuri()+'/records.php','DELETE',{'X-Requested-By':'panda'},{app:this.app.id,id:recordid})
+						pd.request(pd.ui.baseuri()+'/records.php','DELETE',{},{app:this.app.id,id:recordid})
 						.then((resp) => resolve({}))
 						.catch((error) => {
 							pd.alert(error.message);
@@ -2401,7 +2436,7 @@ pd.modules={
 						if (record instanceof Object) load(record);
 						else
 						{
-							pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:this.app.id,id:record})
+							pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:this.app.id,id:record})
 							.then((resp) => {
 								if (resp.total!=0) load(resp.record);
 								else reject({});
@@ -2424,10 +2459,10 @@ pd.modules={
 							if (!param.error)
 							{
 								var execute=() => {
-									pd.request(pd.ui.baseuri()+'/records.php',(param.record['__id'].value)?'PUT':'POST',{'X-Requested-By':'panda'},{app:this.app.id,records:[param.record]})
+									pd.request(pd.ui.baseuri()+'/records.php',(param.record['__id'].value)?'PUT':'POST',{},{app:this.app.id,records:[param.record]})
 									.then((resp) => {
 										if ('id' in resp) this.record.id=resp.id;
-										pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:this.app.id,id:this.record.id})
+										pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:this.app.id,id:this.record.id})
 										.then((resp) => {
 											pd.event.call(this.app.id,(param.record['__id'].value)?'pd.edit.submit.success':'pd.create.submit.success',{
 												container:this.record.ui.body,
@@ -2458,7 +2493,7 @@ pd.modules={
 				},
 				truncate:() => {
 					return new Promise((resolve,reject) => {
-						pd.request(pd.ui.baseuri()+'/records.php','DELETE',{'X-Requested-By':'panda'},{app:this.app.id,truncate:true})
+						pd.request(pd.ui.baseuri()+'/records.php','DELETE',{},{app:this.app.id,truncate:true})
 						.then((resp) => {
 							this.notify().then(() => {
 								if (this.record.ui.tab.active) this.record.clear();
@@ -2659,7 +2694,7 @@ pd.modules={
 									pd.request(
 										pd.ui.baseuri()+'/'+view.type+'.php',
 										'POST',
-										{'X-Requested-By':'panda'},
+										{},
 										pd.extend({
 											app:this.app.id,
 											query:(typeof query==='string')?query:view.query,
@@ -2729,7 +2764,7 @@ pd.modules={
 									pd.request(
 										pd.ui.baseuri()+'/records.php',
 										'GET',
-										{'X-Requested-By':'panda'},
+										{},
 										{
 											app:this.app.id,
 											query:(typeof query==='string')?query:view.query,
@@ -3139,13 +3174,13 @@ pd.modules={
 										if (!param.error)
 											pd.confirm(pd.constants.common.message.confirm.submit[pd.lang],() => {
 												var reload=param.records.put.some((item) => item['__id'].value==this.record.id);
-												pd.request(pd.ui.baseuri()+'/records.php','POST',{'X-Requested-By':'panda'},{app:this.app.id,records:param.records.post})
+												pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:this.app.id,records:param.records.post})
 												.then((resp) => {
 													param.records.post.each((post,index) => {
 														post['__id'].value=resp.id-(param.records.post.length-index-1);
 														if ('autonumbers' in resp) post['__autonumber'].value=resp.autonumbers[post['__id'].value.toString()];
 													});
-													pd.request(pd.ui.baseuri()+'/records.php','PUT',{'X-Requested-By':'panda'},{app:this.app.id,records:param.records.put})
+													pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:this.app.id,records:param.records.put})
 													.then((resp) => {
 														param.records.put.each((put,index) => {
 															if ('autonumbers' in resp) put['__autonumber'].value=resp.autonumbers[put['__id'].value.toString()];
@@ -3288,11 +3323,45 @@ pd.modules={
 	},
 	auth:class extends panda_dialog{
 		/* constructor */
-		constructor(app){
+		constructor(){
 			super(999996,false,false);
 			/* setup properties */
+			this.app={
+				id:'auth',
+				fields:{
+					account:{
+						id:'account',
+						type:'text',
+						caption:'account',
+						required:false,
+						nocaption:true,
+						format:'alphanum',
+						placeholder:pd.constants.auth.prompt.account[pd.lang]
+					},
+					pwd:{
+						id:'pwd',
+						type:'text',
+						caption:'password',
+						required:false,
+						nocaption:true,
+						format:'password',
+						placeholder:pd.constants.auth.prompt.pwd[pd.lang]
+					}
+				},
+				layout:[
+					{
+						type:'row',
+						fields:['account']
+					},
+					{
+						type:'row',
+						fields:['pwd']
+					}
+				],
+				styles:{}
+			};
 			this.ok.attr('tabstop','tabstop').on('click',(e) => {
-				var res=pd.record.get(pd.elm('[form-id=form_'+app.id+']'),app);
+				var res=pd.record.get(pd.elm('[form-id=form_'+this.app.id+']'),this.app);
 				if (!res.error)
 				{
 					if (!res.record.account.value)
@@ -3312,28 +3381,7 @@ pd.modules={
 			/* setup styles */
 			this.ok.css({borderRight:'1px solid #42a5f5'});
 			/* modify elements */
-			app.id='auth';
-			app.fields.account=pd.extend({
-				required:false,
-				nocaption:true,
-				placeholder:pd.constants.auth.prompt.account[pd.lang]
-			},app.fields.account);
-			app.fields.pwd=pd.extend({
-				required:false,
-				nocaption:true,
-				placeholder:pd.constants.auth.prompt.pwd[pd.lang]
-			},app.fields.pwd);
-			app.layout=[
-				{
-					type:'row',
-					fields:['account']
-				},
-				{
-					type:'row',
-					fields:['pwd']
-				}
-			];
-			pd.ui.form.create(this.contents,app);
+			pd.ui.form.create(this.contents,this.app);
 			this.container.css({height:'165px',width:'300px'});
 			this.contents.elms('.pd-field').each((element,index) => element.css({width:'100%'}));
 		}
@@ -3394,7 +3442,7 @@ pd.modules={
 										})
 										.on('click',(e) => {
 											pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
-												pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+												pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 												.then((resp) => {
 													var config=resp.file;
 													var error=(() => {
@@ -3555,7 +3603,7 @@ pd.modules={
 										.on('click',(e) => {
 											/* duplicate field */
 											((parent) => {
-												pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'field'},true)
+												pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'field'},true)
 												.then((resp) => {
 													parent.parentNode.insertBefore(
 														this.menus.form.lib.create({id:'row',type:'row'})
@@ -3890,7 +3938,7 @@ pd.modules={
 										e.stopPropagation();
 									})
 									.on('click',(e) => {
-										pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'view'},true)
+										pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'view'},true)
 										.then((resp) => {
 											res.parentNode.insertBefore(this.menus.views.lib.create(pd.extend({id:resp.id.toString(),name:res.view.name+' Copy'},res.view)),res.nextElementSibling);
 											this.menus.views.lib.remodel();
@@ -3907,7 +3955,7 @@ pd.modules={
 									})
 									.on('click',(e) => {
 										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
-											pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+											pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 											.then((resp) => {
 												var config=resp.file;
 												if (config.dashboard.frames.map((item) => item.panels).flat().filter((item) => (item.app==this.app.id && item.view==res.view.id)).length==0)
@@ -4001,7 +4049,7 @@ pd.modules={
 										e.stopPropagation();
 									})
 									.on('click',(e) => {
-										pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'linkage'},true)
+										pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'linkage'},true)
 										.then((resp) => {
 											res.parentNode.insertBefore(this.menus.linkages.lib.create(pd.extend({id:resp.id.toString(),name:res.linkage.name+' Copy'},res.linkage)),res.nextElementSibling);
 											this.menus.linkages.lib.remodel();
@@ -4117,7 +4165,7 @@ pd.modules={
 										e.stopPropagation();
 									})
 									.on('click',(e) => {
-										pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'action'},true)
+										pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'action'},true)
 										.then((resp) => {
 											res.parentNode.insertBefore(this.menus.actions.lib.create(pd.extend({id:resp.id.toString(),name:res.action.name+' Copy'},res.action)),res.nextElementSibling);
 											this.menus.actions.lib.remodel();
@@ -4203,7 +4251,7 @@ pd.modules={
 						this.get().then((resp) => {
 							if (!resp.error)
 								((app) => {
-									pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{verify:'verify'},true)
+									pd.request(pd.ui.baseuri()+'/config.php','GET',{},{verify:'verify'},true)
 									.then((resp) => {
 										if (resp.result=='ok')
 										{
@@ -4568,7 +4616,7 @@ pd.modules={
 														{
 															if (!keep.fieldinfo.id)
 															{
-																pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'field'},true)
+																pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'field'},true)
 																.then((resp) => {
 																	keep.fieldinfo.id='field_'+resp.id.toString()+'_';
 																	resolve(menu.lib.create(keep.fieldinfo));
@@ -4659,7 +4707,7 @@ pd.modules={
 										pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.app.caption.button.add.view[pd.lang]).on('click',(e) => {
 											/* show viewbuilder */
 											((type) => {
-												pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'view'},true)
+												pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'view'},true)
 												.then((resp) => {
 													menu.builder.show(this.app.id,(() => {
 														var res={
@@ -4748,7 +4796,7 @@ pd.modules={
 									.append(
 										pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.app.caption.button.add.linkage[pd.lang]).on('click',(e) => {
 											/* show linkagebuilder */
-											pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'linkage'},true)
+											pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'linkage'},true)
 											.then((resp) => {
 												menu.builder.show({
 													id:resp.id.toString(),
@@ -4827,7 +4875,7 @@ pd.modules={
 								/* queue event */
 								pd.event.on('appbuilder_'+menu.id,'pd.file.delete.call',(e) => {
 									((file) => {
-										pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+										pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 										.then((resp) => {
 											var config=resp.file;
 											if (!(() => {
@@ -4875,7 +4923,7 @@ pd.modules={
 										pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.app.caption.button.add.action[pd.lang]).on('click',(e) => {
 											/* show actionbuilder */
 											((trigger) => {
-												pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'action'},true)
+												pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'action'},true)
 												.then((resp) => {
 													menu.builder.show((() => {
 														var res={
@@ -4956,7 +5004,7 @@ pd.modules={
 												pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
 													if (this.app.id)
 													{
-														pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+														pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 														.then((resp) => {
 															var config=resp.file;
 															var filekeys=[];
@@ -4999,7 +5047,7 @@ pd.modules={
 															if (error) pd.alert(error);
 															else
 															{
-																pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{verify:'verify'},true)
+																pd.request(pd.ui.baseuri()+'/config.php','GET',{},{verify:'verify'},true)
 																.then((resp) => {
 																	if (resp.result=='ok')
 																	{
@@ -5114,7 +5162,7 @@ pd.modules={
 						error:false,
 						app:this.app
 					};
-					pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+					pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 					.then((resp) => {
 						var config=resp.file;
 						if (!this.contents.elm('.pd-kumaneko-appbuilder-name').elm('input').val())
@@ -5588,7 +5636,7 @@ pd.modules={
 					/* setup properties */
 					if (Object.keys(app).length==0)
 					{
-						pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'app'},true)
+						pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'app'},true)
 						.then((resp) => {
 							this.app={
 								id:resp.id.toString(),
@@ -6311,7 +6359,7 @@ pd.modules={
 															templates.template.elm('[field-id=template]').elm('select').empty().append(pd.create('option'));
 															if (res.closest('.pd-spreadsheet').elm('input').val())
 															{
-																pd.request(pd.ui.baseuri()+'/report.php','GET',{'X-Requested-By':'panda'},{spreadsheet:res.closest('.pd-spreadsheet').elm('input').val()},true)
+																pd.request(pd.ui.baseuri()+'/report.php','GET',{},{spreadsheet:res.closest('.pd-spreadsheet').elm('input').val()},true)
 																.then((resp) => {
 																	var sheets=((sheets) => {
 																		if (Array.isArray(sheets))
@@ -7401,14 +7449,14 @@ pd.modules={
 			show(action,fields,layout,callback){
 				if (action instanceof Object)
 				{
-					pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+					pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 					.then((resp) => {
 						/* setup properties */
 						this.keep.action=pd.extend({},action);
 						this.keep.config=resp.file;
 						this.keep.fields=fields;
 						this.keep.layout=layout;
-						pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'project',id:'1'})
+						pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'project',id:'1'})
 						.then((resp) => {
 							this.keep.mail=(resp.total!=0)?resp.record.smtp.value.shape((item) => (item.smtp_mail.value)?item.smtp_mail.value:PD_THROW):[];
 							/* modify elements */
@@ -8610,7 +8658,7 @@ pd.modules={
 			show(fields,width,callback){
 				if (fields instanceof Object)
 				{
-					pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+					pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 					.then((resp) => {
 						/* setup properties */
 						this.keep.config=resp.file;
@@ -9086,7 +9134,7 @@ pd.modules={
 			show(linkage,fields,layout,callback){
 				if (linkage instanceof Object)
 				{
-					pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+					pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 					.then((resp) => {
 						/* setup properties */
 						this.keep.linkage=pd.extend({},linkage);
@@ -9291,7 +9339,7 @@ pd.modules={
 										pd.request(
 											pd.ui.baseuri()+'/crosstab.php',
 											'POST',
-											{'X-Requested-By':'panda'},
+											{},
 											pd.extend({
 												app:this.keep.app,
 												query:this.keep.view.query,
@@ -9369,7 +9417,7 @@ pd.modules={
 										pd.request(
 											pd.ui.baseuri()+'/timeseries.php',
 											'POST',
-											{'X-Requested-By':'panda'},
+											{},
 											pd.extend({
 												app:this.keep.app,
 												query:this.keep.view.query,
@@ -11112,7 +11160,7 @@ pd.modules={
 								e.stopPropagation();
 							})
 							.on('click',(e) => {
-								pd.request(pd.ui.baseuri()+'/increment.php','PUT',{'X-Requested-By':'panda'},{target:'app'},true)
+								pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'app'},true)
 								.then((resp) => {
 									((duplicate) => {
 										res.parentNode.insertBefore(this.lib.create(duplicate,true),res.nextElementSibling);
@@ -11244,7 +11292,7 @@ pd.modules={
 			}
 			/* show */
 			show(){
-				pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+				pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 				.then((resp) => {
 					/* initialize elements */
 					this.lib.init();
@@ -11256,7 +11304,7 @@ pd.modules={
 					this.handler=(e) => {
 						this.get().then((resp) => {
 							((apps,sort) => {
-								pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{verify:'verify'},true)
+								pd.request(pd.ui.baseuri()+'/config.php','GET',{},{verify:'verify'},true)
 								.then((resp) => {
 									if (resp.result=='ok')
 									{
@@ -11700,7 +11748,7 @@ pd.modules={
 			}
 			/* show */
 			show(){
-				pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+				pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 				.then((resp) => {
 					/* initialize elements */
 					this.lib.init();
@@ -11716,7 +11764,7 @@ pd.modules={
 					this.handler=(e) => {
 						this.get().then((resp) => {
 							((dashboard) => {
-								pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{verify:'verify'},true)
+								pd.request(pd.ui.baseuri()+'/config.php','GET',{},{verify:'verify'},true)
 								.then((resp) => {
 									if (resp.result=='ok')
 									{
@@ -12008,7 +12056,7 @@ pd.modules={
 										{
 											if (('__id' in fields)?cells[fields['__id']]:false)
 											{
-												pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:this.keep.app,id:cells[fields['__id']]},true)
+												pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:this.keep.app,id:cells[fields['__id']]},true)
 												.then((resp) => {
 													if (resp.total!=0) setup(resp.record).then(() => finish());
 													else
@@ -12101,7 +12149,7 @@ pd.modules={
 							this.keep.app=app;
 							this.keep.buffer=readData;
 							this.keep.csv=csv;
-							pd.request(pd.ui.baseuri()+'/config.php','GET',{'X-Requested-By':'panda'},{},true)
+							pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 							.then((resp) => {
 								/* setup properties */
 								this.keep.fields=resp.file.apps.user[this.keep.app].fields;
@@ -12114,13 +12162,13 @@ pd.modules={
 										{
 											((modifiedtime,records) => {
 												pd.confirm(pd.constants.common.message.confirm.submit[pd.lang],() => {
-													pd.request(pd.ui.baseuri()+'/records.php','POST',{'X-Requested-By':'panda'},{app:this.keep.app,records:records.post})
+													pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:this.keep.app,records:records.post})
 													.then((resp) => {
 														records.post.each((post,index) => {
 															post['__id'].value=resp.id-(records.post.length-index-1);
 															if ('autonumbers' in resp) post['__autonumber'].value=resp.autonumbers[post['__id'].value.toString()];
 														});
-														pd.request(pd.ui.baseuri()+'/records.php','PUT',{'X-Requested-By':'panda'},{app:this.keep.app,records:records.put})
+														pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:this.keep.app,records:records.put})
 														.then((resp) => {
 															records.put.each((put,index) => {
 																if ('autonumbers' in resp) put['__autonumber'].value=resp.autonumbers[put['__id'].value.toString()];
@@ -12179,7 +12227,7 @@ pd.modules={
 							registration.pushManager.getSubscription()
 							.then((subscription) => {
 								var handler=(subscription) => {
-									pd.request(pd.ui.baseuri()+'/notify.php','POST',{'X-Requested-By':'panda'},{
+									pd.request(pd.ui.baseuri()+'/notify.php','POST',{},{
 										endpoint:subscription.endpoint,
 										publicKey:window.btoa(String.fromCharCode.apply(null,new Uint8Array(subscription.getKey('p256dh')))).replace(/\+/g, '-').replace(/\//g, '_'),
 										authToken:window.btoa(String.fromCharCode.apply(null,new Uint8Array(subscription.getKey('auth')))).replace(/\+/g, '-').replace(/\//g, '_')
@@ -12189,7 +12237,7 @@ pd.modules={
 								};
 								if (!subscription)
 								{
-									pd.request(pd.ui.baseuri()+'/notify.php','GET',{'X-Requested-By':'panda'},{},true)
+									pd.request(pd.ui.baseuri()+'/notify.php','GET',{},{},true)
 									.then((resp) => {
 										registration.pushManager.subscribe({
 											userVisibleOnly:true,
@@ -12219,7 +12267,7 @@ pd.modules={
 			/* push */
 			push(data){
 				if (this.enabled)
-					pd.request(pd.ui.baseuri()+'/notify.php','PUT',{'X-Requested-By':'panda'},{payload:data,subject:location.href.replace(/\/[^\/]*$/g,'')+'/'},true)
+					pd.request(pd.ui.baseuri()+'/notify.php','PUT',{},{payload:data,subject:location.href.replace(/\/[^\/]*$/g,'')+'/'},true)
 					.then((resp) => {})
 					.catch((error) => pd.alert(error.message));
 			}
@@ -13538,6 +13586,16 @@ pd.constants=pd.extend({
 				secure:{
 					en:'Please specify Connection Security',
 					ja:'Connection Security を指定して下さい'
+				}
+			}
+		}
+	},
+	users:{
+		message:{
+			invalid:{
+				account:{
+					en:'The account you entered is already in use',
+					ja:'入力したアカウントは既にに使用されています'
 				}
 			}
 		}

@@ -271,7 +271,6 @@ class panda{
 				});
 			};
 			body['timezone']=this.timezone();
-			if ('__id' in this.operator) body['operator']=this.operator.__id.value;
 			switch (method)
 			{
 				case 'GET':
@@ -285,6 +284,7 @@ class panda{
 						method:method,
 						headers:((res) => {
 							if (!('X-Requested-With' in res)) res['X-Requested-With']='XMLHttpRequest';
+							if (('account' in this.operator) && ('pwd' in this.operator)) res['X-Authorization']=window.btoa(this.operator.account.value+':'+this.operator.pwd.value);
 							return res;
 						})(headers)
 					};
@@ -312,6 +312,7 @@ class panda{
 						method:method,
 						headers:((res) => {
 							if (!('X-Requested-With' in res)) res['X-Requested-With']='XMLHttpRequest';
+							if (('account' in this.operator) && ('pwd' in this.operator)) res['X-Authorization']=window.btoa(this.operator.account.value+':'+this.operator.pwd.value);
 							return res;
 						})(headers),
 						body:filedata
@@ -322,6 +323,7 @@ class panda{
 						method:method,
 						headers:((res) => {
 							if (!('X-Requested-With' in res)) res['X-Requested-With']='XMLHttpRequest';
+							if (('account' in this.operator) && ('pwd' in this.operator)) res['X-Authorization']=window.btoa(this.operator.account.value+':'+this.operator.pwd.value);
 							return res;
 						})(headers),
 						body:JSON.stringify(body)
@@ -493,7 +495,6 @@ class panda{
 			if (addcontenttype)
 				if (!('Content-Type' in headers)) headers['Content-Type']='application/json';
 			body['timezone']=this.timezone();
-			if ('__id' in this.operator) body['operator']=this.operator.__id.value;
 			if (method=='GET')
 			{
 				var param=[];
@@ -507,6 +508,7 @@ class panda{
 					method:method,
 					headers:((res) => {
 						if (!('X-Requested-With' in res)) res['X-Requested-With']='XMLHttpRequest';
+						if (('account' in this.operator) && ('pwd' in this.operator)) res['X-Authorization']=window.btoa(this.operator.account.value+':'+this.operator.pwd.value);
 						return res;
 					})(headers)
 				};
@@ -517,6 +519,7 @@ class panda{
 					method:method,
 					headers:((res) => {
 						if (!('X-Requested-With' in res)) res['X-Requested-With']='XMLHttpRequest';
+						if (('account' in this.operator) && ('pwd' in this.operator)) res['X-Authorization']=window.btoa(this.operator.account.value+':'+this.operator.pwd.value);
 						return res;
 					})(headers),
 					body:JSON.stringify(body)

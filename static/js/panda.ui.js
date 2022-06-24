@@ -66,6 +66,11 @@ class panda_filter extends panda_dialog{
 		super(999996,false,false);
 		/* setup properties */
 		this.handler=null;
+		this.config={
+			department:{},
+			group:{},
+			user:{}
+		};
 		this.result={};
 		this.tables={
 			query:null,
@@ -190,10 +195,37 @@ class panda_filter extends panda_dialog{
 		this.record={
 			load:() => {
 				return new Promise((resolve,reject) => {
-					pd.request(pd.ui.baseuri()+'/records.php','GET',{'X-Requested-By':'panda'},{app:'users',query:'available = "available"',offset:0,limit:0},true)
+					pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 					.then((resp) => {
-						this.record.user=resp.records;
-						resolve();
+						var config=resp.file;
+						this.config.department=config.apps.system.departments;
+						this.config.group=config.apps.system.groups;
+						this.config.user=config.apps.system.users;
+						pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'departments',query:'',offset:0,limit:0},true)
+						.then((resp) => {
+							this.record.department=resp.records;
+							pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'groups',query:'',offset:0,limit:0},true)
+							.then((resp) => {
+								this.record.group=resp.records;
+								pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'users',query:'available = "available"',offset:0,limit:0},true)
+								.then((resp) => {
+									this.record.user=resp.records;
+									resolve(config);
+								})
+								.catch((error) => {
+									pd.alert(error.message);
+									reject();
+								});
+							})
+							.catch((error) => {
+								pd.alert(error.message);
+								reject();
+							});
+						})
+						.catch((error) => {
+							pd.alert(error.message);
+							reject();
+						});
 					})
 					.catch((error) => {
 						pd.alert(error.message);
@@ -201,6 +233,8 @@ class panda_filter extends panda_dialog{
 					});
 				});
 			},
+			department:[],
+			group:[],
 			user:[]
 		};
 		/* sort */
@@ -437,7 +471,7 @@ class panda_filter extends panda_dialog{
 													case 'checkbox':
 													case 'dropdown':
 													case 'radio':
-														var values=value.replace(/^\(/g,'').replace(/\)$/g,'').replace(/^\"/g,'').replace(/\"$/g,'').split('","').filter((item) => item);
+														var values=value.replace(/^\(/g,'').replace(/\)$/g,'').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
 														field.elms('input').each((element,index) => element.checked=values.includes(element.val()));
 														break;
 													case 'creator':
@@ -445,7 +479,7 @@ class panda_filter extends panda_dialog{
 													case 'group':
 													case 'modifier':
 													case 'user':
-														var values=value.replace(/^\(/g,'').replace(/\)$/g,'').replace(/^\"/g,'').replace(/\"$/g,'').split('","').filter((item) => item);
+														var values=value.replace(/^\(/g,'').replace(/\)$/g,'').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
 														field.elm('input').val(JSON.stringify(values));
 														field.elm('.pd-guide').empty();
 														values.each((value,index) => field.elm('.pd-field-value').guide(value));
@@ -470,12 +504,12 @@ class panda_filter extends panda_dialog{
 																	switch (fieldinfo.type)
 																	{
 																		case 'date':
-																			elements.date.val(value.replace(/^\"/g,'').replace(/\"$/g,''));
+																			elements.date.val(value.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
 																			break;
 																		case 'createdtime':
 																		case 'datetime':
 																		case 'modifiedtime':
-																			var date=value.replace(/^\"/g,'').replace(/\"$/g,'').parseDateTime();
+																			var date=value.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'').parseDateTime();
 																			elements.date.val(date.format('Y-m-d'));
 																			elements.hour.val(date.format('H'));
 																			elements.minute.val(date.format('i'));
@@ -493,7 +527,7 @@ class panda_filter extends panda_dialog{
 														});
 														break;
 													case 'time':
-														var values=value.replace(/^\"/g,'').replace(/\"$/g,'').split(':').filter((item) => item);
+														var values=value.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'').split(':').filter((item) => item);
 														if (values.length==2)
 														{
 															field.elm('.pd-hour').elm('select').val(values[0]);
@@ -506,7 +540,7 @@ class panda_filter extends panda_dialog{
 														}
 														break;
 													default:
-														field.elm('input').val(value.replace(/^\"/g,'').replace(/\"$/g,''));
+														field.elm('input').val(value.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
 														break;
 												}
 											}
@@ -849,8 +883,8 @@ class panda_filter extends panda_dialog{
 						((user) => {
 							if (user.length!=0)
 							{
-								res+=user.first()['department'].value.filter((item) => values.department.includes(item)).length;
-								res+=user.first()['group'].value.filter((item) => values.group.includes(item)).length;
+								res+=user.first().department.value.filter((item) => values.department.includes(item)).length;
+								res+=user.first().group.value.filter((item) => values.group.includes(item)).length;
 								if (values.user.includes(value)) res++;
 							}
 						})(this.record.user.filter((item) => item['__id'].value==value));
@@ -897,12 +931,12 @@ class panda_filter extends panda_dialog{
 				case 'department':
 				case 'group':
 				case 'modifier':
-					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').replace(/^\"/g,'').replace(/\"$/g,'').split('","').filter((item) => item);
+					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
 					formula='CONTAIN_MULTIPLE()';
 					break;
 				case 'dropdown':
 				case 'radio':
-					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').replace(/^\"/g,'').replace(/\"$/g,'').split('","').filter((item) => item);
+					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
 					switch (operator)
 					{
 						case 'not in':
@@ -971,14 +1005,14 @@ class panda_filter extends panda_dialog{
 					}
 					break;
 				case 'file':
-					rhs=rhs.replace(/^\"/g,'').replace(/\"$/g,'');
+					rhs=rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'');
 					formula='CONTAIN_FILE()';
 					break;
 				case 'id':
 				case 'number':
 					formula=((rhs) => {
 						return '(pd.isnumeric(lhs.value)?parseFloat(lhs.value):null) '+((operator=='=')?'==':operator)+' '+((rhs!='0')?rhs.replace(/^0/g,''):rhs);
-					})((pd.isnumeric(rhs.replace(/^\"/g,'').replace(/\"$/g,'')))?rhs.replace(/^\"/g,'').replace(/\"$/g,''):'null');
+					})((pd.isnumeric(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'')))?rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):'null');
 					break;
 				case 'lookup':
 					switch (operator)
@@ -986,22 +1020,22 @@ class panda_filter extends panda_dialog{
 						case 'not like':
 							((pattern) => {
 								formula=(pattern)?'!lhs.search.match(/(?:'+pattern+')/g)':'lhs.search';
-							})(rhs.replace(/^\"/g,'').replace(/\"$/g,''));
+							})(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
 							break;
 						case 'like':
 							((pattern) => {
 								formula=(pattern)?'lhs.search.match(/(?:'+pattern+')/g)':'!lhs.search';
-							})(rhs.replace(/^\"/g,'').replace(/\"$/g,''));
+							})(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
 							break;
 						case 'not match':
 							formula=((rhs) => {
 								return '(pd.isnumeric(lhs.value)?parseFloat(lhs.value):null) != '+((rhs!='0')?rhs.replace(/^0/g,''):rhs);
-							})((pd.isnumeric(rhs.replace(/^\"/g,'').replace(/\"$/g,'')))?rhs.replace(/^\"/g,'').replace(/\"$/g,''):'null');
+							})((pd.isnumeric(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'')))?rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):'null');
 							break;
 						case 'match':
 							formula=((rhs) => {
 								return '(pd.isnumeric(lhs.value)?parseFloat(lhs.value):null) == '+((rhs!='0')?rhs.replace(/^0/g,''):rhs);
-							})((pd.isnumeric(rhs.replace(/^\"/g,'').replace(/\"$/g,'')))?rhs.replace(/^\"/g,'').replace(/\"$/g,''):'null');
+							})((pd.isnumeric(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'')))?rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):'null');
 							break;
 						default:
 							formula='lhs.search '+((operator=='=')?'==':operator)+' '+rhs;
@@ -1009,7 +1043,7 @@ class panda_filter extends panda_dialog{
 					}
 					break;
 				case 'user':
-					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').replace(/"LOGIN_USER"/g,'"'+pd.operator.__id.value.toString()+'"').replace(/^\"/g,'').replace(/\"$/g,'').split('","').filter((item) => item);
+					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').replace(/"LOGIN_USER"/g,'"'+pd.operator.__id.value.toString()+'"').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
 					formula='CONTAIN_USER()';
 					break;
 				default:
@@ -1018,12 +1052,12 @@ class panda_filter extends panda_dialog{
 						case 'not like':
 							((pattern) => {
 								formula=(pattern)?'!((lhs.value)?lhs.value:\'\').match(/(?:'+pattern+')/g)':'lhs.value';
-							})(rhs.replace(/^\"/g,'').replace(/\"$/g,''));
+							})(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
 							break;
 						case 'like':
 							((pattern) => {
 								formula=(pattern)?'((lhs.value)?lhs.value:\'\').match(/(?:'+pattern+')/g)':'!lhs.value';
-							})(rhs.replace(/^\"/g,'').replace(/\"$/g,''));
+							})(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
 							break;
 						default:
 							formula='((lhs.value)?lhs.value:\'\') '+((operator=='=')?'==':operator)+' '+rhs;
@@ -1240,6 +1274,72 @@ class panda_formula{
 			var LINES=(value,index) => {
 				var res=STR(value).split('\n');
 				return (res.length<index)?'':res[index-1];
+			};
+			var LOOKUP_DEPT=(value) => {
+				var res=[];
+				if (Array.isArray(value))
+				{
+					res=Array.from(new Set(value.shape((item) => {
+						return ((id) => {
+							return ((user) => {
+								return (user.length!=0)?user.first().department.value:PD_THROW;
+							})(pd.filter.record.user.filter((item) => item['__id'].value==id));
+						})(item);
+					}).flat()));
+				}
+				return res;
+			};
+			var LOOKUP_DEPT_USER=(value,query) => {
+				var res=[];
+				if (Array.isArray(value))
+				{
+					res=Array.from(new Set(value.shape((item) => {
+						return ((id) => {
+							return ((user) => {
+								if (user.length!=0)
+								{
+									if (query) user=user.filter((item) => pd.filter.scan(pd.filter.config.user,item,query));
+									return (user.length!=0)?user.map((item) => item['__id'].value):PD_THROW;
+								}
+								else return PD_THROW;
+							})(pd.filter.record.user.filter((item) => item.department.value.includes(id)));
+						})(item);
+					}).flat()));
+				}
+				return res;
+			};
+			var LOOKUP_GROUP=(value) => {
+				var res=[];
+				if (Array.isArray(value))
+				{
+					res=Array.from(new Set(value.shape((item) => {
+						return ((id) => {
+							return ((user) => {
+								return (user.length!=0)?user.first().group.value:PD_THROW;
+							})(pd.filter.record.user.filter((item) => item['__id'].value==id));
+						})(item);
+					}).flat()));
+				}
+				return res;
+			};
+			var LOOKUP_GROUP_USER=(value,query) => {
+				var res=[];
+				if (Array.isArray(value))
+				{
+					res=Array.from(new Set(value.shape((item) => {
+						return ((id) => {
+							return ((user) => {
+								if (user.length!=0)
+								{
+									if (query) user=user.filter((item) => pd.filter.scan(pd.filter.config.user,item,query));
+									return (user.length!=0)?user.map((item) => item['__id'].value):PD_THROW;
+								}
+								else return PD_THROW;
+							})(pd.filter.record.user.filter((item) => item.group.value.includes(id)));
+						})(item);
+					}).flat()));
+				}
+				return res;
 			};
 			var LPAD=(value,len,pad) => {
 				return STR(value).padStart(len,pad);
@@ -1894,7 +1994,7 @@ class panda_recordpicker extends panda_dialog{
 		pd.request(
 			pd.ui.baseuri()+'/records.php',
 			'GET',
-			{'X-Requested-By':'panda'},
+			{},
 			{
 				app:this.fieldinfo.app,
 				query:(() => {
@@ -2243,7 +2343,7 @@ class panda_unifiedpicker extends panda_dialog{
 		pd.request(
 			pd.ui.baseuri()+'/records.php',
 			'GET',
-			{'X-Requested-By':'panda'},
+			{},
 			{
 				app:this.active.id,
 				query:(() => {
@@ -2735,7 +2835,7 @@ class panda_user_interface{
 									pd.request(
 										this.baseuri()+'/records.php',
 										'GET',
-										{'X-Requested-By':'panda'},
+										{},
 										{
 											app:'users',
 											id:id
@@ -2843,7 +2943,7 @@ class panda_user_interface{
 														pd.request(
 															this.baseuri()+'/records.php',
 															'GET',
-															{'X-Requested-By':'panda'},
+															{},
 															(() => {
 																var res={
 																	app:fieldinfo.type+'s',
@@ -2905,7 +3005,7 @@ class panda_user_interface{
 											if (e.currentTarget.files)
 											{
 												((files) => {
-													pd.request(this.baseuri()+'/limit.php','GET',{'X-Requested-By':'panda'},{option:'upload_max_filesize'},true)
+													pd.request(this.baseuri()+'/limit.php','GET',{},{option:'upload_max_filesize'},true)
 													.then((resp) => {
 														if (Array.from(files).some((file,index) => new Blob([file],{type:file.type}).size>resp.size))
 														{
@@ -2914,7 +3014,7 @@ class panda_user_interface{
 														}
 														else
 														{
-															pd.file(this.baseuri()+'/file.php','POST',{'X-Requested-By':'panda'},{dir:fieldinfo.dir,files:files})
+															pd.file(this.baseuri()+'/file.php','POST',{},{dir:fieldinfo.dir,files:files})
 															.then((resp) => {
 																field.elm('input').val(((files) => {
 																	return JSON.stringify(files.concat(resp.files));
@@ -2963,7 +3063,7 @@ class panda_user_interface{
 									);
 								};
 								field.open=(file) => {
-									pd.file(this.baseuri()+'/file.php','GET',{'X-Requested-By':'panda'},{dir:fieldinfo.dir,filekey:file.filekey})
+									pd.file(this.baseuri()+'/file.php','GET',{},{dir:fieldinfo.dir,filekey:file.filekey})
 									.then((resp) => {
 										try
 										{
@@ -3204,7 +3304,7 @@ class panda_user_interface{
 												pd.request(
 													this.baseuri()+'/records.php',
 													'GET',
-													{'X-Requested-By':'panda'},
+													{},
 													{
 														app:fieldinfo.app,
 														query:fieldinfo.query
@@ -3236,7 +3336,7 @@ class panda_user_interface{
 												pd.request(
 													this.baseuri()+'/records.php',
 													'GET',
-													{'X-Requested-By':'panda'},
+													{},
 													{
 														app:fieldinfo.app,
 														id:id
