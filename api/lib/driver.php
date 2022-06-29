@@ -344,8 +344,8 @@ class clsDriver
 						case "department":
 						case "group":
 							$query=preg_replace(
-								"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
-								'$me->FILTER_MULTIPLE($values["'.$key.'"]["value"],\'$1\',[$2])',
+								"/{$key}[ ]+(not in|in)[ ]+\(([^\)]*)\)/u",
+								'$me->FILTER_MULTIPLE($values["'.$key.'"]["value"],"$1",[$2])',
 								$query
 							);
 							break;
@@ -430,16 +430,16 @@ class clsDriver
 							break;
 						case "file":
 							$query=preg_replace(
-								"/{$key}[ ]*( not like | like )[ ]*\"([^\"]*)\"/u",
-								'$me->FILTER_FILE($values["'.$key.'"]["value"],\'$1\',\'$2\')',
+								"/{$key}[ ]+(not like|like)[ ]+(\"[^\"]*\"|'[^']*')/u",
+								'$me->FILTER_FILE($values["'.$key.'"]["value"],"$1",$2)',
 								$query
 							);
 							break;
 						case "lookup":
-							if (preg_match("/{$key}[ ]*( not match | match )[ ]*[\"]{1}[0-9-]*[\"]{1}/u",$query))
+							if (preg_match("/{$key}[ ]*( not match | match )[ ]*[\"']{1}[0-9-]*[\"']{1}/u",$query))
 							{
 								$query=preg_replace(
-									"/({$key})[ ]*( not match | match )[ ]*[\"]{1}([0-9-]*)[\"]{1}/u",
+									"/({$key})[ ]*( not match | match )[ ]*[\"']{1}([0-9-]*)[\"']{1}/u",
 									'$1 $2 $3',
 									$query
 								);
@@ -457,10 +457,10 @@ class clsDriver
 							$query=preg_replace("/(^|[ \(]{1}){$key}/u",'$1$values["'.$key.'"]["search"]',$query);
 							break;
 						case "number":
-							if (preg_match("/{$key}[ ]*([!><=]+)[ ]*[\"]{1}[0-9-]*[\"]{1}/u",$query))
+							if (preg_match("/{$key}[ ]*([!><=]+)[ ]*[\"']{1}[0-9-]*[\"']{1}/u",$query))
 							{
 								$query=preg_replace(
-									"/({$key})[ ]*([!><=]+)[ ]*[\"]{1}([0-9-]*)[\"]{1}/u",
+									"/({$key})[ ]*([!><=]+)[ ]*[\"']{1}([0-9-]*)[\"']{1}/u",
 									'$1 $2 $3',
 									$query
 								);
@@ -484,9 +484,9 @@ class clsDriver
 									case "checkbox":
 									case "department":
 									case "group":
-										$replacement='$me->FILTER_MULTIPLE($values["'.$key.'"]["value"],\'$1\',[$2])';
+										$replacement='$me->FILTER_MULTIPLE($values["'.$key.'"]["value"],"$1",[$2])';
 										$query=preg_replace(
-											"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
+											"/{$key}[ ]+(not in|in)[ ]+\(([^\)]*)\)/u",
 											'count(array_filter($values["'.$table.'"]["value"],function($values) use ($me){return '.$replacement.';}))>0',
 											$query
 										);
@@ -602,18 +602,18 @@ class clsDriver
 										}
 										break;
 									case "file":
-										$replacement='$me->FILTER_FILE($values["'.$key.'"]["value"],\'$1\',\'$2\')';
+										$replacement='$me->FILTER_FILE($values["'.$key.'"]["value"],"$1",$2)';
 										$query=preg_replace(
-											"/{$key}[ ]*( not like | like )[ ]*\"([^\"]*)\"/u",
+											"/{$key}[ ]+(not like|like)[ ]+(\"[^\"]*\"|'[^']*')/u",
 											'count(array_filter($values["'.$table.'"]["value"],function($values) use ($me){return '.$replacement.';}))>0',
 											$query
 										);
 										break;
 									case "lookup":
-										if (preg_match("/{$key}[ ]*( not match | match )[ ]*[\"]{1}[0-9-]*[\"]{1}/u",$query))
+										if (preg_match("/{$key}[ ]*( not match | match )[ ]*[\"']{1}[0-9-]*[\"']{1}/u",$query))
 										{
 											$query=preg_replace(
-												"/({$key})[ ]*( not match | match )[ ]*[\"]{1}([0-9-]*)[\"]{1}/u",
+												"/({$key})[ ]*( not match | match )[ ]*[\"']{1}([0-9-]*)[\"']{1}/u",
 												'$1 $2 $3',
 												$query
 											);
@@ -643,10 +643,10 @@ class clsDriver
 										);
 										break;
 									case "number":
-										if (preg_match("/{$key}[ ]*([!><=]+)[ ]*[\"]{1}[0-9-]*[\"]{1}/u",$query))
+										if (preg_match("/{$key}[ ]*([!><=]+)[ ]*[\"']{1}[0-9-]*[\"']{1}/u",$query))
 										{
 											$query=preg_replace(
-												"/({$key})[ ]*([!><=]+)[ ]*[\"]{1}([0-9-]*)[\"]{1}/u",
+												"/({$key})[ ]*([!><=]+)[ ]*[\"']{1}([0-9-]*)[\"']{1}/u",
 												'$1 $2 $3',
 												$query
 											);
@@ -666,9 +666,9 @@ class clsDriver
 										);
 										break;
 									case "user":
-										$replacement='$me->FILTER_USER($values["'.$key.'"]["value"],\'$1\',[$2])';
+										$replacement='$me->FILTER_USER($values["'.$key.'"]["value"],"$1",[$2])';
 										$query=preg_replace(
-											"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
+											"/{$key}[ ]+(not in|in)[ ]+\(([^\)]*)\)/u",
 											'count(array_filter($values["'.$table.'"]["value"],function($values) use ($me){return '.$replacement.';}))>0',
 											$query
 										);
@@ -690,8 +690,8 @@ class clsDriver
 							break;
 						case "user":
 							$query=preg_replace(
-								"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
-								'$me->FILTER_USER($values["'.$key.'"]["value"],\'$1\',[$2])',
+								"/{$key}[ ]+(not in|in)[ ]+\(([^\)]*)\)/u",
+								'$me->FILTER_USER($values["'.$key.'"]["value"],"$1",[$2])',
 								$query
 							);
 							break;
@@ -776,10 +776,10 @@ class clsDriver
 				}
 				foreach ($reserved["id"] as $key)
 				{
-					if (preg_match("/{$key}[ ]*([!><=]+)[ ]*[\"]{1}[0-9-]*[\"]{1}/u",$query))
+					if (preg_match("/{$key}[ ]*([!><=]+)[ ]*[\"']{1}[0-9-]*[\"']{1}/u",$query))
 					{
 						$query=preg_replace(
-							"/({$key})[ ]*([!><=]+)[ ]*[\"]{1}([0-9-]*)[\"]{1}/u",
+							"/({$key})[ ]*([!><=]+)[ ]*[\"']{1}([0-9-]*)[\"']{1}/u",
 							'$1 $2 $3',
 							$query
 						);
@@ -796,12 +796,12 @@ class clsDriver
 				foreach ($reserved["user"] as $key)
 				{
 					$query=preg_replace(
-						"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
-						'$me->FILTER_USER($values["'.$key.'"]["value"],\'$1\',[$2])',
+						"/{$key}[ ]+(not in|in)[ ]+\(([^\)]*)\)/u",
+						'$me->FILTER_USER($values["'.$key.'"]["value"],"$1",[$2])',
 						$query
 					);
 				}
-				if ($arg_operator!="") $query=preg_replace("/\"LOGIN_USER\"/u",'"'.$arg_operator.'"',$query);
+				if ($arg_operator!="") $query=preg_replace("/LOGIN_USER/u",$arg_operator,$query);
 				$query=preg_replace("/(^|[ \(]{1})__id/u",'$1$values["__id"]["value"]',$query);
 				$query=preg_replace("/ and /u"," && ",$query);
 				$query=preg_replace("/ or /u"," || ",$query);
@@ -812,8 +812,10 @@ class clsDriver
 				$query=preg_replace("/([^ \(]+)[ ]+in[ ]+\(([^\)]*)\)/u","in_array($1,[$2],true)",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+\"([^\"]+)\"/u","!preg_match(\"/$2/u\",$1)",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+\"([^\"]+)\"/u","preg_match(\"/$2/u\",$1)",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+\"\"/u","$1 != \"\"",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+\"\"/u","$1 == \"\"",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+'([^']+)'/u","!preg_match('/$2/u',$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+'([^']+)'/u","preg_match('/$2/u',$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+(\"\"|'')/u","$1 != \"\"",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+(\"\"|'')/u","$1 == \"\"",$query);
 			}
 			return array_filter($arg_source,function($values,$key) use ($query,$me){
 				$values["__id"]=["value"=>intval($key)];
@@ -1049,11 +1051,11 @@ class clsDriver
 		$res=false;
 		switch ($arg_operator)
 		{
-			case ' not like ':
+			case 'not like':
 				if (count($arg_field)>0) $res=$this->FILTER_FILE_COUNT($arg_field,$arg_value)==0;
 				else $res=($arg_value!="");
 				break;
-			case ' like ':
+			case 'like':
 				if (count($arg_field)>0) $res=$this->FILTER_FILE_COUNT($arg_field,$arg_value)>0;
 				else $res=($arg_value=="");
 				break;
@@ -1069,11 +1071,11 @@ class clsDriver
 		$res=false;
 		switch ($arg_operator)
 		{
-			case ' not in ':
+			case 'not in':
 				if (count($arg_field)>0) $res=$this->FILTER_MULTIPLE_COUNT($arg_field,$arg_value)==0;
 				else $res=count($arg_value)!=0;
 				break;
-			case ' in ':
+			case 'in':
 				if (count($arg_field)>0) $res=$this->FILTER_MULTIPLE_COUNT($arg_field,$arg_value)>0;
 				else $res=count($arg_value)==0;
 				break;
@@ -1089,11 +1091,11 @@ class clsDriver
 		$res=false;
 		switch ($arg_operator)
 		{
-			case ' not in ':
+			case 'not in':
 				if (count($arg_field)>0) $res=$this->FILTER_USER_COUNT($arg_field,$arg_value)==0;
 				else $res=count($arg_value)!=0;
 				break;
-			case ' in ':
+			case 'in':
 				if (count($arg_field)>0) $res=$this->FILTER_USER_COUNT($arg_field,$arg_value)>0;
 				else $res=count($arg_value)==0;
 				break;
@@ -1107,6 +1109,8 @@ class clsDriver
 		$groups=[];
 		$users=[];
 		foreach ($arg_value as $value)
+		{
+			$value=strval($value);
 			switch (substr($value,0,1))
 			{
 				case "d":
@@ -1115,10 +1119,14 @@ class clsDriver
 				case "g":
 					$groups[]=substr($value,1);
 					break;
+				case "u":
+					$users[]=substr($value,1);
+					break;
 				default:
 					$users[]=$value;
 					break;
 			}
+		}
 		foreach ($arg_field as $field)
 			if (array_key_exists($field,$this->users))
 			{
