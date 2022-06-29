@@ -866,18 +866,24 @@ class panda_filter extends panda_dialog{
 						user:[]
 					};
 					rhs.each((value,index) => {
-						switch (value.charAt(0))
-						{
-							case 'd':
-								values.department.push(value.slice(1));
-								break;
-							case 'g':
-								values.group.push(value.slice(1));
-								break;
-							default:
-								values.user.push(value);
-								break;
-						}
+						if (typeof value==='number' || typeof value==='string')
+							((value) => {
+								switch (value.charAt(0))
+								{
+									case 'd':
+										values.department.push(value.slice(1));
+										break;
+									case 'g':
+										values.group.push(value.slice(1));
+										break;
+									case 'u':
+										values.user.push(value.slice(1));
+										break;
+									default:
+										values.user.push(value);
+										break;
+								}
+							})(value.toString());
 					});
 					lhs.value.each((value,index) => {
 						((user) => {
