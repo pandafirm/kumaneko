@@ -13,7 +13,7 @@ class panda_event{
 	}
 	/* setup event handler */
 	on(key,events,handler){
-		((Array.isArray(events))?events:events.split(',')).each((type,index) => {
+		((Array.isArray(events))?events:events.split(',').map((item) => item.trim())).each((type,index) => {
 			if (type)
 			{
 				if (!(key in this.eventhandlers)) this.eventhandlers[key]={};
@@ -182,9 +182,9 @@ class panda_filter extends panda_dialog{
 					if (query)
 					{
 						res.push({
-							field:query[1].replace(/^[ ]+/g,'').replace(/[ ]+$/g,''),
-							operator:query[2].replace(/^[ ]+/g,'').replace(/[ ]+$/g,''),
-							value:query[3].replace(/^[ ]+/g,'').replace(/[ ]+$/g,'')
+							field:query[1].trim(),
+							operator:query[2].trim(),
+							value:query[3].trim()
 						})
 					}
 				});
@@ -241,7 +241,7 @@ class panda_filter extends panda_dialog{
 		this.sort={
 			parse:(sort) => {
 				var res=[];
-				sort.split(',').map((item) => item.split(' ')).each((sort,index) => {
+				sort.split(',').map((item) => item.trim()).map((item) => item.split(' ')).each((sort,index) => {
 					if (sort[0])
 						res.push({
 							field:sort[0],
@@ -402,7 +402,7 @@ class panda_filter extends panda_dialog{
 													case 'group':
 													case 'modifier':
 													case 'user':
-														res='('+field.elm('input').val().replace(/^\[/g,'').replace(/\]$/g,'')+')';
+														res='('+field.elm('input').val().replace(/["']{1}LOGIN_USER["']{1}/g,'LOGIN_USER').replace(/(^\[|\]$)/g,'')+')';
 														break;
 													case 'createdtime':
 													case 'date':
@@ -471,7 +471,7 @@ class panda_filter extends panda_dialog{
 													case 'checkbox':
 													case 'dropdown':
 													case 'radio':
-														var values=value.replace(/^\(/g,'').replace(/\)$/g,'').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
+														var values=value.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim()).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
 														field.elms('input').each((element,index) => element.checked=values.includes(element.val()));
 														break;
 													case 'creator':
@@ -479,7 +479,7 @@ class panda_filter extends panda_dialog{
 													case 'group':
 													case 'modifier':
 													case 'user':
-														var values=value.replace(/^\(/g,'').replace(/\)$/g,'').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
+														var values=value.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim()).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
 														field.elm('input').val(JSON.stringify(values));
 														field.elm('.pd-guide').empty();
 														values.each((value,index) => field.elm('.pd-field-value').guide(value));
@@ -495,8 +495,8 @@ class panda_filter extends panda_dialog{
 																if (value.toLowerCase().match(/^from_/g))
 																{
 																	elements.pattern.val(value.toLowerCase().replace(/\(.*$/g,'').replace(/_/g,' ')).dispatchEvent(new Event('change'));
-																	elements.interval.val(value.toLowerCase().match(/^[^"]+"([0-9-]*)"/)[1]);
-																	elements.unit.val(value.toLowerCase().match(/^[^"]+"([0-9-]*)","([^"]*)"/)[2]);
+																	elements.interval.val(value.toLowerCase().match(/^[^"']+["']{1}([0-9-]*)["']{1}/)[1]);
+																	elements.unit.val(value.toLowerCase().match(/^[^"']+["']{1}([0-9-]*)["']{1}[ ]*,[ ]*["']{1}([^"']*)["']{1}/)[2]);
 																}
 																else
 																{
@@ -504,12 +504,12 @@ class panda_filter extends panda_dialog{
 																	switch (fieldinfo.type)
 																	{
 																		case 'date':
-																			elements.date.val(value.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
+																			elements.date.val(value.replace(/(^["']{1}|["']{1}$)/g,''));
 																			break;
 																		case 'createdtime':
 																		case 'datetime':
 																		case 'modifiedtime':
-																			var date=value.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'').parseDateTime();
+																			var date=value.replace(/(^["']{1}|["']{1}$)/g,'').parseDateTime();
 																			elements.date.val(date.format('Y-m-d'));
 																			elements.hour.val(date.format('H'));
 																			elements.minute.val(date.format('i'));
@@ -527,7 +527,7 @@ class panda_filter extends panda_dialog{
 														});
 														break;
 													case 'time':
-														var values=value.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'').split(':').filter((item) => item);
+														var values=value.replace(/(^["']{1}|["']{1}$)/g,'').split(':').filter((item) => item);
 														if (values.length==2)
 														{
 															field.elm('.pd-hour').elm('select').val(values[0]);
@@ -540,7 +540,7 @@ class panda_filter extends panda_dialog{
 														}
 														break;
 													default:
-														field.elm('input').val(value.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
+														field.elm('input').val(value.replace(/(^["']{1}|["']{1}$)/g,''));
 														break;
 												}
 											}
@@ -931,12 +931,12 @@ class panda_filter extends panda_dialog{
 				case 'department':
 				case 'group':
 				case 'modifier':
-					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
+					rhs=rhs.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim()).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
 					formula='CONTAIN_MULTIPLE()';
 					break;
 				case 'dropdown':
 				case 'radio':
-					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
+					rhs=rhs.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim()).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
 					switch (operator)
 					{
 						case 'not in':
@@ -1005,14 +1005,14 @@ class panda_filter extends panda_dialog{
 					}
 					break;
 				case 'file':
-					rhs=rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'');
+					rhs=rhs.replace(/(^["']{1}|["']{1}$)/g,'');
 					formula='CONTAIN_FILE()';
 					break;
 				case 'id':
 				case 'number':
 					formula=((rhs) => {
 						return '(pd.isnumeric(lhs.value)?parseFloat(lhs.value):null) '+((operator=='=')?'==':operator)+' '+((rhs!='0')?rhs.replace(/^0/g,''):rhs);
-					})((pd.isnumeric(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'')))?rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):'null');
+					})((pd.isnumeric(rhs.replace(/(^["']{1}|["']{1}$)/g,'')))?rhs.replace(/(^["']{1}|["']{1}$)/g,''):'null');
 					break;
 				case 'lookup':
 					switch (operator)
@@ -1020,22 +1020,22 @@ class panda_filter extends panda_dialog{
 						case 'not like':
 							((pattern) => {
 								formula=(pattern)?'!lhs.search.match(/(?:'+pattern+')/g)':'lhs.search';
-							})(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
+							})(rhs.replace(/(^["']{1}|["']{1}$)/g,''));
 							break;
 						case 'like':
 							((pattern) => {
 								formula=(pattern)?'lhs.search.match(/(?:'+pattern+')/g)':'!lhs.search';
-							})(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
+							})(rhs.replace(/(^["']{1}|["']{1}$)/g,''));
 							break;
 						case 'not match':
 							formula=((rhs) => {
 								return '(pd.isnumeric(lhs.value)?parseFloat(lhs.value):null) != '+((rhs!='0')?rhs.replace(/^0/g,''):rhs);
-							})((pd.isnumeric(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'')))?rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):'null');
+							})((pd.isnumeric(rhs.replace(/(^["']{1}|["']{1}$)/g,'')))?rhs.replace(/(^["']{1}|["']{1}$)/g,''):'null');
 							break;
 						case 'match':
 							formula=((rhs) => {
 								return '(pd.isnumeric(lhs.value)?parseFloat(lhs.value):null) == '+((rhs!='0')?rhs.replace(/^0/g,''):rhs);
-							})((pd.isnumeric(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,'')))?rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):'null');
+							})((pd.isnumeric(rhs.replace(/(^["']{1}|["']{1}$)/g,'')))?rhs.replace(/(^["']{1}|["']{1}$)/g,''):'null');
 							break;
 						default:
 							formula='lhs.search '+((operator=='=')?'==':operator)+' '+rhs;
@@ -1043,7 +1043,7 @@ class panda_filter extends panda_dialog{
 					}
 					break;
 				case 'user':
-					rhs=rhs.replace(/^\(/g,'').replace(/\)$/g,'').replace(/"LOGIN_USER"/g,'"'+pd.operator.__id.value.toString()+'"').split(',').shape((item) => (item)?item.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''):PD_THROW);
+					rhs=rhs.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim().replace(/LOGIN_USER/g,pd.operator.__id.value.toString())).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
 					formula='CONTAIN_USER()';
 					break;
 				default:
@@ -1052,12 +1052,12 @@ class panda_filter extends panda_dialog{
 						case 'not like':
 							((pattern) => {
 								formula=(pattern)?'!((lhs.value)?lhs.value:\'\').match(/(?:'+pattern+')/g)':'lhs.value';
-							})(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
+							})(rhs.replace(/(^["']{1}|["']{1}$)/g,''));
 							break;
 						case 'like':
 							((pattern) => {
 								formula=(pattern)?'((lhs.value)?lhs.value:\'\').match(/(?:'+pattern+')/g)':'!lhs.value';
-							})(rhs.replace(/^["']{1}/g,'').replace(/["']{1}$/g,''));
+							})(rhs.replace(/(^["']{1}|["']{1}$)/g,''));
 							break;
 						default:
 							formula='((lhs.value)?lhs.value:\'\') '+((operator=='=')?'==':operator)+' '+rhs;
@@ -1389,7 +1389,7 @@ class panda_formula{
 					case 'group':
 					case 'modifier':
 					case 'user':
-						res=(answer)?(((Array.isArray(answer))?answer:answer.toString().split(',')).shape((item) => (item=='LOGIN_USER')?pd.operator.__id.value.toString():((item)?item:PD_THROW))):[];
+						res=(answer)?(((Array.isArray(answer))?answer:answer.toString().split(',').map((item) => item.trim())).shape((item) => (item=='LOGIN_USER')?LOGIN_USER:((item)?item:PD_THROW))):[];
 						break;
 					case 'id':
 					case 'lookup':
@@ -1402,6 +1402,7 @@ class panda_formula{
 				}
 				return res;
 			};
+			var LOGIN_USER=pd.operator.__id.value.toString();
 			try
 			{
 				var formula=param.formula.replace(/([^!><]{1})[ ]*=/g,'$1==');

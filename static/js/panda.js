@@ -1746,7 +1746,7 @@ class panda_coloradjuster extends panda_dialog{
 		var max=0;
 		var min=0;
 		color=color.replace(/(#|rgba|rgb|\(|\))/g,'');
-		colors=color.split(',');
+		colors=color.split(',').map((item) => item.trim());
 		if (colors.length==1)
 		{
 			switch (color.length)
@@ -3048,7 +3048,7 @@ var pd=new panda();
 DOM extention
 */
 HTMLDocument.prototype.off=function(type,handler){
-	((Array.isArray(type))?type:type.split(',')).each((type,index) => {
+	((Array.isArray(type))?type:type.split(',').map((item) => item.trim())).each((type,index) => {
 		if (type)
 		{
 			if (handler) this.removeEventListener(type,handler);
@@ -3063,7 +3063,7 @@ HTMLDocument.prototype.off=function(type,handler){
 	return this;
 }
 HTMLDocument.prototype.on=function(type,handler){
-	((Array.isArray(type))?type:type.split(',')).each((type,index) => {
+	((Array.isArray(type))?type:type.split(',').map((item) => item.trim())).each((type,index) => {
 		if (type)
 		{
 			if (!(this in pd.eventhandlers)) pd.eventhandlers[this]={};
@@ -3379,7 +3379,7 @@ HTMLElement.prototype.isempty=function(){
 	return !exists;
 }
 HTMLElement.prototype.off=function(type,handler){
-	((Array.isArray(type))?type:type.split(',')).each((type,index) => {
+	((Array.isArray(type))?type:type.split(',').map((item) => item.trim())).each((type,index) => {
 		if (type)
 		{
 			if (handler) this.removeEventListener(type,handler);
@@ -3394,7 +3394,7 @@ HTMLElement.prototype.off=function(type,handler){
 	return this;
 }
 HTMLElement.prototype.on=function(type,handler){
-	((Array.isArray(type))?type:type.split(',')).each((type,index) => {
+	((Array.isArray(type))?type:type.split(',').map((item) => item.trim())).each((type,index) => {
 		if (type)
 		{
 			if (!(this in pd.eventhandlers)) pd.eventhandlers[this]={};
@@ -3672,7 +3672,7 @@ HTMLSelectElement.prototype.selectedtext=function(){
 	else return '';
 }
 Window.prototype.off=function(type,handler){
-	((Array.isArray(type))?type:type.split(',')).each((type,index) => {
+	((Array.isArray(type))?type:type.split(',').map((item) => item.trim())).each((type,index) => {
 		if (type)
 		{
 			if (handler) this.removeEventListener(type,handler);
@@ -3687,7 +3687,7 @@ Window.prototype.off=function(type,handler){
 	return this;
 }
 Window.prototype.on=function(type,handler){
-	((Array.isArray(type))?type:type.split(',')).each((type,index) => {
+	((Array.isArray(type))?type:type.split(',').map((item) => item.trim())).each((type,index) => {
 		if (type)
 		{
 			if (!(this in pd.eventhandlers)) pd.eventhandlers[this]={};
@@ -3732,7 +3732,7 @@ Date extention
 */
 Date.prototype.calc=function(pattern){
 	var date=this;
-	pattern.split(',').map((item) => item.replace(/^[ ]*/g,'').replace(/[ ]*$/g,'')).each((pattern,index) => {
+	pattern.split(',').map((item) => item.trim()).each((pattern,index) => {
 		var year=date.getFullYear();
 		var month=date.getMonth()+1;
 		var day=date.getDate();

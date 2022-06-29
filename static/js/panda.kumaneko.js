@@ -2204,7 +2204,7 @@ pd.modules={
 			};
 			this.linkage={
 				load:(ids,record) => {
-					ids=((Array.isArray(ids))?pd.extend([],ids):ids.split(',')).filter((item) => item);
+					ids=((Array.isArray(ids))?pd.extend([],ids):ids.split(',').map((item) => item.trim())).filter((item) => item);
 					((linkages) => {
 						pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 						.then((resp) => {
@@ -6045,7 +6045,7 @@ pd.modules={
 																			}
 																		},
 																		((fieldinfo.type=='user')?[{__id:{value:'LOGIN_USER'},account:{value:'LOGIN_USER'},name:{value:'Login user'}}]:[]),
-																		(records) => field.elm('input').val(JSON.stringify(records.map((item) => item['__id'].value.toString())))
+																		(records) => field.elm('input').val('['+records.map((item) => item['__id'].value.toString()).join(',')+']')
 																	);
 																})
 															);
