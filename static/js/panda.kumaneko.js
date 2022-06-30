@@ -6045,7 +6045,11 @@ pd.modules={
 																			}
 																		},
 																		((fieldinfo.type=='user')?[{__id:{value:'LOGIN_USER'},account:{value:'LOGIN_USER'},name:{value:'Login user'}}]:[]),
-																		(records) => field.elm('input').val('['+records.map((item) => item['__id'].value.toString()).join(',')+']')
+																		(records) => {
+																			((value) => {
+																				field.elm('input').val(value.replace(/["']{1}LOGIN_USER["']{1}/g,'LOGIN_USER'));
+																			})(JSON.stringify(records.map((item) => item['__id'].value.toString())));
+																		}
 																	);
 																})
 															);

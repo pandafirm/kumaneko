@@ -22,6 +22,17 @@ class panda_event{
 			}
 		});
 	}
+	/* clear event handler */
+	off(key,events,handler){
+		((Array.isArray(events))?events:events.split(',').map((item) => item.trim())).each((type,index) => {
+			if (type)
+			{
+				if (key in this.eventhandlers)
+					if (type in this.eventhandlers[key])
+						this.eventhandlers[key][type]=this.eventhandlers[key][type].filter((item) => item!==handler);
+			}
+		});
+	}
 	/* call event */
 	call(key,type,param){
 		var call=(index,param,callback) => {
@@ -933,12 +944,16 @@ class panda_filter extends panda_dialog{
 			switch (fieldinfo.type)
 			{
 				case 'checkbox':
-				case 'creator':
 				case 'department':
 				case 'group':
-				case 'modifier':
 					rhs=rhs.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim()).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
 					formula='CONTAIN_MULTIPLE()';
+					break;
+				case 'creator':
+				case 'modifier':
+				case 'user':
+					rhs=rhs.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim().replace(/LOGIN_USER/g,pd.operator.__id.value.toString())).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
+					formula='CONTAIN_USER()';
 					break;
 				case 'dropdown':
 				case 'radio':
@@ -1047,10 +1062,6 @@ class panda_filter extends panda_dialog{
 							formula='lhs.search '+((operator=='=')?'==':operator)+' '+rhs;
 							break;
 					}
-					break;
-				case 'user':
-					rhs=rhs.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim().replace(/LOGIN_USER/g,pd.operator.__id.value.toString())).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
-					formula='CONTAIN_USER()';
 					break;
 				default:
 					switch (operator)
