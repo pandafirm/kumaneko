@@ -39,10 +39,7 @@ class clsDriver
 			switch ($arg_fields[$key]["type"])
 			{
 				case "checkbox":
-				case "department":
 				case "file":
-				case "group":
-				case "user":
 					if (array_key_exists($key,$arg_source)) $arg_destination[$key]=["value"=>$arg_source[$key]["value"]];
 					else
 					{
@@ -55,6 +52,15 @@ class clsDriver
 				case "modifier":
 				case "modifiedtime":
 				case "spacer":
+					break;
+				case "department":
+				case "group":
+				case "user":
+					if (array_key_exists($key,$arg_source)) $arg_destination[$key]=["value"=>array_map("strval",$arg_source[$key]["value"])];
+					else
+					{
+						if (!array_key_exists($key,$arg_destination)) $arg_destination[$key]=["value"=>[]];
+					}
 					break;
 				case "lookup":
 					if (array_key_exists($key,$arg_source))
@@ -858,9 +864,9 @@ class clsDriver
 				$time=$now->modify(strval($timezone->getOffset($now)*-1)." second")->format("Y-m-d\TH:i:s")."Z";
 				$this->resultid++;
 				$build=$this->build([],$record,$fields,$source);
-				$build["__creator"]=["value"=>[$arg_operator]];
+				$build["__creator"]=["value"=>[strval($arg_operator)]];
 				$build["__createdtime"]=["value"=>$time];
-				$build["__modifier"]=["value"=>[$arg_operator]];
+				$build["__modifier"]=["value"=>[strval($arg_operator)]];
 				$build["__modifiedtime"]=["value"=>$time];
 				$source[strval($this->resultid)]=$build;
 				$this->resultnumbers[strval($this->resultid)]=$build["__autonumber"]["value"];
@@ -1010,7 +1016,7 @@ class clsDriver
 									break;
 								}
 							$build=$this->build($source[strval($this->resultid)],$record,$fields,$source);
-							$build["__modifier"]=["value"=>[$arg_operator]];
+							$build["__modifier"]=["value"=>[strval($arg_operator)]];
 							$build["__modifiedtime"]=["value"=>$time];
 							$source[strval($this->resultid)]=$build;
 							$this->resultnumbers[strval($this->resultid)]=$build["__autonumber"]["value"];
@@ -1084,7 +1090,7 @@ class clsDriver
 	}
 	public function FILTER_MULTIPLE_COUNT($arg_field,$arg_value)
 	{
-		return count(array_filter($arg_field,function($value) use ($arg_value){return in_array($value,$arg_value,true);}));
+		return count(array_filter($arg_field,function($value) use ($arg_value){return in_array(strval($value),$arg_value,true);}));
 	}
 	public function FILTER_USER($arg_field,$arg_operator,$arg_value)
 	{
