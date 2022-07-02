@@ -2776,7 +2776,7 @@ pd.modules={
 									)
 									.then((resp) => {
 										pd.event.call(this.app.id,'pd.view.show',{
-											container:view.body.elm('.pd-view'),
+											container:((view.type=='customize')?view.body:view.body.elm('.pd-view')),
 											records:resp.records,
 											total:resp.total,
 											viewid:viewid
