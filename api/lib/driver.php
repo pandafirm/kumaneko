@@ -75,7 +75,7 @@ class clsDriver
 					}
 					else
 					{
-						if (!array_key_exists($key,$arg_destination)) $arg_destination[$key]=["search"=>null,"value"=>null];
+						if (!array_key_exists($key,$arg_destination)) $arg_destination[$key]=["search"=>"","value"=>null];
 					}
 					break;
 				case "number":
@@ -83,6 +83,13 @@ class clsDriver
 					else
 					{
 						if (!array_key_exists($key,$arg_destination)) $arg_destination[$key]=["value"=>null];
+					}
+					break;
+				case "radio":
+					if (array_key_exists($key,$arg_source)) $arg_destination[$key]=["value"=>($arg_source[$key]["value"]=="")?$arg_fields[$key]["options"][0]["option"]["value"]:$arg_source[$key]["value"]];
+					else
+					{
+						if (!array_key_exists($key,$arg_destination)) $arg_destination[$key]=["value"=>$arg_fields[$key]["options"][0]["option"]["value"]];
 					}
 					break;
 				case "table":
@@ -104,17 +111,14 @@ class clsDriver
 					if (array_key_exists($key,$arg_source)) $arg_destination[$key]=["value"=>$arg_source[$key]["value"]];
 					else
 					{
-						if (!array_key_exists($key,$arg_destination))
-						{
-							if ($arg_fields[$key]["type"]=="radio") $arg_destination[$key]=["value"=>$arg_fields[$key]["options"][0]["option"]["value"]];
-							else $arg_destination[$key]=["value"=>null];
-						}
+						if (!array_key_exists($key,$arg_destination)) $arg_destination[$key]=["value"=>""];
 					}
 					break;
 			}
 		}
 		foreach ($lookups as $key=>$value)
 		{
+			$clear=true;
 			$mapping=$value["mapping"];
 			$source=$this->record($value["app"],$arg_source[$key]["value"]);
 			if (is_array($source))
@@ -143,10 +147,37 @@ class clsDriver
 										break;
 								}
 					}
+					$clear=false;
 				}
-				else $arg_destination[$key]=["search"=>null,"value"=>null];
 			}
-			else $arg_destination[$key]=["search"=>null,"value"=>null];
+			if ($clear)
+			{
+				$arg_destination[$key]=["search"=>"","value"=>null];
+				foreach ($mapping as $mappingkey => $mappingvalue)
+				{
+					if (array_key_exists($mappingvalue,$arg_fields))
+						switch ($arg_fields[$mappingvalue]["type"])
+						{
+							case "checkbox":
+							case "department":
+							case "file":
+							case "group":
+							case "user":
+								$arg_destination[$mappingvalue]=["value"=>[]];
+								break;
+							case "lookup":
+								$arg_destination[$mappingvalue]=["lookup"=>true,"search"=>"","value"=>null];
+								$continue=true;
+								break;
+							case "number":
+								$arg_destination[$mappingvalue]=["value"=>null];
+								break;
+							default:
+								$arg_destination[$mappingvalue]=["value"=>""];
+								break;
+						}
+				}
+			}
 		}
 		if (is_array($arg_records))
 		{
