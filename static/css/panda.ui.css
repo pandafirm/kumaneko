@@ -184,6 +184,7 @@
 }
 .pd-field .pd-field-value .pd-guide{
 	display:none;
+	min-height:1.5em;
 	padding:0 0.25em;
 	white-space:normal;
 	width:100%;

@@ -1785,7 +1785,7 @@ class panda_record{
 							field.elm('.pd-guide').html(field.elm('select').selectedtext());
 							break;
 						case 'lookup':
-							if (value.lookup) field.lookup(value.value);
+							if (value.lookup) field.lookup(value.value,record);
 							else
 							{
 								field.elm('.pd-lookup-search').val(value.search);
@@ -3346,7 +3346,7 @@ class panda_user_interface{
 									});
 								});
 								field.recordpicker=new panda_recordpicker();
-								field.lookup=(id) => {
+								field.lookup=(id,record) => {
 									return new Promise((resolve,reject) => {
 										((scope) => {
 											if (id)
@@ -3404,11 +3404,17 @@ class panda_user_interface{
 																case 'user':
 																	res[fieldinfo.mapping[key]]={value:[]};
 																	break;
+																case 'lookup':
+																	res[fieldinfo.mapping[key]]={lookup:true,value:''};
+																	break;
 																default:
 																	res[fieldinfo.mapping[key]]={value:''};
 																	break;
 															}
 														}
+													if (record instanceof Object)
+														for (var key in res)
+															if (key in record) record[key]=pd.extend({},res[key]);
 													return res;
 												})());
 												resolve();

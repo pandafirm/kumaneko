@@ -8297,7 +8297,11 @@ pd.modules={
 										pd.alert(pd.constants.field.message.invalid.option[pd.lang]);
 										res=true;
 									}
-									else this.fieldinfo.options=record.options.value.map((item) => ({option:{value:item}}));
+									else
+									{
+										this.fieldinfo.options=record.options.value.map((item) => ({option:{value:item}}));
+										if (this.fieldinfo.type=='dropdown') this.fieldinfo.options=[{option:{value:''}}].concat(this.fieldinfo.options);
+									}
 									break;
 								case 'textarea':
 									if (record.lines.value)
@@ -8645,7 +8649,7 @@ pd.modules={
 							case 'checkbox':
 							case 'dropdown':
 							case 'radio':
-								res['options']={value:this.fieldinfo.options.map((item) => ({option:{value:item.option.value}}))};
+								res['options']={value:this.fieldinfo.options.shape((item) => (item.option.value)?{option:{value:item.option.value}}:PD_THROW)};
 								break;
 							case 'spacer':
 								res['multiuse']={value:(this.fieldinfo.multiuse)?[this.app.fields.multiuse.options.first().option.value]:[]};
