@@ -2653,6 +2653,7 @@ pd.modules={
 								})({app:this.app.id,view:viewid,records:records})).then(() => {
 									view.loaded=true;
 									if (!deactivate) this.view.show(viewid);
+									pd.event.call(this.app.id,'pd.view.show.success',{records:records,viewid:viewid});
 									resolve({});
 								});
 							};
