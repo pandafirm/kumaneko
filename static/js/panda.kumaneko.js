@@ -1175,7 +1175,7 @@ pd.modules={
 															},[],true,(records) => {
 																var setup=(index,callback) => {
 																	this.actions.button(action,records[index],'view').then((param) => {
-																		if ('record' in param) records[index]=this.actions.value(param.record);
+																		if ('record' in param) records[index]=this.actions.value(param.record,'backend');
 																		else records[index]=null;
 																		index++;
 																		pd.progressupdate();
@@ -2478,7 +2478,7 @@ pd.modules={
 											.then((param) => {
 												if (!param.error)
 													this.notify().then(() => {
-														if (!single) this.record.load(param.record,true);
+														if (!single) this.record.load(this.record.id,true);
 														else
 														{
 															pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
