@@ -1243,9 +1243,12 @@ pd.modules={
 															});
 														});
 													}));
-													pd.event.on(this.app.id,'pd.view.show',(e) => {
-														if (e.total!=0) button.css({display:'inline-block'});
-														else button.hide();
+													pd.event.on(this.app.id,'pd.view.load',(e) => {
+														if (e.viewid==viewid)
+														{
+															if (e.total!=0) button.css({display:'inline-block'});
+															else button.hide();
+														}
 														return e;
 													});
 												}
@@ -1285,7 +1288,7 @@ pd.modules={
 											}).catch(() => pd.loadend());
 										});
 									}));
-									pd.event.on(this.app.id,['pd.create.show','pd.edit.show'],(e) => {
+									pd.event.on(this.app.id,['pd.create.load','pd.edit.load'],(e) => {
 										if (!e.viewid)
 											((record) => {
 												if (pd.filter.scan(this.app,record,action.filter)) button.css({display:'inline-block'});
@@ -2314,11 +2317,11 @@ pd.modules={
 															});
 														})(linkage.app.fields[aggregate])
 													});
-													pd.event.call(this.app.id,'pd.linkage.show',keep);
-													((contents) => {
+													pd.event.call(this.app.id,'pd.linkage.load.complete',keep);
+													((contents,active) => {
 														contents.elm('.pd-view').css({display:'table'});
-														return contents;
-													})(linkage.contents).show();
+														if (active) contents.show();
+													})(linkage.contents,linkage.tab.active);
 													finish();
 												});
 											}
@@ -2418,14 +2421,18 @@ pd.modules={
 					return new Promise((resolve,reject) => {
 						var load=(record) => {
 							((recordid) => {
-								pd.event.call(this.app.id,'pd.edit.show',{
+								pd.event.call(this.app.id,'pd.edit.load',{
 									container:this.record.ui.body,
 									record:record
 								})
 								.then((param) => {
 									if (!param.error)
 									{
-										pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
+										pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => {
+											pd.event.call(this.app.id,'pd.edit.load.complete',{container:this.record.ui.body}).then(() => {
+												this.linkage.load('',pd.record.get(this.record.ui.body,this.app,true).record);
+											});
+										});
 										if (!issilent) pd.event.call(this.app.id,'pd.app.activate',{}).then((param) => resolve({recordid:recordid}));
 										else resolve({recordid:recordid});
 									}
@@ -2646,14 +2653,14 @@ pd.modules={
 				load:(viewid,query,sort,deactivate) => {
 					return new Promise((resolve,reject) => {
 						((view) => {
-							var finish=(records) => {
+							var finish=(param) => {
 								pd.event.call('0','pd.dashboard.redraw',((param) => {
 									if (view.type=='calendar') param.month=view.monitor.text()+'-01';
 									return param;
-								})({app:this.app.id,view:viewid,records:records})).then(() => {
+								})({app:this.app.id,view:viewid,records:param.records})).then(() => {
 									view.loaded=true;
 									if (!deactivate) this.view.show(viewid);
-									pd.event.call(this.app.id,'pd.view.show.success',{records:records,viewid:viewid});
+									pd.event.call(this.app.id,'pd.view.load.complete',{container:param.container,viewid:param.viewid});
 									resolve({});
 								});
 							};
@@ -2672,7 +2679,7 @@ pd.modules={
 										limit:500
 									},[],true,(records) => {
 										if (!deactivate) pd.loadend();
-										pd.event.call(this.app.id,'pd.view.show',{
+										pd.event.call(this.app.id,'pd.view.load',{
 											container:view.calendar.calendar,
 											records:records,
 											total:records.length,
@@ -2684,7 +2691,7 @@ pd.modules={
 												this.view.build(this.app,view,param.records,{readonly:false,date:view.monitor.text()+'-01'});
 												if (typeof query==='string') view.query=query;
 												if (typeof sort==='string') view.sort=sort;
-												finish(param.records);
+												finish(param);
 											}
 											else reject({});
 										});
@@ -2708,7 +2715,7 @@ pd.modules={
 									.then((resp) => {
 										if ('fields' in resp)
 										{
-											pd.event.call(this.app.id,'pd.view.show',{
+											pd.event.call(this.app.id,'pd.view.load',{
 												container:view[view.type],
 												records:resp,
 												viewid:viewid
@@ -2718,7 +2725,7 @@ pd.modules={
 												{
 													this.view.build(this.app,view,resp);
 													if (typeof query==='string') view.query=query;
-													finish(param.records);
+													finish(param);
 												}
 												else reject({});
 											});
@@ -2743,7 +2750,7 @@ pd.modules={
 										limit:500
 									},[],true,(records) => {
 										if (!deactivate) pd.loadend();
-										pd.event.call(this.app.id,'pd.view.show',{
+										pd.event.call(this.app.id,'pd.view.load',{
 											container:view.map.container,
 											records:records,
 											total:records.length,
@@ -2755,7 +2762,7 @@ pd.modules={
 												this.view.build(this.app,view,param.records,{center:!view.tab.active});
 												if (typeof query==='string') view.query=query;
 												if (typeof sort==='string') view.sort=sort;
-												finish(param.records);
+												finish(param);
 											}
 											else reject({});
 										});
@@ -2776,7 +2783,7 @@ pd.modules={
 										deactivate
 									)
 									.then((resp) => {
-										pd.event.call(this.app.id,'pd.view.show',{
+										pd.event.call(this.app.id,'pd.view.load',{
 											container:((view.type=='customize')?view.body:view.body.elm('.pd-view')),
 											records:resp.records,
 											total:resp.total,
@@ -2797,7 +2804,7 @@ pd.modules={
 												else view.next.attr('disabled','disabled');
 												if (typeof query==='string') view.query=query;
 												if (typeof sort==='string') view.sort=sort;
-												finish(param.records);
+												finish(param);
 											}
 											else reject({});
 										});
@@ -2871,7 +2878,7 @@ pd.modules={
 								.on('click',(e) => {
 									option.hide();
 									this.confirm(() => {
-										pd.event.call(this.app.id,'pd.create.show',{
+										pd.event.call(this.app.id,'pd.create.load',{
 											container:this.record.ui.body,
 											copy:true,
 											record:((res) => {
@@ -2886,7 +2893,12 @@ pd.modules={
 											})(pd.record.get(this.record.ui.body,this.app,true).record)
 										})
 										.then((param) => {
-											if (!param.error) pd.record.set(this.record.ui.init('copied'),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
+											if (!param.error)
+												pd.record.set(this.record.ui.init('copied'),this.app,this.actions.value(param.record)).then((record) => {
+													pd.event.call(this.app.id,'pd.create.load.complete',{container:this.record.ui.body,copy:true}).then(() => {
+														this.linkage.load('',pd.record.get(this.record.ui.body,this.app,true).record);
+													});
+												});
 										});
 									});
 								})
@@ -3244,14 +3256,18 @@ pd.modules={
 							this.record.clear();
 							e.record=pd.record.get(this.record.ui.body,this.app,true).record;
 						}
-						pd.event.call(this.app.id,'pd.create.show',{
+						pd.event.call(this.app.id,'pd.create.load',{
 							container:this.record.ui.body,
 							record:e.record
 						})
 						.then((param) => {
 							if (!param.error)
 							{
-								pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => this.linkage.load('',record));
+								pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => {
+									pd.event.call(this.app.id,'pd.create.load.complete',{container:this.record.ui.body}).then(() => {
+										this.linkage.load('',pd.record.get(this.record.ui.body,this.app,true).record);
+									});
+								});
 								if (e.activate) pd.event.call(this.app.id,'pd.app.activate',{});
 							}
 						});
@@ -11116,7 +11132,6 @@ pd.modules={
 		show(){
 			this.ui.contents.show();
 			this.ui.tab.activate();
-			pd.event.call('0','pd.dashboard.show',{space:this.ui.space});
 		}
 		/* hide */
 		hide(){

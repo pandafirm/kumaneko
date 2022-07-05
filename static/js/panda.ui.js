@@ -4277,7 +4277,7 @@ class panda_user_interface{
 							});
 							row.elm('.pd-view-row-add').on('click',(e) => {
 								((row) => {
-									pd.event.call(app.id,'pd.create.show',{
+									pd.event.call(app.id,'pd.create.load',{
 										container:row.elm('[form-id=form_'+app.id+']'),
 										record:pd.record.get(row.elm('[form-id=form_'+app.id+']'),app,true).record,
 										viewid:viewid
@@ -4290,7 +4290,9 @@ class panda_user_interface{
 												workplace:'view'
 											})
 											.then((param) => {
-												pd.record.set(row.elm('[form-id=form_'+app.id+']').attr('unsaved','unsaved'),app,param.record);
+												pd.record.set(row.elm('[form-id=form_'+app.id+']').attr('unsaved','unsaved'),app,param.record).then((record) => {
+													pd.event.call(app.id,'pd.create.load.complete',{container:row.elm('[form-id=form_'+app.id+']'),viewid:viewid});
+												});
 												((event) => {
 													row.elm('[form-id=form_'+app.id+']').dispatchEvent(event);
 												})(new Event('change'));
@@ -4332,7 +4334,7 @@ class panda_user_interface{
 							row.elm('.pd-view-row-copy').on('click',(e) => {
 								pd.confirm(pd.constants.common.message.confirm.copy[pd.lang],() => {
 									((record,row) => {
-										pd.event.call(app.id,'pd.create.show',{
+										pd.event.call(app.id,'pd.create.load',{
 											container:row.elm('[form-id=form_'+app.id+']'),
 											copy:true,
 											record:((res) => {
@@ -4350,7 +4352,9 @@ class panda_user_interface{
 													workplace:'view'
 												})
 												.then((param) => {
-													pd.record.set(row.elm('[form-id=form_'+app.id+']').attr('unsaved','unsaved'),app,param.record);
+													pd.record.set(row.elm('[form-id=form_'+app.id+']').attr('unsaved','unsaved'),app,param.record).then((record) => {
+														pd.event.call(app.id,'pd.create.load.complete',{container:row.elm('[form-id=form_'+app.id+']'),copy:true,viewid:viewid});
+													});
 													((event) => {
 														row.elm('[form-id=form_'+app.id+']').dispatchEvent(event);
 													})(new Event('change'));
