@@ -3982,33 +3982,31 @@ class panda_user_interface{
 							});
 						});
 						row.elm('.pd-table-row-copy').on('click',(e) => {
-							((index) => {
-								table.insertrow(row);
-								pd.event.call(app.id,'pd.row.copy.'+table.attr('field-id'),{
-									container:table,
-									record:((record) => {
-										record[table.attr('field-id')].value[index+1]=pd.extend({},record[table.attr('field-id')].value[index]);
-										return record;
-									})(pd.record.get(container,app,true).record),
-									rowindex:index+1
-								})
-								.then((param) => {
-									if (!param.error)
-									{
-										pd.event.call(app.id,'pd.action.call',{
-											record:param.record,
-											workplace:(container.closest('.pd-view'))?'view':'record'
-										})
-										.then((param) => {
-											pd.record.set(container,app,param.record);
-											((event) => {
-												container.attr('unsaved','unsaved').dispatchEvent(event);
-											})(new Event('change'));
-										});
-									}
-									else table.delrow(row);
-								});
-							})(parseInt(row.attr('row-id')));
+							table.insertrow(row);
+							pd.event.call(app.id,'pd.row.copy.'+table.attr('field-id'),{
+								container:table,
+								record:((record,index) => {
+									record[table.attr('field-id')].value[index+1]=pd.extend({},record[table.attr('field-id')].value[index]);
+									return record;
+								})(pd.record.get(container,app,true).record,parseInt(row.attr('row-id'))),
+								rowindex:parseInt(row.attr('row-id'))+1
+							})
+							.then((param) => {
+								if (!param.error)
+								{
+									pd.event.call(app.id,'pd.action.call',{
+										record:param.record,
+										workplace:(container.closest('.pd-view'))?'view':'record'
+									})
+									.then((param) => {
+										pd.record.set(container,app,param.record);
+										((event) => {
+											container.attr('unsaved','unsaved').dispatchEvent(event);
+										})(new Event('change'));
+									});
+								}
+								else table.delrow(row);
+							});
 						});
 						row.elm('.pd-table-row-del').on('click',(e) => {
 							pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
@@ -4313,13 +4311,14 @@ class panda_user_interface{
 												viewid:viewid
 											})
 											.then((param) => {
-												pd.event.call(app.id,'pd.delete.call',{
-													recordid:recordid,
-													viewid:viewid
-												})
-												.then((param) => {
-													res.delrow(row);
-												});
+												if (!param.error)
+													pd.event.call(app.id,'pd.delete.call',{
+														recordid:recordid,
+														viewid:viewid
+													})
+													.then((param) => {
+														res.delrow(row);
+													});
 											});
 										});
 									}
