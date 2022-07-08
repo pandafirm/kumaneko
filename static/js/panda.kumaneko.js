@@ -28,6 +28,42 @@ class panda_kumaneko{
 		/* initialize */
 		pd.elm('body').addclass(pd.theme);
 		pd.ui.baseuri(baseuri);
+		/* functions */
+		this.app={
+			action:(app,record,workplace) => {
+				return (app in this.apps)?this.apps[app].actions.value(record,workplace):record;
+			},
+			fields:(app) => {
+				return (app in this.apps)?this.apps[app].app.fields:{};
+			}
+		};
+		this.record={
+			get:(app,container) => {
+				return (app in this.apps)?pd.record.get(container,this.apps[app].app,true).record:{};
+			},
+			set:(app,container,record) => {
+				if (app in this.apps) pd.record.set(container,this.apps[app].app,this.app.action(app,record,(container.closest('pd-view'))?'view':'record'));
+			}
+		};
+		this.users={
+			login:(app,record,workplace) => {
+				return pd.extend({},pd.operator);
+			}
+		};
+		this.view={
+			query:(app,view) => {
+				var res='';
+				if (app in this.apps)
+					if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].query;
+				return res;
+			},
+			order:(app,view) => {
+				var res='';
+				if (app in this.apps)
+					if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].sort;
+				return res;
+			}
+		};
 		try
 		{
 			var auth=() => {
@@ -1924,7 +1960,7 @@ pd.modules={
 																			});
 																		}
 																	});
-																	return pd.kumaneko.apps[action.transfer.app].actions.value(origin,'backend');
+																	return pd.kumaneko.app.action(action.transfer.app,origin,'backend');
 																}
 															};
 															var cast=(fieldinfo,value) => {
@@ -2242,20 +2278,16 @@ pd.modules={
 												if (index<linkages.length) build(index);
 											};
 											var setup=(index,callback) => {
-												pd.event.call(linkage.app.id,'pd.action.call',{
-													record:records[index],
-													workplace:'view'
-												})
-												.then((param) => {
-													new Array((linkage.tableid)?param.record[linkage.tableid].value.length:1).fill().map(() => ({})).each((cells,index) => {
-														cells['__id']=param.record['__id'];
+												((record) => {
+													new Array((linkage.tableid)?record[linkage.tableid].value.length:1).fill().map(() => ({})).each((cells,index) => {
+														cells['__id']=record['__id'];
 														for (var key in linkage.app.fields)
 														{
 															if (linkage.app.fields[key].tableid)
 															{
-																if (linkage.app.fields[key].tableid==linkage.tableid) cells[key]=param.record[linkage.tableid].value[index][key];
+																if (linkage.app.fields[key].tableid==linkage.tableid) cells[key]=record[linkage.tableid].value[index][key];
 															}
-															else cells[key]=param.record[key];
+															else cells[key]=record[key];
 															if (key in keep.aggregates) keep.aggregates[key].push((cells[key].value)?parseFloat(cells[key].value):0);
 														}
 														keep.records.push(cells);
@@ -2264,7 +2296,7 @@ pd.modules={
 													index++;
 													if (index<records.length) setup(index,callback);
 													else callback();
-												});
+												})(pd.kumaneko.app.action(linkage.app.id,records[index],'view'));
 											};
 											records=records.shape((item) => {
 												var res=pd.filter.scan(config.apps.user[linkage.app.id],item,param.query);
@@ -11439,7 +11471,7 @@ pd.modules={
 													element.css({height:''}).panelinfo.styles.height='';
 													this.lib.remodel();
 												}
-											},'alphanum',element.panelinfo.styles.height);
+											},'text',element.panelinfo.styles.height);
 											break;
 										default:
 											pd.input(pd.constants.dashboard.prompt.panel[pd.lang],(value) => {
@@ -11459,7 +11491,7 @@ pd.modules={
 													element.css({width:''}).panelinfo.styles.width='';
 													this.lib.remodel();
 												}
-											},'alphanum',element.panelinfo.styles.width);
+											},'text',element.panelinfo.styles.width);
 											break;
 									}
 								})
@@ -12065,15 +12097,11 @@ pd.modules={
 																break;
 														}
 													})(this.keep.fields[key],(key in fields)?cells[fields[key]]:'');
-												pd.event.call(this.keep.app,'pd.action.call',{
-													record:record,
-													workplace:'backend'
-												})
-												.then((param) => {
-													if (record['__id'].value) res.records.put.push(param.record);
-													else res.records.post.push(param.record);
+												((record) => {
+													if (record['__id'].value) res.records.put.push(record);
+													else res.records.post.push(record);
 													resolve();
-												});
+												})(pd.kumaneko.app.action(this.keep.app,record,'backend'));
 											});
 										};
 										if (index!=0 || skip=='no')
