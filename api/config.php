@@ -3,8 +3,8 @@
 * PandaFirm-PHP-Module "config.php"
 * Version: 1.0
 * Copyright (c) 2020 TIS
-* Released under the MIT License.
-* http://pandafirm.jp/license.txt
+* Distributed under the terms of the GNU Lesser General Public License.
+* http://www.gnu.org/copyleft/lesser.html
 */
 require_once(dirname(__FILE__)."/lib/base.php");
 class clsRequest extends clsBase
