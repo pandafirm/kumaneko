@@ -3,8 +3,8 @@
 * PandaFirm-PHP-Module "driver.php"
 * Version: 1.0
 * Copyright (c) 2020 TIS
-* Released under the MIT License.
-* http://pandafirm.jp/license.txt
+* Distributed under the terms of the GNU Lesser General Public License.
+* http://www.gnu.org/copyleft/lesser.html
 */
 class clsDriver
 {
@@ -235,6 +235,25 @@ class clsDriver
 		}
 		if ($continue) $arg_destination=$this->build($arg_destination,$arg_destination,$arg_fields);
 		return $arg_destination;
+	}
+	/* deduplications */
+	public function deduplications($arg_file)
+	{
+		$file=$this->dir."config.json";
+		if (file_exists($file))
+		{
+			$source=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
+			if (is_array($source))
+			{
+				$deduplications=null;
+				if (array_key_exists($arg_file,$source["apps"]["user"])) $deduplications=$source["apps"]["user"][$arg_file]["deduplications"];
+				if (array_key_exists($arg_file,$source["apps"]["system"])) $deduplications=$source["apps"]["system"][$arg_file]["deduplications"];
+				if (!is_array($deduplications)) throw new Exception("{$arg_file} not found in Configuration file");
+				return $deduplications;
+			}
+			else throw new Exception("Configuration file not found");
+		}
+		else throw new Exception("Configuration file not found");
 	}
 	/* delete */
 	public function delete($arg_file,$arg_id="")
@@ -871,6 +890,7 @@ class clsDriver
 	/* insert */
 	public function insert($arg_file,$arg_records,$arg_operator)
 	{
+		$error="";
 		$file=$this->dir."{$arg_file}.json";
 		$source=[];
 		try
@@ -887,6 +907,7 @@ class clsDriver
 				}
 				else $source=[];
 			}
+			$deduplications=$this->deduplications($arg_file);
 			$fields=$this->fields($arg_file);
 			foreach ($arg_records as $record)
 			{
@@ -899,11 +920,34 @@ class clsDriver
 				$build["__createdtime"]=["value"=>$time];
 				$build["__modifier"]=["value"=>[strval($arg_operator)]];
 				$build["__modifiedtime"]=["value"=>$time];
+				foreach ($deduplications as $deduplication)
+				{
+					$queries=[];
+					foreach ($deduplication["criteria"] as $criteria)
+					{
+						if (array_key_exists($criteria["external"],$fields) && array_key_exists($criteria["internal"],$fields))
+							$queries[]=$this->query($criteria["external"],$criteria["operator"],["type"=>$fields[$criteria["internal"]]["type"],"value"=>$record[$criteria["internal"]]["value"]]);
+					}
+					if (count($this->filter($source,$fields,implode(" and ",$queries),$arg_operator))>0)
+					{
+						$error=$deduplication["message"];
+						break;
+					}
+				}
+				if ($error!="") break;
 				$source[strval($this->resultid)]=$build;
 				$this->resultnumbers[strval($this->resultid)]=$build["__autonumber"]["value"];
 			}
-			file_put_contents($file,json_encode($source));
-			return true;
+			if ($error=="")
+			{
+				file_put_contents($file,json_encode($source));
+				return true;
+			}
+			else
+			{
+				$this->resulterror=$error;
+				return false;
+			}
 		}
 		catch (Exception $e)
 		{
@@ -914,6 +958,43 @@ class clsDriver
 	public function insertid()
 	{
 		return $this->resultid;
+	}
+	/* query */
+	public function query($arg_lhs,$arg_operator,$arg_rhs)
+	{
+		switch ($arg_rhs["type"])
+		{
+			case "checkbox":
+			case "creator":
+			case "department":
+			case "group":
+			case "modifier":
+			case "user":
+				if (is_array($arg_rhs["value"]))
+				{
+					$arg_rhs["value"]=array_filter($arg_rhs["value"],function($values,$key){return strval($values)!="";},ARRAY_FILTER_USE_BOTH);
+					$arg_rhs["value"]=array_map(function($item){return "\"".strval($item)."\"";},$arg_rhs["value"]);
+					$arg_rhs["value"]="(".implode(",",$arg_rhs["value"]).")";
+				}
+				else $arg_rhs["value"]="()";
+				break;
+			case "dropdown":
+			case "radio":
+				$arg_rhs["value"]="(\"".((!is_null($arg_rhs["value"])?$arg_rhs["value"]:""))."\")";
+				break;
+			case "file":
+				$arg_rhs["value"]="\"\"";
+				break;
+			case "id":
+			case "lookup":
+			case "number":
+				$arg_rhs["value"]=(is_numeric($arg_rhs["value"]))?$arg_rhs["value"]:"null";
+				break;
+			default:
+				$arg_rhs["value"]="\"".((!is_null($arg_rhs["value"])?$arg_rhs["value"]:""))."\"";
+				break;
+		}
+		return $arg_lhs." ".$arg_operator." ".$arg_rhs["value"];
 	}
 	/* queries error */
 	public function queryerror()
@@ -1020,6 +1101,7 @@ class clsDriver
 	/* update */
 	public function update($arg_file,$arg_records,$arg_operator)
 	{
+		$error="";
 		$file=$this->dir."{$arg_file}.json";
 		try
 		{
@@ -1027,10 +1109,10 @@ class clsDriver
 			$this->resultnumbers=[];
 			if (file_exists($file))
 			{
-				$error="";
 				$source=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
 				if (is_array($source))
 				{
+					$deduplications=$this->deduplications($arg_file);
 					$fields=$this->fields($arg_file);
 					foreach ($arg_records as $record)
 					{
@@ -1049,6 +1131,22 @@ class clsDriver
 							$build=$this->build($source[strval($this->resultid)],$record,$fields,$source);
 							$build["__modifier"]=["value"=>[strval($arg_operator)]];
 							$build["__modifiedtime"]=["value"=>$time];
+							foreach ($deduplications as $deduplication)
+							{
+								$queries=[];
+								foreach ($deduplication["criteria"] as $criteria)
+								{
+									if (array_key_exists($criteria["external"],$fields) && array_key_exists($criteria["internal"],$fields))
+										$queries[]=$this->query($criteria["external"],$criteria["operator"],["type"=>$fields[$criteria["internal"]]["type"],"value"=>$record[$criteria["internal"]]["value"]]);
+								}
+								$queries[]="__id != ".strval($record["__id"]["value"]);
+								if (count($this->filter($source,$fields,implode(" and ",$queries),$arg_operator))>0)
+								{
+									$error=$deduplication["message"];
+									break;
+								}
+							}
+							if ($error!="") break;
 							$source[strval($this->resultid)]=$build;
 							$this->resultnumbers[strval($this->resultid)]=$build["__autonumber"]["value"];
 						}
