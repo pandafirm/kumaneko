@@ -4,7 +4,7 @@
 * Version: 1.0
 * Copyright (c) 2020 TIS
 * Distributed under the terms of the GNU Lesser General Public License.
-* http://www.gnu.org/copyleft/lesser.html
+* https://opensource.org/licenses/LGPL-2.1
 */
 class RequestError extends Exception{
 	public $response="";
