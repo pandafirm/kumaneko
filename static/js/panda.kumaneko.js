@@ -2,8 +2,8 @@
 * FileName "panda.kumaneko.js"
 * Version: 1.0
 * Copyright (c) 2020 PandaFirm
-* Released under the MIT License.
-* http://pandafirm.jp/license.txt
+* Distributed under the terms of the GNU Lesser General Public License.
+* http://www.gnu.org/copyleft/lesser.html
 */
 "use strict";
 class panda_kumaneko{
@@ -1531,13 +1531,13 @@ pd.modules={
 															if (fieldinfo.tableid)
 															{
 																result[fieldinfo.tableid].value.each((row,index) => {
-																	row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,fieldinfos);
+																	row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,record,fieldinfos);
 																	if (fieldinfo.type=='lookup') row[fieldinfo.id].lookup=true;
 																});
 															}
 															else
 															{
-																result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,fieldinfos);
+																result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,record,fieldinfos);
 																if (fieldinfo.type=='lookup') result[fieldinfo.id].lookup=true;
 															}
 															actions.call=true;
@@ -2156,13 +2156,13 @@ pd.modules={
 												if (fieldinfo.tableid)
 												{
 													result[fieldinfo.tableid].value.each((row,index) => {
-														row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,fieldinfos);
+														row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,record,fieldinfos);
 														if (fieldinfo.type=='lookup') row[fieldinfo.id].lookup=true;
 													});
 												}
 												else
 												{
-													result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,fieldinfos);
+													result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,record,fieldinfos);
 													if (fieldinfo.type=='lookup') result[fieldinfo.id].lookup=true;
 												}
 											})(fieldinfos[formula.field]);
@@ -3583,6 +3583,10 @@ pd.modules={
 																	break;
 															}
 														});
+														this.app.deduplications.each((deduplication,index) => {
+															if (deduplication.criteria.some((item) => (item.external==fieldinfo.id || item.internal==fieldinfo.id)))
+																res.push({id:fieldinfo.id,message:'-&nbsp;'+deduplication.name+'&nbsp;(This app)'});
+														});
 														for (var key in config.apps.user)
 															((app) => {
 																if (app.id!=this.app.id)
@@ -4259,6 +4263,108 @@ pd.modules={
 								this.app.actions=[];
 								pd.children(this.menus.actions.contents.elm('.pd-kumaneko-drag-vertical')).each((element,index) => {
 									if (!element.hasclass('pd-kumaneko-drag-guide')) this.app.actions.push(element.action);
+								});
+							}
+						}
+					},
+					deduplications:{
+						id:'deduplications',
+						app:{},
+						contents:null,
+						tab:null,
+						builder:null,
+						lib:{
+							create:(deduplication) => {
+								var res=pd.create('div').addclass('pd-row').attr('field-type','row');
+								var handler=(e) => {
+									var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
+									pd.event.call(
+										'appbuilder',
+										'pd.drag.start',
+										{
+											element:res,
+											menu:this.menus.deduplications,
+											page:{
+												x:pointer.pageX,
+												y:pointer.pageY
+											}
+										}
+									);
+									window.off('touchmove,mousemove',handler);
+								};
+								var setup=(deduplication) => {
+									res.deduplication=deduplication;
+									res.elm('.pd-kumaneko-drag-label').empty().append(pd.create('span').html(deduplication.name));
+									return res;
+								};
+								/* setup properties */
+								res.deduplication=deduplication;
+								/* modify elements */
+								res
+								.append(
+									pd.create('button').addclass('pd-icon pd-icon-edit pd-kumaneko-drag-button')
+									.on('touchstart,mousedown',(e) => {
+										e.stopPropagation();
+									})
+									.on('click',(e) => {
+										/* show deduplicationbuilder */
+										this.menus.deduplications.builder.show(res.deduplication,this.app.fields,this.app.layout,(deduplication) => {
+											setup(deduplication);
+											this.menus.deduplications.lib.remodel();
+										});
+									})
+								)
+								.append(
+									pd.create('button').addclass('pd-icon pd-icon-copy pd-kumaneko-drag-button')
+									.on('touchstart,mousedown',(e) => {
+										e.stopPropagation();
+									})
+									.on('click',(e) => {
+										pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'deduplication'},true)
+										.then((resp) => {
+											res.parentNode.insertBefore(this.menus.deduplications.lib.create(pd.extend({id:resp.id.toString(),name:res.deduplication.name+' Copy'},res.deduplication)),res.nextElementSibling);
+											this.menus.deduplications.lib.remodel();
+										})
+										.catch((error) => {
+											pd.alert(error.message);
+										});
+									})
+								)
+								.append(
+									pd.create('button').addclass('pd-icon pd-icon-del pd-kumaneko-drag-button')
+									.on('touchstart,mousedown',(e) => {
+										e.stopPropagation();
+									})
+									.on('click',(e) => {
+										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+											res.parentNode.removeChild(res);
+											this.menus.deduplications.lib.remodel();
+										});
+									})
+								)
+								.append(pd.create('span').addclass('pd-kumaneko-drag-label'));
+								/* event */
+								res
+								.on('touchstart,mousedown',(e) => {
+									window.on('touchmove,mousemove',handler);
+									e.stopPropagation();
+									e.preventDefault();
+								})
+								.on('touchend,mouseup',(e) => {
+									window.off('touchmove,mousemove',handler);
+								});
+								return setup(deduplication);
+							},
+							init:() => {
+								this.menus.deduplications.contents.elm('.pd-kumaneko-drag-vertical').insertBefore(this.menus.deduplications.contents.elm('.pd-kumaneko-drag-guide'),null);
+								pd.children(this.menus.deduplications.contents.elm('.pd-kumaneko-drag-vertical')).each((element,index) => {
+									if (!element.hasclass('pd-kumaneko-drag-guide')) element.parentNode.removeChild(element);
+								});
+							},
+							remodel:() => {
+								this.app.deduplications=[];
+								pd.children(this.menus.deduplications.contents.elm('.pd-kumaneko-drag-vertical')).each((element,index) => {
+									if (!element.hasclass('pd-kumaneko-drag-guide')) this.app.deduplications.push(element.deduplication);
 								});
 							}
 						}
@@ -5043,6 +5149,37 @@ pd.modules={
 									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
 								);
 								break;
+							case 'deduplications':
+								menu.builder=new pd.modules.builder.deduplication();
+								menu.contents.addclass('pd-container')
+								.append(
+									pd.create('div').css({padding:'0.25em'})
+									.append(
+										pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.app.caption.button.add.deduplication[pd.lang]).on('click',(e) => {
+											/* show deduplicationbuilder */
+											pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'deduplication'},true)
+											.then((resp) => {
+												menu.builder.show({
+													id:resp.id.toString(),
+													name:'New '+pd.constants.app.caption.deduplication[pd.lang],
+													message:'',
+													criteria:[]
+												},this.app.fields,this.app.layout,(deduplication) => {
+													menu.contents.elm('.pd-kumaneko-drag-vertical').append(menu.lib.create(deduplication));
+													menu.lib.remodel();
+												});
+											})
+											.catch((error) => {
+												pd.alert(error.message);
+											});
+										})
+									)
+								)
+								.append(
+									pd.create('div').addclass('pd-kumaneko-drag-vertical').attr('field-type','form')
+									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
+								);
+								break;
 							case 'deletion':
 								menu.contents.addclass('pd-container')
 								.append(
@@ -5392,7 +5529,7 @@ pd.modules={
 									if (linkage.app)
 									{
 										((fields) => {
-											if (linkage.criteria.some((item) => !(item.external in fields.external)))
+											if (linkage.criteria.some((item) => (!(item.external in fields.external))?true:fields.internal[item.internal].tableid))
 											{
 												res.push('-&nbsp;'+linkage.name);
 												return;
@@ -5592,6 +5729,26 @@ pd.modules={
 								});
 								return;
 							}
+							/* get deduplications */
+							error=(() => {
+								var res=[];
+								app.deduplications.each((deduplication,index) => {
+									if (deduplication.criteria.some((item) => (fieldinfos[item.external].tableid || fieldinfos[item.internal].tableid)))
+									{
+										res.push('-&nbsp;'+deduplication.name);
+										return;
+									}
+								});
+								return (res.length!=0)?pd.constants.app.message.invalid.deduplication[pd.lang]+'<br>'+res.join('<br>'):'';
+							})();
+							if (error)
+							{
+								res.error=true;
+								pd.alert(error,() => {
+									resolve(res);
+								});
+								return;
+							}
 						})(res.app,pd.ui.field.parallelize(res.app.fields));
 						if (!res.error) resolve(res);
 					})
@@ -5660,6 +5817,9 @@ pd.modules={
 					/* setup actions */
 					this.app.actions.each((action,index) => this.menus.actions.contents.elm('.pd-kumaneko-drag-vertical').append(this.menus.actions.lib.create(action)));
 					this.menus.actions.lib.remodel();
+					/* setup deduplications */
+					this.app.deduplications.each((deduplication,index) => this.menus.deduplications.contents.elm('.pd-kumaneko-drag-vertical').append(this.menus.deduplications.lib.create(deduplication)));
+					this.menus.deduplications.lib.remodel();
 					resolve();
 				});
 			}
@@ -5682,6 +5842,7 @@ pd.modules={
 					this.menus.views.lib.init();
 					this.menus.linkages.lib.init();
 					this.menus.actions.lib.init();
+					this.menus.deduplications.lib.init();
 					/* setup properties */
 					if (Object.keys(app).length==0)
 					{
@@ -5697,7 +5858,8 @@ pd.modules={
 								linkages:[],
 								permissions:{'owner':[pd.operator.__id.value.toString()],'admin':[],'denied':[]},
 								customize:[],
-								actions:[]
+								actions:[],
+								deduplications:[]
 							};
 							show();
 						})
@@ -7538,6 +7700,280 @@ pd.modules={
 						.catch((error) => pd.alert(error.message));
 					})
 					.catch((error) => pd.alert(error.message));
+				}
+				else pd.alert(pd.constants.common.message.invalid.config.corrupted[pd.lang]);
+			}
+		},
+		deduplication:class extends panda_dialog{
+			/* constructor */
+			constructor(){
+				super(999995,false,false);
+				/* setup properties */
+				this.app={
+					id:'deduplicationbuilder',
+					fields:{
+						name:{
+							id:'name',
+							type:'text',
+							caption:pd.constants.deduplication.caption.name[pd.lang],
+							required:false,
+							nocaption:false,
+							placeholder:pd.constants.deduplication.prompt.name[pd.lang]
+						},
+						message:{
+							id:'message',
+							type:'text',
+							caption:pd.constants.deduplication.caption.message[pd.lang],
+							required:false,
+							nocaption:false,
+							placeholder:pd.constants.deduplication.prompt.message[pd.lang]
+						}
+					}
+				};
+				this.keep={
+					layout:[],
+					fields:{},
+					deduplication:{}
+				};
+				this.tables={
+					criteria:null
+				};
+				/* modify elements */
+				this.tables.criteria=pd.ui.table.create({
+					id:'criterias',
+					type:'table',
+					caption:'',
+					nocaption:true,
+					fields:{
+						external:{
+							id:'external',
+							type:'dropdown',
+							caption:'',
+							required:false,
+							nocaption:true,
+							options:[]
+						},
+						operator:{
+							id:'operator',
+							type:'dropdown',
+							caption:'',
+							required:false,
+							nocaption:true,
+							options:[]
+						},
+						internal:{
+							id:'internal',
+							type:'dropdown',
+							caption:'',
+							required:false,
+							nocaption:true,
+							options:[]
+						}
+					}
+				}).spread((row,index) => {
+					/* event */
+					row.elm('.pd-table-row-add').on('click',(e) => {
+						this.tables.criteria.insertrow(row);
+					});
+					row.elm('.pd-table-row-del').on('click',(e) => {
+						pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+							this.tables.criteria.delrow(row);
+						});
+					});
+					/* modify elements */
+					((cells) => {
+						cells.external.on('change',(e) => e.currentTarget.rebuild()).rebuild=() => {
+							return new Promise((resolve,reject) => {
+								cells.operator.empty();
+								cells.internal.empty().append(pd.create('option').attr('value','').html(pd.constants.deduplication.caption.internal[pd.lang]));
+								if (cells.external.val())
+								{
+									resolve(((fields) => {
+										var res={};
+										cells.operator.assignoption(pd.filter.query.operator(fields[cells.external.val()]),'caption','id');
+										for (var key in fields)
+											((fieldinfo) => {
+												if (pd.ui.field.typing(fieldinfo,fields[cells.external.val()],true))
+												{
+													cells.internal.append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
+													res[fieldinfo.id]=fieldinfo;
+												}
+											})(fields[key]);
+										return res;
+									})(this.keep.fields));
+								}
+								else resolve({});
+							});
+						};
+					})({
+						external:row.elm('[field-id=external]').elm('select'),
+						operator:row.elm('[field-id=operator]').elm('select'),
+						internal:row.elm('[field-id=internal]').elm('select')
+					});
+				},(table,index) => {
+					if (table.tr.length==0) table.addrow();
+				},false);
+				this.header.addclass('pd-kumaneko-builder-header')
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('Deduplication Settings'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
+				this.container.addclass('pd-kumaneko-main').css({
+					height:'calc(100% - 1em)',
+					width:'55em'
+				});
+				this.contents.addclass('pd-kumaneko-deduplicationbuilder').css({
+					padding:'0'
+				})
+				.append(
+					((contents) => {
+						contents
+						.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.name).css({width:'100%'}),this.app))
+						.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.message).css({width:'100%'}),this.app))
+						.append(
+							pd.create('div').addclass('pd-kumaneko-section')
+							.append(pd.create('span').addclass('pd-table-caption').html(pd.constants.deduplication.caption.criteria[pd.lang]))
+							.append(this.tables.criteria)
+						);
+						return contents;
+					})(pd.create('div').addclass('pd-scope').attr('form-id','form_'+this.app.id))
+				);
+				this.contents.elms('input,select,textarea').each((element,index) => element.initialize());
+			}
+			/* get configuration */
+			get(){
+				return new Promise((resolve,reject) => {
+					var res=pd.record.get(this.contents,this.app);
+					if (!res.error)
+					{
+						((record) => {
+							var res={
+								error:false,
+								deduplication:this.keep.deduplication
+							};
+							if (!record.name.value)
+							{
+								res.error=true;
+								pd.alert(pd.constants.deduplication.message.invalid.name[pd.lang],() => {
+									resolve(res);
+								});
+							}
+							if (!record.message.value)
+							{
+								res.error=true;
+								pd.alert(pd.constants.deduplication.message.invalid.message[pd.lang],() => {
+									resolve(res);
+								});
+							}
+							if (!res.error)
+							{
+								var criteria=(() => {
+									var res=[];
+									this.tables.criteria.tr.each((element,index) => {
+										if (element.elm('[field-id=external]').elm('select').val() && element.elm('[field-id=internal]').elm('select').val())
+											res.push({
+												external:element.elm('[field-id=external]').elm('select').val(),
+												operator:element.elm('[field-id=operator]').elm('select').val(),
+												internal:element.elm('[field-id=internal]').elm('select').val()
+											});
+									});
+									return res;
+								})();
+								if (criteria.length==0)
+								{
+									res.error=true;
+									pd.alert(pd.constants.deduplication.message.invalid.criteria[pd.lang],() => {
+										resolve(res);
+									});
+								}
+								else res.deduplication.criteria=criteria;
+							}
+							res.deduplication.name=record.name.value;
+							res.deduplication.message=record.message.value;
+							if (!res.error) resolve(res);
+						})(res.record);
+					}
+					else resolve(res);
+				});
+			}
+			/* set configuration */
+			set(){
+				return new Promise((resolve,reject) => {
+					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.deduplication.id.toString()).on('click',(e) => {
+						navigator.clipboard.writeText(this.keep.deduplication.id.toString()).then(() => {
+							pd.alert(pd.constants.common.message.clipboard[pd.lang]);
+						})
+					});
+					pd.record.set(this.contents,this.app,(() => {
+						var res={
+							name:{value:this.keep.deduplication.name},
+							message:{value:this.keep.deduplication.message}
+						};
+						((criterias) => {
+							criterias.clearrows();
+							criterias.template.elm('[field-id=external]').elm('select').empty().append(pd.create('option').attr('value','').html(pd.constants.deduplication.caption.external[pd.lang]));
+							criterias.template.elm('[field-id=operator]').elm('select').empty();
+							criterias.template.elm('[field-id=internal]').elm('select').empty().append(pd.create('option').attr('value','').html(pd.constants.deduplication.caption.internal[pd.lang]));
+							for (var key in this.keep.fields)
+							{
+								switch (this.keep.fields[key].type)
+								{
+									case 'file':
+									case 'spacer':
+									case 'table':
+										break;
+									default:
+										criterias.template.elm('select').append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+										break;
+								}
+							}
+							this.keep.deduplication.criteria.each((values,index) => {
+								if (values.external in this.keep.fields)
+									((row) => {
+										row.elm('[field-id=external]').elm('select').val(values.external).rebuild().then((fields) => {
+											if (values.internal in fields)
+											{
+												row.elm('[field-id=operator]').elm('select').val(values.operator);
+												row.elm('[field-id=internal]').elm('select').val(values.internal);
+											}
+										});
+									})(criterias.addrow());
+							});
+							if (criterias.tr.length==0) criterias.addrow();
+						})(this.tables.criteria);
+						return res;
+					})());
+					resolve();
+				});
+			}
+			/* show */
+			show(deduplication,fields,layout,callback){
+				if (deduplication instanceof Object)
+				{
+					/* setup properties */
+					this.keep.deduplication=pd.extend({},deduplication);
+					this.keep.fields=fields;
+					this.keep.layout=layout;
+					/* modify elements */
+					this.contents.elms('input,select,textarea').each((element,index) => {
+						if (element.alert) element.alert.hide();
+					});
+					/* setup handler */
+					if (this.handler) this.ok.off('click',this.handler);
+					this.handler=(e) => {
+						this.get().then((resp) => {
+							if (!resp.error)
+							{
+								callback(this.keep.deduplication);
+								this.hide();
+							}
+						});
+					};
+					this.ok.on('click',this.handler);
+					this.cancel.on('click',(e) => this.hide());
+					/* set configuration */
+					this.set().then(() => {
+						/* show */
+						super.show();
+					});
 				}
 				else pd.alert(pd.constants.common.message.invalid.config.corrupted[pd.lang]);
 			}
@@ -13034,6 +13470,10 @@ pd.constants=pd.extend({
 						en:'Add new action',
 						ja:'追加'
 					},
+					deduplication:{
+						en:'Add new deduplication',
+						ja:'追加'
+					},
 					linkage:{
 						en:'Add new linkage view',
 						ja:'追加'
@@ -13063,6 +13503,10 @@ pd.constants=pd.extend({
 			customize:{
 				en:'Upload Javascript files for customize.',
 				ja:'カスタマイズ用のJavascriptファイルをアップロードして下さい。'
+			},
+			deduplication:{
+				en:'Deduplication',
+				ja:'重複制御'
 			},
 			delete:{
 				en:'You cannot cancel the deletion.<br>By deleting the app, all data in the app also becomes unavailable.',
@@ -13110,6 +13554,10 @@ pd.constants=pd.extend({
 				actions:{
 					en:'actions',
 					ja:'アクション'
+				},
+				deduplications:{
+					en:'deduplication',
+					ja:'重複制御'
 				},
 				deletion:{
 					en:'deletion',
@@ -13217,6 +13665,10 @@ pd.constants=pd.extend({
 						ja:'このビューはダッシュボードで使用されています'
 					}
 				},
+				deduplication:{
+					en:'There is a defect in some deduplications',
+					ja:'設定に不備がある重複制御があります'
+				},
 				delete:{
 					en:'This app is referenced in other apps or dashboard<br>Please delete after changing the settings of the following apps or dashboard',
 					ja:'このアプリは他のアプリやダッシュボードで参照されています<br>以下のアプリまたはダッシュボードの設定を変更した上で、削除を行って下さい'
@@ -13301,6 +13753,56 @@ pd.constants=pd.extend({
 			row:{
 				en:'Please enter the height of the panel row',
 				ja:'パネル行の高さを入力して下さい'
+			}
+		}
+	},
+	deduplication:{
+		caption:{
+			criteria:{
+				en:'Fetch Criteria',
+				ja:'比較条件'
+			},
+			external:{
+				en:'This App',
+				ja:'アプリ内のフィールド'
+			},
+			internal:{
+				en:'This Record',
+				ja:'レコード内のフィールド'
+			},
+			message:{
+				en:'Error Message',
+				ja:'エラーメッセージ'
+			},
+			name:{
+				en:'Deduplication Name',
+				ja:'重複制御名'
+			}
+		},
+		message:{
+			invalid:{
+				criteria:{
+					en:'Please specify one or more criteria',
+					ja:'リンクするレコードの関連付けを指定して下さい'
+				},
+				message:{
+					en:'Please enter the error message',
+					ja:'エラーメッセージを入力して下さい'
+				},
+				name:{
+					en:'Please enter the deduplication name',
+					ja:'重複制御名を入力して下さい'
+				}
+			}
+		},
+		prompt:{
+			message:{
+				en:'Enter the message to be displayed when a record that meets the specified conditions is registered.',
+				ja:'指定した条件に該当するレコードが登録された時に表示するメッセージを入力'
+			},
+			name:{
+				en:'Enter the deduplication name',
+				ja:'重複制御名を入力'
 			}
 		}
 	},

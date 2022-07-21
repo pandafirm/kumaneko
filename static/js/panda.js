@@ -2,8 +2,8 @@
 * FileName "panda.js"
 * Version: 1.0
 * Copyright (c) 2020 PandaFirm
-* Released under the MIT License.
-* http://pandafirm.jp/license.txt
+* Distributed under the terms of the GNU Lesser General Public License.
+* http://www.gnu.org/copyleft/lesser.html
 */
 "use strict";
 const PD_BREAK='__pd_break';

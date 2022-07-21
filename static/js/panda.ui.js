@@ -2,8 +2,8 @@
 * FileName "panda.ui.js"
 * Version: 1.0
 * Copyright (c) 2020 PandaFirm
-* Released under the MIT License.
-* http://pandafirm.jp/license.txt
+* Distributed under the terms of the GNU Lesser General Public License.
+* http://www.gnu.org/copyleft/lesser.html
 */
 "use strict";
 class panda_event{
@@ -832,7 +832,7 @@ class panda_filter extends panda_dialog{
 		super.show();
 	}
 	/* scanning */
-	scan(app,record,query){
+	scan(app,record,query,parallelize=true){
 		var matches=0;
 		var queries=this.query.parse(query);
 		var comparison=(fieldinfo,lhs,operator,rhs) => {
@@ -1107,14 +1107,14 @@ class panda_filter extends panda_dialog{
 						}
 					})(fieldinfos[query.field]);
 			});
-		})(pd.ui.field.parallelize(app.fields));
+		})((parallelize)?pd.ui.field.parallelize(app.fields):app.fields);
 		return (queries.length==matches)?this.result:false;
 	}
 };
 class panda_formula{
 	/* constructor */
 	constructor(){}
-	calculate(param,row,record,fieldinfos){
+	calculate(param,row,record,origin,fieldinfos){
 		if (param.field in fieldinfos)
 		{
 			var IF=(condition,exprIfTrue,exprIfFalse) => {
@@ -1173,8 +1173,35 @@ class panda_formula{
 				}
 				return res;
 			};
+			var AVGIF=(id,query='') => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					((record,fieldinfo) => {
+						if (record)
+						{
+							if (fieldinfo.tableid)
+							{
+								res=((values) => {
+									return (values.length!=0)?values.reduce((a,b) => a+b)/values.length:0;
+								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+							}
+							else res=NUM(record[id].value);
+						}
+					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
+				}
+				return res;
+			};
 			var CONCAT=(...args) => {
 				return (args.length>0)?args.map((item) => (typeof item==='number' || typeof item==='string')?item.toString():'').join(''):'';
+			};
+			var COUNT=(id) => {
+				return (Object.values(fieldinfos).some((item) => item.tableid==id))?record[id].value.length:0;
+			};
+			var COUNTIF=(id,query='') => {
+				return ((record,fieldinfo) => {
+					return (record)?((Object.values(fieldinfos).some((item) => item.tableid==id))?record[id].value.length:0):0;
+				})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
 			};
 			var CEIL=(value) => {
 				return Math.ceil(NUM(value));
@@ -1243,6 +1270,25 @@ class panda_formula{
 				}
 				return res;
 			};
+			var MAXIF=(id,query='') => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					((record,fieldinfo) => {
+						if (record)
+						{
+							if (fieldinfo.tableid)
+							{
+								res=((values) => {
+									return (values.length!=0)?values.reduce((a,b) => Math.max(a,b)):0;
+								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+							}
+							else res=NUM(record[id].value);
+						}
+					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
+				}
+				return res;
+			};
 			var MIN=(id) => {
 				var res=0;
 				if (id in fieldinfos)
@@ -1255,6 +1301,25 @@ class panda_formula{
 						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
 					}
 					else res=NUM(record[id].value);
+				}
+				return res;
+			};
+			var MINIF=(id,query='') => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					((record,fieldinfo) => {
+						if (record)
+						{
+							if (fieldinfo.tableid)
+							{
+								res=((values) => {
+									return (values.length!=0)?values.reduce((a,b) => Math.min(a,b)):0;
+								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+							}
+							else res=NUM(record[id].value);
+						}
+					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
 				}
 				return res;
 			};
@@ -1273,6 +1338,25 @@ class panda_formula{
 				}
 				return res;
 			};
+			var SUMIF=(id,query='') => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					((record,fieldinfo) => {
+						if (record)
+						{
+							if (fieldinfo.tableid)
+							{
+								res=((values) => {
+									return (values.length!=0)?values.reduce((a,b) => a+b):0;
+								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+							}
+							else res=NUM(record[id].value);
+						}
+					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
+				}
+				return res;
+			};
 			var FORMAT=(...args) => {
 				return (typeof args[1]==='string')?((!isNaN(Date.parse(args[0])))?new Date(args[0]).calc(STR(args[2])).format(args[1]):''):NUM(args[0]).comma(args[1]);
 			};
@@ -1288,7 +1372,7 @@ class panda_formula{
 			var MID=(value,start,len) => {
 				return STR(value).substr(NUM(start)-1,NUM(len));
 			};
-			var LINES=(value,index) => {
+			var LINE=(value,index) => {
 				var res=STR(value).split('\n');
 				return (res.length<index)?'':res[index-1];
 			};
@@ -1423,19 +1507,43 @@ class panda_formula{
 			try
 			{
 				var formula=param.formula.replace(/([^!><]{1})[ ]*=/g,'$1==');
+				var reserved=[];
 				for (var key in fieldinfos)
-					formula=((formula,fieldinfo) => {
-						if (formula.match(new RegExp('(^|[^\'\"]{1})'+fieldinfo.id+'([^\'\"]{1}|$)')))
-						{
-							if (fieldinfo.tableid)
+					((fieldinfo) => {
+						formula=((formula) => {
+							if (formula.match(new RegExp('(^|[^\'\"]{1})'+fieldinfo.id+'([^\'\"]{1}|$)')))
 							{
-								if (fieldinfo.id in row)
-									formula=formula.replace(new RegExp('(^|[^\'\"]{1})'+fieldinfo.id+'([^\'\"]{1}|$)','g'),'$1row["'+fieldinfo.id+'"].value$2');
+								if (fieldinfo.tableid)
+								{
+									if (fieldinfo.id in row)
+										formula=formula.replace(new RegExp('(^|[^\'\"]{1})'+fieldinfo.id+'([^\'\"]{1}|$)','g'),'$1row["'+fieldinfo.id+'"].value$2');
+								}
+								else formula=formula.replace(new RegExp('(^|[^\'\"]{1})'+fieldinfo.id+'([^\'\"]{1}|$)','g'),'$1record["'+fieldinfo.id+'"].value$2');
 							}
-							else formula=formula.replace(new RegExp('(^|[^\'\"]{1})'+fieldinfo.id+'([^\'\"]{1}|$)','g'),'$1record["'+fieldinfo.id+'"].value$2');
-						}
-						return formula;
-					})(formula.replace(new RegExp('(AVG|MIN|MAX|SUM)\\('+key+'\\)','g'),'$1\("'+key+'"\)'),fieldinfos[key]);
+							return formula;
+						})(
+							formula
+							.replace(new RegExp('(AVG|MIN|MAX|SUM)\\([ ]*('+fieldinfo.id+')[ ]*\\)','g'),(match,functions,field) => {
+								reserved.push(functions+'("'+field+'")');
+								return 'calculate_'+reserved.length.toString();
+							})
+							.replace(new RegExp('(AVGIF|MINIF|MAXIF|SUMIF)\\([ ]*('+fieldinfo.id+')[ ]*,[ ]*("[^\\"]*"|\\\'[^\\\']*\\\')\\)','g'),(match,functions,field,query) => {
+								reserved.push(functions+'("'+field+'",'+query+')');
+								return 'calculate_'+reserved.length.toString();
+							})
+							.replace(new RegExp('(COUNT)\\([ ]*('+fieldinfo.tableid+')[ ]*\\)','g'),(match,functions,field) => {
+								reserved.push(functions+'("'+field+'")');
+								return 'calculate_'+reserved.length.toString();
+							})
+							.replace(new RegExp('(COUNTIF)\\([ ]*('+fieldinfo.tableid+')[ ]*,[ ]*("[^\\"]*"|\\\'[^\\\']*\\\')\\)','g'),(match,functions,field,query) => {
+								reserved.push(functions+'("'+field+'",'+query+')');
+								return 'calculate_'+reserved.length.toString();
+							})
+						);
+					})(fieldinfos[key]);
+				reserved.each((reserved,index) => {
+					formula=formula.replace(new RegExp('calculate_'+(index+1).toString(),'g'),reserved);
+				});
 				return result(eval(formula),fieldinfos[param.field]);
 			}
 			catch(e)
@@ -4016,7 +4124,20 @@ class panda_user_interface{
 									rowindex:parseInt(row.attr('row-id'))
 								})
 								.then((param) => {
-									if (!param.error) table.delrow(row);
+									if (!param.error)
+									{
+										table.delrow(row);
+										pd.event.call(app.id,'pd.action.call',{
+											record:pd.record.get(container,app,true).record,
+											workplace:(container.closest('.pd-view'))?'view':'record'
+										})
+										.then((param) => {
+											pd.record.set(container,app,param.record);
+											((event) => {
+												container.attr('unsaved','unsaved').dispatchEvent(event);
+											})(new Event('change'));
+										});
+									}
 								});
 							});
 						});

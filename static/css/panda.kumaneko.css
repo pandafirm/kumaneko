@@ -3,8 +3,8 @@
 * FileName "panda.kumaneko.css"
 * Version: 1.0
 * Copyright (c) 2020 PandaFirm
-* Released under the MIT License.
-* http://pandafirm.jp/license.txt
+* Distributed under the terms of the GNU Lesser General Public License.
+* http://www.gnu.org/copyleft/lesser.html
 */
 /* Common definition */
 html{
@@ -533,6 +533,15 @@ svg *{
 	width:100%;
 	z-index:2;
 }
+.pd-view .pd-table tbody tr:last-of-type :is(td,th){
+	padding-bottom:0 !important;
+}
+.pd-view .pd-table tbody tr:last-of-type :is(td,th):before{
+	background-color:transparent !important;
+}
+.pd-view .pd-table tbody tr:last-of-type :is(td,th):after{
+	box-shadow:none !important;
+}
 /* Mapping Table definition */
 .pd-table.pd-mapping .pd-mapping-guide{
 	width:2em;
@@ -635,6 +644,22 @@ svg *{
 	display:none;
 }
 .pd-kumaneko-actionbuilder .pd-table tr td .pd-field{
+	width:100%;
+}
+/* Deduplication Builder definition */
+.pd-kumaneko-deduplicationbuilder :is(.pd-field-caption,.pd-table-caption){
+	margin-bottom:0.25em;
+	padding:0;
+	width:100%;
+}
+.pd-kumaneko-deduplicationbuilder .pd-table{
+	margin-bottom:0.25em;
+	width:100%;
+}
+.pd-kumaneko-deduplicationbuilder .pd-table thead{
+	display:none;
+}
+.pd-kumaneko-deduplicationbuilder .pd-table tr td .pd-field{
 	width:100%;
 }
 /* Field Builder definition */
