@@ -926,7 +926,7 @@ class clsDriver
 					foreach ($deduplication["criteria"] as $criteria)
 					{
 						if (array_key_exists($criteria["external"],$fields) && array_key_exists($criteria["internal"],$fields))
-							$queries[]=$this->query($criteria["external"],$criteria["operator"],["type"=>$fields[$criteria["internal"]]["type"],"value"=>$record[$criteria["internal"]]["value"]]);
+							$queries[]=$this->query($criteria["external"],$criteria["operator"],array_merge($record[$criteria["internal"]],["type"=>$fields[$criteria["internal"]]["type"]]));
 					}
 					if (count($this->filter($source,$fields,implode(" and ",$queries),$arg_operator))>0)
 					{
@@ -986,9 +986,12 @@ class clsDriver
 				$arg_rhs["value"]="\"\"";
 				break;
 			case "id":
-			case "lookup":
 			case "number":
 				$arg_rhs["value"]=(is_numeric($arg_rhs["value"]))?$arg_rhs["value"]:"null";
+				break;
+			case "lookup":
+				if (preg_match("/match/u",$arg_operator)) $arg_rhs["value"]=(is_numeric($arg_rhs["value"]))?$arg_rhs["value"]:"null";
+				else $arg_rhs["value"]="\"".((!is_null($arg_rhs["search"])?$arg_rhs["search"]:""))."\"";
 				break;
 			default:
 				$arg_rhs["value"]="\"".((!is_null($arg_rhs["value"])?$arg_rhs["value"]:""))."\"";
@@ -1137,7 +1140,7 @@ class clsDriver
 								foreach ($deduplication["criteria"] as $criteria)
 								{
 									if (array_key_exists($criteria["external"],$fields) && array_key_exists($criteria["internal"],$fields))
-										$queries[]=$this->query($criteria["external"],$criteria["operator"],["type"=>$fields[$criteria["internal"]]["type"],"value"=>$record[$criteria["internal"]]["value"]]);
+										$queries[]=$this->query($criteria["external"],$criteria["operator"],array_merge($record[$criteria["internal"]],["type"=>$fields[$criteria["internal"]]["type"]]));
 								}
 								$queries[]="__id != ".strval($record["__id"]["value"]);
 								if (count($this->filter($source,$fields,implode(" and ",$queries),$arg_operator))>0)
