@@ -109,9 +109,11 @@ class panda_filter extends panda_dialog{
 						res='""';
 						break;
 					case 'id':
-					case 'lookup':
 					case 'number':
 						res=((pd.isnumeric(rhs.value))?rhs.value:'null');
+						break;
+					case 'lookup':
+						res=(operator.match(/match/g))?(((pd.isnumeric(rhs.value))?rhs.value:'null')):('"'+((rhs.search)?rhs.search:'')+'"');
 						break;
 					default:
 						res='"'+((rhs.value)?rhs.value:'')+'"';
