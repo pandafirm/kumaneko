@@ -951,7 +951,7 @@ pd.modules={
 								res.header.removeattr('copied');
 								break;
 						}
-						return res.body.removeattr('unsaved');
+						return res.body.removeattr('unsaved').removeclass('pd-unsaved');
 					}
 				};
 				res.contents=(() => {
@@ -1490,7 +1490,7 @@ pd.modules={
 					this.confirm((reload) => {
 						if (typeof viewid!=='undefined')
 						{
-							if (res.body.elm('.pd-view')) res.body.elm('.pd-view').elms('[form-id=form_'+this.app.id+']').each((element,index) => element.removeattr('unsaved').closest('tr').removeclass('pd-view-unsaved'));
+							if (res.body.elm('.pd-view')) res.body.elm('.pd-view').elms('[form-id=form_'+this.app.id+']').each((element,index) => element.removeattr('unsaved').closest('tr').removeclass('pd-unsaved'));
 							if (reload) this.view.ui[viewid].loaded=false;
 						}
 						else res.init();
@@ -2968,12 +2968,15 @@ pd.modules={
 								})
 							)
 						);
-						window.on('click',(e) => option.hide());
+						window.on('click',(e) => {if (option.visible()) option.hide();});
 					})(pd.create('div').addclass('pd-kumaneko-app-header-option'));
 				}
 				else this.record.ui.buttons.add.hide();
 				pd.ui.form.create(this.record.ui.body,this.app);
 				/* event */
+				this.record.ui.body.on('change',(e) => {
+					this.record.ui.body.addclass('pd-unsaved');
+				});
 				this.record.ui.buttons.ok.on('click',(e) => this.record.save());
 				this.record.ui.buttons.cancel.on('click',(e) => {
 					this.record.ui.tab.close.click();
@@ -3183,7 +3186,7 @@ pd.modules={
 												})
 											)
 										);
-										window.on('click',(e) => option.hide());
+										window.on('click',(e) => {if (option.visible()) option.hide();});
 									})(pd.create('div').addclass('pd-kumaneko-app-header-option'));
 								}
 								pd.ui.view.create(view.body,this.app,viewid);

@@ -113,7 +113,16 @@ class panda_filter extends panda_dialog{
 						res=((pd.isnumeric(rhs.value))?rhs.value:'null');
 						break;
 					case 'lookup':
-						res=(operator.match(/match/g))?(((pd.isnumeric(rhs.value))?rhs.value:'null')):('"'+((rhs.search)?rhs.search:'')+'"');
+						switch (lhs.type)
+						{
+							case 'id':
+							case 'number':
+								res=((pd.isnumeric(rhs.value))?rhs.value:'null');
+								break;
+							default:
+								res=(operator.match(/match/g))?(((pd.isnumeric(rhs.value))?rhs.value:'null')):('"'+((rhs.search)?rhs.search:'')+'"');
+								break;
+						}
 						break;
 					default:
 						res='"'+((rhs.value)?rhs.value:'')+'"';
@@ -4064,6 +4073,85 @@ class panda_user_interface{
 		};
 		this.table={
 			activate:(table,app) => {
+				((tableid) => {
+					table.elms('[sort-id]').each((element,index) => {
+						element.on('click',(e) => {
+							((container,fieldinfo,order) => {
+								((record) => {
+									record[tableid].value.sort((a,b) => {
+										var values={
+											a:null,
+											b:null
+										};
+										switch (fieldinfo.type)
+										{
+											case 'checkbox':
+												values.a='';
+												values.b='';
+												if (Array.isArray(a[fieldinfo.id].value))
+													if (a[fieldinfo.id].value.length!=0) values.a=a[fieldinfo.id].value.first();
+												if (Array.isArray(b[fieldinfo.id].value))
+													if (b[fieldinfo.id].value.length!=0) values.b=b[fieldinfo.id].value.first();
+												break;
+											case 'creator':
+											case 'department':
+											case 'group':
+											case 'modifier':
+											case 'user':
+												values.a=0;
+												values.b=0;
+												if (Array.isArray(a[fieldinfo.id].value))
+													if (a[fieldinfo.id].value.length!=0) values.a=a[fieldinfo.id].value.first();
+												if (Array.isArray(b[fieldinfo.id].value))
+													if (b[fieldinfo.id].value.length!=0) values.b=b[fieldinfo.id].value.first();
+												break;
+											case 'file':
+												values.a='';
+												values.b='';
+												if (Array.isArray(a[fieldinfo.id].value))
+													if (a[fieldinfo.id].value.length!=0) values.a=a[fieldinfo.id].value.first().name;
+												if (Array.isArray(b[fieldinfo.id].value))
+													if (b[fieldinfo.id].value.length!=0) values.b=b[fieldinfo.id].value.first().name;
+												break;
+											case 'lookup':
+												values.a=a[fieldinfo.id].search;
+												values.b=b[fieldinfo.id].search;
+												break;
+											default:
+												values.a=a[fieldinfo.id].value;
+												values.b=b[fieldinfo.id].value;
+												break;
+										}
+										if (values.a<values.b) return (order=='desc')?1:-1;
+										if (values.a>values.b) return (order=='desc')?-1:1;
+										return 0;
+									});
+									pd.event.call(app.id,'pd.row.sort.'+tableid,{
+										container:table,
+										record:record,
+										fieldid:fieldinfo.id
+									})
+									.then((param) => {
+										if (!param.error)
+										{
+											pd.event.call(app.id,'pd.action.call',{
+												record:param.record,
+												workplace:(container.closest('.pd-view'))?'view':'record'
+											})
+											.then((param) => {
+												pd.record.set(container,app,param.record);
+												((event) => {
+													container.attr('unsaved','unsaved').dispatchEvent(event);
+												})(new Event('change'));
+												table.elms('[sort-id]').each((element,index) => element.attr('sort-order',(element.attr('sort-id')==fieldinfo.id)?order:''));
+											});
+										}
+									});
+								})(pd.record.get(container,app,true).record);
+							})(table.closest('[form-id=form_'+app.id+']'),app.fields[tableid].fields[element.attr('sort-id')],(element.attr('sort-order')=='asc')?'desc':'asc')
+						});
+					});
+				})(table.attr('field-id'));
 				return table.spread((row,index) => {
 					((container) => {
 						/* event */
@@ -4163,7 +4251,13 @@ class panda_user_interface{
 					res.append(pd.create('tbody').append(pd.create('tr').addclass('pd-scope')));
 					for (var key in table.fields)
 						((fieldinfo) => {
-							if (!isview) res.elm('thead tr').append(pd.create('th').append(pd.create('span').addclass('pd-table-head').html(fieldinfo.caption)));
+							if (!isview)
+							{
+								res.elm('thead tr').append(((cell) => {
+									if (isform) cell.css({cursor:'pointer'}).attr('sort-id',fieldinfo.id).attr('sort-order','');
+									return cell;
+								})(pd.create('th').append(pd.create('span').html(fieldinfo.caption))));
+							}
 							res.elm('tbody tr').append(pd.create('td').append(this.field.create(((fieldinfo) => {
 								fieldinfo.nocaption=true;
 								return fieldinfo;
@@ -4394,7 +4488,7 @@ class panda_user_interface{
 						return res.spread((row,index) => {
 							/* event */
 							row.elm('[form-id=form_'+app.id+']').on('change',(e) => {
-								row.addclass('pd-view-unsaved');
+								row.addclass('pd-unsaved');
 							});
 							row.elm('.pd-view-row-add').on('click',(e) => {
 								((row) => {

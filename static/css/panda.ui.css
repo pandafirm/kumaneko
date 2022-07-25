@@ -404,8 +404,16 @@
 	font-weight:normal;
 	padding:0;
 }
-.pd-table th{
+.pd-table thead th{
 	padding-top:0.25em;
+}
+.pd-table thead th span{
+	display:inline-block;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	padding:0 0.25em;
+	user-select:none;
+	width:100%;
 }
 .pd-table .pd-table-button{
 	width:4em;
@@ -423,9 +431,6 @@
 .pd-table:is(.pd-disabled,.pd-readonly) .pd-table-button{
 	opacity:0;
 	pointer-events:none;
-}
-.pd-table .pd-table-head{
-	padding:0 0.25em;
 }
 .pd-table-caption{
 	display:inline-block;
