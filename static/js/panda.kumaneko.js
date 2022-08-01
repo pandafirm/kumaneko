@@ -1,7 +1,7 @@
 /*
 * FileName "panda.kumaneko.js"
 * Version: 1.0
-* Copyright (c) 2020 PandaFirm
+* Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
 */
@@ -638,7 +638,7 @@ class panda_kumaneko{
 												container.append(pd.create('p').html('version:'+resp.my));
 												if (resp.latest) container.append(pd.create('p').html(pd.constants.common.prompt.update[pd.lang].replace(/%version%/g,resp.latest)));
 												return container.append(
-													pd.create('p').html('Copyright '+new Date().format('Y')+' pandafirm LLC. All rights reserved.')
+													pd.create('p').html('Copyright '+new Date().format('Y')+' Pandafirm LLC. All rights reserved.')
 												);
 											})(pd.create('p').addclass('pd-kumaneko-about-overview'))
 										)
