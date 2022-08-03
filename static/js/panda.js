@@ -3029,6 +3029,7 @@ class panda_progress{
 		this.counter++;
 		this.monitor.html(Math.ceil((this.counter/this.max)*100).toString()+'% complete');
 		this.progress.css({width:'calc(100% * '+(this.counter/this.max).toString()+')'});
+		this.cover.css({display:'block'});
 	}
 	/* show */
 	show(max){
