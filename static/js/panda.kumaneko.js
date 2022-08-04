@@ -13383,7 +13383,7 @@ pd.constants=pd.extend({
 				ja:'フィールドカラー'
 			},
 			suspend:{
-				en:'Abort save',
+				en:'Abort Save',
 				ja:'保存の中断',
 				message:{
 					en:'Message',
