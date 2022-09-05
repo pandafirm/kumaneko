@@ -2342,14 +2342,15 @@ pd.modules={
 													new Array((linkage.tableid)?record[linkage.tableid].value.length:1).fill().map(() => ({})).each((cells,index) => {
 														cells['__id']=record['__id'];
 														for (var key in linkage.app.fields)
-														{
-															if (linkage.app.fields[key].tableid)
+															if (linkage.app.fields[key].type!='spacer')
 															{
-																if (linkage.app.fields[key].tableid==linkage.tableid) cells[key]=record[linkage.tableid].value[index][key];
+																if (linkage.app.fields[key].tableid)
+																{
+																	if (linkage.app.fields[key].tableid==linkage.tableid) cells[key]=record[linkage.tableid].value[index][key];
+																}
+																else cells[key]=record[key];
+																if (key in keep.aggregates) keep.aggregates[key].push((cells[key].value)?parseFloat(cells[key].value):0);
 															}
-															else cells[key]=record[key];
-															if (key in keep.aggregates) keep.aggregates[key].push((cells[key].value)?parseFloat(cells[key].value):0);
-														}
 														keep.records.push(cells);
 														pd.record.set(linkage.contents.elm('.pd-view').addrow().elm('[form-id=form_'+linkage.app.id+']'),linkage.app,cells);
 													});
@@ -11858,7 +11859,37 @@ pd.modules={
 					}
 				};
 				/* modify elements */
-				this.header.css({paddingLeft:'0.25em',textAlign:'left'}).html('App Management');
+				this.header.css({paddingLeft:'0.25em',paddingRight:'4em',textAlign:'left'})
+				.append(pd.create('span').css({lineHeight:'2em'}).html('App Management'))
+				.append(
+					((icon) => {
+						icon.css({
+							right:'2em',
+							top:'0'
+						})
+						.on('click',(e) => {
+							pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
+							.then((resp) => {
+								delete resp.file.dashboard;
+								delete resp.file.increments;
+								pd.downloadtext(JSON.stringify(resp.file,null,'\t'),'config.json');
+							})
+							.catch((error) => pd.alert(error.message));
+							e.stopPropagation();
+							e.preventDefault();
+						});
+						switch (pd.theme)
+						{
+							case 'dark':
+								icon.attr('src','data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAFN++nkAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAtFJREFUeNpiYKA6+A8EyHwmfJI4dQKZBjA+C9EmICm6T5KjAQKIHn7H6vr/EGCAroARl18ZgYB8vwIEEE29/h6EyQ43fBHLhEPTfmLEsNoEBAFY5AIIuQSkKOE/bpBAtQAFCKDhiAhlXiZKDKe+ZuRCCD2jEsrmMIWGSLQALgNgmhygtrzHk8NAwAGbzTBBARzmC6CpQy1XSSpfYQUUsRoxCi08YaAA9aPC4Eu+AAE0iugGGKlRxBCd7KhVitCl+ELKIxhVFVptRJs8BCsWsQADalqyHt10LA4wwOFzEFhPqoUNBGt/EtoyIPNIjmMsvjgPxAJoagSg4v9xpQOisxO09UiNhPIAmNsUKY3z+f/xg/mjReOgAwABNIpGwSggujM79FsgI9ti5PoYvW6m1bAKIfB+ICx/PxA+p5lP5yO3LtAsf49LHbmWJeAbOkIfSiOkntRmKcltKWztMqq0h2naNqekR4Cv90GOxcigAIv6AnwaiG7QU9p1IWbYBleRGUhFewPJKpNBY7//SQf7qVaGQwfw8BaZyIN3tCrJGqiR5UbBKKAJAAjQrhXYMAgCQUk6gCO4QjeoGziCo7iBK3SDjlA3qBvQDXSDFpJr2hKoovii/YvGaBS4/wfkHj4YDMamIKgrhHiffTzS+up9z4SH9zrsUYP4O9GFCRPhsFA/dS1gTq71iLo0jvVlE70VkWzsHvPQBc2ORkx8e0QnEo+fKHYKaHFJjknYO4h3jvdskKgvoyJYjgxRaVPeDELXXx4dMKRpsHJpZedL16TaeQiDXxztqKjmYR1e6dLJF5SfJmH2R8zysCvM6qmDEEK+9hzhyTxsg/aE7sM3S/gXBrnCDFP9Hb4PHjXCx+poSKw4qr+yNpiHdWECULe5Os/q7Fci16P+XLzRkrYAc3I1cirxgUS5WRI7kK4pPVI2V7y/2IgvVjLES+YhlXcYDAZjc3gC2vR/IwVkWLEAAAAASUVORK5CYII=');
+								break;
+							case 'light':
+								icon.attr('src','data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAFN++nkAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA5RJREFUeNpiYKA6KJy15j8ynwmfJE6dQLYBjM9CtAlIiu6T5GiAAKKH37G6HiQA8iu6AmQ/nwcKUsmvAAFEU6+/B2Fc8iwE9Avgk2TCYeN+YsRwJZ9AENGfFsKIJD0RJg8TZ8RiQwKQmo/DpYlAjQuoEqAAATQcEaHMy0SJ4RRpZsThXFDGPI8kZAiM3wsEbUbK0YZItAByTsewGSjpAKRA6fcD0BZBbDkMmlEcgfIH0G12IJCTBNDUYc+SRJWvODIGTo1ouQx7aEMNUQBSoAJNEajpweBKvgABNIroBhipUcSgJzualyJ08TFSHiEEiMpDjGQEMXqxiLd4JMtioCXrgVQAtmIEyQFwC7EUPxuAcoGkFPYNQKqe3ISDJQE2As1pIKURhM0XF6Dl/QckNQLQesKA4qCGth4VqJCAHwAdqUhR4gI6BtSuSsCjZAHQksTR4nFQAYAAGkWjYBSgd+n/k6t/wFogoxYTG78C2Ni0auy9JzQ6gqvDSHFjj4DlRFtKbisTm+UkWUq0xdCWBwOsdYFmOdxSdHXktrlATRz0IST40BFsGA3JUrzqiW3e/ie3LYWtXYatiUyoeYvRHiYEoA5MRG6bYwOELK4HGlCPr0dATO+DHIthIAAp+AuBjpiAZlkByLOkhAwLGYVOP9CifgYKAa4iM5CBeiCQ5HwMLYdBceZAomUHQBYi968oKasdoI7AWWRCLTtAszEQtKxCcpYbBaOApgAgQLtWdIQgDEOD5wCMwAiOoBPIBoygbqATcI7ABnUC2URGcASNRK5WWltoq5x5Jz981L40JM1L+MdgMCaFJPYfksifSa+amA2x+ReMfPmm4Wf/5tJMmIPWsMCkq7CWmhL9QFVWX3lf+9xbqKCFVdsZPqtwndzQYwhcYzWptERdVhfiHVGXNvDP5WFL4kGJeiFMlwhUsTbQ3+R9adhriL8RNQwA4AXlCK3S1gQnTMpoaeGij42pyptCCNfZ6U6UVDqdIVXP2NkOArrIS3tNhBX35xRj8pAMvoZ+bdRKbfKRh/EE0qHNFweyKXlWNmYdH2lpQU8pzQKjm+GJV0OCELl8Aa2u79WQofIwbhK/wa0yEC3ICEIilxO5HCLAhbAAQyPDEkgqN06FD4cIlpbo6vg8lRTi4yp5i9PVM/EYVDL65grwM3glp7gK2r7eaKEg9NUyJS8owK5lUxM5YWrVTEriUWSehuedGQwGw4Ab4kZ8FrSVRGEAAAAASUVORK5CYII=');
+								break;
+						}
+						return icon;
+					})(this.parts.icon.clone())
+				);
 				this.container.addclass('pd-kumaneko-main').css({
 					height:'calc(100% - 1em)',
 					width:'calc(100% - 1em)'

@@ -247,6 +247,9 @@
 .pd-field .pd-field-value:is(.pd-id,.pd-number) *{
 	text-align:right;
 }
+.pd-field .pd-field-value.pd-spacer > *{
+	white-space:normal;
+}
 .pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value .pd-guide{
 	display:inline-block;
 }
@@ -260,7 +263,7 @@
 	padding-left:0;
 	width:100%;
 }
-.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value > :not(.pd-guide,.pd-icon.pd-open){
+.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value:not(.pd-spacer) > :not(.pd-guide,.pd-icon.pd-open){
 	display:none;
 }
 .pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value.pd-dropdown:after{
@@ -450,7 +453,7 @@
 	padding-left:0;
 	width:100%;
 }
-.pd-uneditable .pd-field .pd-field-value > :not(.pd-guide,.pd-icon.pd-open){
+.pd-uneditable .pd-field .pd-field-value:not(.pd-spacer) > :not(.pd-guide,.pd-icon.pd-open){
 	display:none;
 }
 .pd-uneditable .pd-field .pd-field-value.pd-dropdown:after{
