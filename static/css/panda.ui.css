@@ -509,6 +509,11 @@
 }
 .pd-view .pd-view-guide{
 	padding-left:5px !important;
+}
+.pd-view .pd-view-guide.pd-readonly{
+	width:calc(2em + 5px) !important;
+}
+.pd-view .pd-view-guide:not(.pd-readonly){
 	width:calc(4em + 5px) !important;
 }
 .pd-view .pd-view-head .pd-view-head-cell{
@@ -518,14 +523,14 @@
 	display:inline-block;
 	overflow:hidden;
 	text-overflow:ellipsis;
-	padding:0 0.5em;
+	padding:0.25em 0.5em;
 	user-select:none;
 	width:100%;
 	z-index:1;
 }
 .pd-view .pd-view-head .pd-view-head-cell .pd-view-head-guide{
 	background-color:transparent;
-	background-position:left top;
+	background-position:left center;
 	background-repeat:no-repeat;
 	background-size:100% auto;
 	cursor:pointer;
@@ -533,13 +538,13 @@
 	height:100%;
 	position:absolute;
 	right:0.375em;
-	top:0.25em;
+	top:0;
 	width:0.75em;
 	z-index:1;
 }
 .pd-view .pd-view-head .pd-view-head-cell .pd-view-head-resizer{
 	background-color:transparent;
-	background-position:left top;
+	background-position:left center;
 	background-repeat:no-repeat;
 	background-size:100% auto;
 	cursor:col-resize;
@@ -547,7 +552,7 @@
 	height:100%;
 	position:absolute;
 	right:-0.375em;
-	top:0.25em;
+	top:0;
 	width:0.75em;
 	z-index:2;
 }

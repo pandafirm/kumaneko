@@ -1404,10 +1404,10 @@ pd.modules={
 											res.linkage[linkage.id]={
 												id:linkage.id,
 												app:app,
-												aggregate:((fieldinfos) => {
+												aggregate:((display,fieldinfos) => {
 													var res=[];
 													((latlng) => {
-														Object.values(fieldinfos).filter((item) => linkage.display.includes(item.id)).each((fieldinfo,index) => {
+														Object.values(fieldinfos).filter((item) => display.includes(item.id)).each((fieldinfo,index) => {
 															switch (fieldinfo.type)
 															{
 																case 'number':
@@ -1416,7 +1416,7 @@ pd.modules={
 														});
 													})(Array.from(new Set(Object.values(fieldinfos).shape((item) => (item.type=='address')?Object.values(item.mapping):PD_THROW).flat())));
 													return res;
-												})(fields.external),
+												})(linkage.display.map((item) => item.external),fields.external),
 												criteria:linkage.criteria.map((item) => {
 													events.push('pd.change.'+item.internal);
 													return {
@@ -1481,7 +1481,7 @@ pd.modules={
 											views:[{
 												id:'linkage_'+this.app.id+'_'+linkage.id,
 												type:'linkage',
-												fields:linkage.display
+												fields:linkage.display.map((item) => item.external)
 											}]
 										});
 									})({
@@ -2314,8 +2314,8 @@ pd.modules={
 										for (var key in linkage.app.fields) if (!(key in fields.external)) delete linkage.app.fields[key];
 										linkage.aggregate=linkage.aggregate.filter((item) => (item in fields.external));
 										linkage.criteria=linkage.criteria.filter((item) => ((item.external.id in fields.external) && (item.internal.id in fields.internal)));
-										linkage.display=linkage.display.filter((item) => (item in fields.external));
-										linkage.tableid=Array.from(new Set(linkage.display.shape((item) => (fields.external[item].tableid)?fields.external[item].tableid:PD_THROW))).join('');
+										linkage.display=linkage.display.filter((item) => (item.external in fields.external));
+										linkage.tableid=Array.from(new Set(linkage.display.shape((item) => (fields.external[item.external].tableid)?fields.external[item.external].tableid:PD_THROW))).join('');
 									})({
 										external:pd.ui.field.parallelize(config.apps.user[linkage.app.id].fields),
 										internal:config.apps.user[this.app.id].fields
@@ -2410,6 +2410,57 @@ pd.modules={
 															});
 														})(linkage.app.fields[aggregate])
 													});
+													if (keep.records.length!=0)
+														((fieldinfos) => {
+															((fields) => {
+																linkage.contents.elm('.pd-view').elm('th').empty();
+																if (fields.length!=0)
+																	linkage.contents.elm('.pd-view').elm('th')
+																	.append(
+																		pd.create('button').addclass('pd-icon pd-icon-copy').on('click',(e) => {
+																			pd.confirm(pd.constants.common.message.confirm.copy[pd.lang],() => {
+																				((origin) => {
+																					var tables=Array.from(new Set(fields.map((item) => item.internal.tableid))).reduce((result,current) => {
+																						origin[current].value=[];
+																						result[current]={
+																							fields:fields.filter((item) => item.internal.tableid==current),
+																							row:pd.record.create({fields:config.apps.user[this.app.id].fields[current].fields})
+																						};
+																						return result;
+																					},{});
+																					keep.records.each((record,index) => {
+																						for (var key in tables)
+																							origin[key].value.push(((row) => {
+																								tables[key].fields.each((field,index) => {
+																									switch (field.internal.type)
+																									{
+																										case 'lookup':
+																											row[field.internal.id]=((value) => {
+																												return {
+																													lookup:true,
+																													search:(!('search' in value)?'':value.search),
+																													value:value.value
+																												};
+																											})(record[field.external]);
+																											break;
+																										default:
+																											row[field.internal.id].value=record[field.external].value;
+																											break;
+																									}
+																								});
+																								return row;
+																							})(pd.extend({},tables[key].row)));
+																					});
+																					pd.record.set(this.record.ui.body,config.apps.user[this.app.id],this.actions.value(origin));
+																					((event) => {
+																						this.record.ui.body.attr('unsaved','unsaved').dispatchEvent(event);
+																					})(new Event('change'));
+																				})(pd.record.get(this.record.ui.body,this.app,true).record);
+																			});
+																		})
+																	)
+															})(linkage.display.shape((item) => (item.internal in fieldinfos)?{external:item.external,internal:fieldinfos[item.internal]}:PD_THROW));
+														})(pd.ui.field.parallelize(config.apps.user[this.app.id].fields));
 													pd.event.call(this.app.id,'pd.linkage.load.complete',keep);
 													((contents,active) => {
 														contents.elm('.pd-view').css({display:'table'});
@@ -3628,17 +3679,18 @@ pd.modules={
 														});
 														this.app.linkages.each((linkage,index) => {
 															if (linkage.criteria.some((item) => item.internal==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+linkage.name+'&nbsp;(This app)'});
+															if (linkage.display.some((item) => item.internal==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+linkage.name+'&nbsp;(This app)'});
 															if (linkage.app==this.app.id)
 															{
 																if (linkage.criteria.some((item) => item.external==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+linkage.name+'&nbsp;(This app)'});
-																if (linkage.display.some((item) => item==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+linkage.name+'&nbsp;(This app)'});
+																if (linkage.display.some((item) => item.external==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+linkage.name+'&nbsp;(This app)'});
 															}
 														});
 														this.app.actions.each((action,index) => {
-															if (action.formula.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 															switch (action.trigger)
 															{
 																case 'button':
+																	if (action.formula.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.report.saveas) res.push({id:action.report.saveas,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.report.store) res.push({id:action.report.store,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.transfer.criteria.some((item) => item.internal==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
@@ -3652,6 +3704,7 @@ pd.modules={
 																	if (action.mail.attachment) res.push({id:action.mail.attachment,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	break;
 																case 'value':
+																	if (action.formula.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.style.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.disabled.fields.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.hidden.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
@@ -3684,7 +3737,7 @@ pd.modules={
 																		if (linkage.app==this.app.id)
 																		{
 																			if (linkage.criteria.some((item) => item.external==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+linkage.name+'&nbsp;('+app.name+')'});
-																			if (linkage.display.some((item) => item==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+linkage.name+'&nbsp;('+app.name+')'});
+																			if (linkage.display.some((item) => item.external==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+linkage.name+'&nbsp;('+app.name+')'});
 																		}
 																	});
 																	app.actions.each((action,index) => {
@@ -5566,7 +5619,7 @@ pd.modules={
 														if (!(criteria.external in fieldinfos)) res.push('-&nbsp;'+linkage.name+'&nbsp;('+app.name+')');
 													});
 													linkage.display.each((display,index) => {
-														if (!(display in fieldinfos)) res.push('-&nbsp;'+linkage.name+'&nbsp;('+app.name+')');
+														if (!(display.external in fieldinfos)) res.push('-&nbsp;'+linkage.name+'&nbsp;('+app.name+')');
 													});
 												}
 											});
@@ -5619,12 +5672,12 @@ pd.modules={
 												res.push('-&nbsp;'+linkage.name);
 												return;
 											}
-											if (linkage.display.some((item) => !(item in fields.external)))
+											if (linkage.display.some((item) => !(item.external in fields.external)))
 											{
 												res.push('-&nbsp;'+linkage.name);
 												return;
 											}
-											if (Array.from(new Set(linkage.display.shape((item) => (fields.external[item].tableid)?fields.external[item].tableid:PD_THROW))).length>1)
+											if (Array.from(new Set(linkage.display.shape((item) => (fields.external[item.external].tableid)?fields.external[item.external].tableid:PD_THROW))).length>1)
 											{
 												res.push('-&nbsp;'+linkage.name);
 												return;
@@ -9468,8 +9521,24 @@ pd.modules={
 					caption:'',
 					nocaption:true,
 					fields:{
-						display:{
-							id:'display',
+						external:{
+							id:'external',
+							type:'dropdown',
+							caption:'',
+							required:false,
+							nocaption:true,
+							options:[]
+						},
+						guide:{
+							id:'guide',
+							type:'spacer',
+							caption:'',
+							required:false,
+							nocaption:true,
+							contents:'<span class="pd-icon pd-icon-arrow pd-icon-arrow-right"></span>'
+						},
+						internal:{
+							id:'internal',
 							type:'dropdown',
 							caption:'',
 							required:false,
@@ -9477,7 +9546,7 @@ pd.modules={
 							options:[]
 						}
 					}
-				}).spread((row,index) => {
+				}).addclass('pd-mapping').spread((row,index) => {
 					/* event */
 					row.elm('.pd-table-row-add').on('click',(e) => {
 						this.tables.display.insertrow(row);
@@ -9486,6 +9555,39 @@ pd.modules={
 						pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
 							this.tables.display.delrow(row);
 						});
+					});
+					/* modify elements */
+					((cells) => {
+						cells.external.on('change',(e) => e.currentTarget.rebuild()).rebuild=() => {
+							return new Promise((resolve,reject) => {
+								cells.internal.empty().append(pd.create('option'));
+								if (cells.external.val())
+								{
+									resolve(((fields) => {
+										var res={};
+										for (var key in fields.internal)
+											((fieldinfo) => {
+												if (pd.ui.field.typing(fields.external[cells.external.val()],fieldinfo))
+												{
+													cells.internal.append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
+													res[fieldinfo.id]=fieldinfo;
+												}
+											})(fields.internal[key]);
+										return res;
+									})({
+										external:pd.ui.field.parallelize(this.keep.config.apps.user[this.contents.elm('[field-id=app]').elm('select').val()].fields),
+										internal:Object.values(pd.ui.field.parallelize(this.keep.fields)).reduce((result,current) => {
+											if (current.tableid) result[current.id]=current;
+											return result;
+										},{})
+									}));
+								}
+								else resolve({});
+							});
+						};
+					})({
+						external:row.elm('[field-id=external]').elm('select'),
+						internal:row.elm('[field-id=internal]').elm('select')
 					});
 				},(table,index) => {
 					if (table.tr.length==0) table.addrow();
@@ -9514,7 +9616,9 @@ pd.modules={
 											criterias.template.elm('[field-id=operator]').elm('select').empty();
 											criterias.template.elm('[field-id=internal]').elm('select').empty().append(pd.create('option').attr('value','').html(pd.constants.linkage.caption.internal[pd.lang]));
 											displays.clearrows();
-											displays.template.elm('select').empty().append(pd.create('option'));
+											displays.template.elm('[field-id=external]').elm('select').empty().append(pd.create('option'));
+											displays.template.elm('[field-id=internal]').elm('select').empty().append(pd.create('option'));
+											displays.template.elm('[field-id=guide]').parentNode.addclass('pd-mapping-guide');
 											this.keep.filter.monitor.html('0&nbsp;Filters,&nbsp;0&nbsp;Sorts');
 											this.keep.filter.query='';
 											this.keep.filter.sort='';
@@ -9652,10 +9756,11 @@ pd.modules={
 										var display=(() => {
 											var res=[];
 											this.tables.display.tr.each((element,index) => {
-												((display) => {
-													if (display)
-														if (!res.includes(display)) res.push(display);
-												})(element.elm('select').val());
+												if (element.elm('[field-id=external]').elm('select').val())
+													res.push({
+														external:element.elm('[field-id=external]').elm('select').val(),
+														internal:element.elm('[field-id=internal]').elm('select').val()
+													});
 											});
 											return res;
 										})();
@@ -9677,7 +9782,7 @@ pd.modules={
 											}
 											else
 											{
-												if (Array.from(new Set(display.shape((item) => (fields.external[item].tableid)?fields.external[item].tableid:PD_THROW))).length>1)
+												if (Array.from(new Set(display.shape((item) => (fields.external[item.external].tableid)?fields.external[item.external].tableid:PD_THROW))).length>1)
 												{
 													res.error=true;
 													pd.alert(pd.constants.linkage.message.invalid.table[pd.lang],() => {
@@ -9756,8 +9861,13 @@ pd.modules={
 								});
 								if (elements.tables.criteria.tr.length==0) elements.tables.criteria.addrow();
 								elements.tables.display.clearrows();
-								this.keep.linkage.display.each((display,index) => {
-									if (display in fields.display) elements.tables.display.addrow().elm('select').val(display);
+								this.keep.linkage.display.each((values,index) => {
+									if (values.external in fields.display)
+										((row) => {
+											row.elm('[field-id=external]').elm('select').val(values.external).rebuild().then((fields) => {
+												if (values.internal in fields) row.elm('[field-id=internal]').elm('select').val(values.internal);
+											});
+										})(elements.tables.display.addrow());
 								});
 								if (elements.tables.display.tr.length==0) elements.tables.display.addrow();
 							});
@@ -13203,6 +13313,10 @@ pd.constants=pd.extend({
 				cleanup:{
 					en:'Free up storage space by deleting attachments you no longer need',
 					ja:'不要となった添付ファイルを削除して、ストレージの空き容量を増やします'
+				},
+				copy:{
+					en:'Are you sure you want to copy?',
+					ja:'コピーしてもよろしいですか？'
 				},
 				forced:{
 					en:'Another user has changed the settings of kumaneko.<br>Would you like to reboot now?',
