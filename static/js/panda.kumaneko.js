@@ -3620,8 +3620,9 @@ pd.modules={
 												pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 												.then((resp) => {
 													var config=resp.file;
-													var error=(() => {
+													var error=(index,fieldinfos,callback) => {
 														var res=[];
+														var fieldinfo=fieldinfos[index];
 														((fieldinfos) => {
 															for (var key in fieldinfos)
 																((fieldinfo) => {
@@ -3754,19 +3755,51 @@ pd.modules={
 																	});
 																}
 															})(config.apps.user[key]);
-														return ((messages) => {
+														res=((messages) => {
 															return (messages.length!=0)?pd.constants.app.message.invalid.field.delete[pd.lang]+'<br>'+messages.join('<br>'):''
 														})(res.shape((item) => (item.id==fieldinfo.id)?item.message:PD_THROW));
-													})();
-													if (error) pd.alert(error);
-													else
-													{
-														/* move the guide to top level element */
-														this.menus.form.contents.elm('.pd-kumaneko-drag').insertBefore(this.menus.form.contents.elm('.pd-kumaneko-drag-guide'),null);
-														/* delete */
-														element.parentNode.removeChild(element);
-													}
-													this.menus.form.lib.remodel();
+														if (res) callback(res);
+														else
+														{
+															index++;
+															if (index<fieldinfos.length) error(index,fieldinfos,callback);
+															else callback('');
+														}
+													};
+													((fieldinfos) => {
+														error(0,fieldinfos,(message) => {
+															if (message) pd.alert(message);
+															else
+															{
+																/* move the guide to top level element */
+																this.menus.form.contents.elm('.pd-kumaneko-drag').insertBefore(this.menus.form.contents.elm('.pd-kumaneko-drag-guide'),null);
+																/* delete */
+																element.parentNode.removeChild(element);
+															}
+															this.menus.form.lib.remodel();
+														});
+													})((() => {
+														var res=[];
+														switch (fieldinfo.type)
+														{
+															case 'box':
+																res=this.app.layout.reduce((result,current) => {
+																	if (current.id==fieldinfo.id)
+																		current.rows.each((row,index) => {
+																			Array.prototype.push.apply(result,row.fields.map((item) => this.app.fields[item]));
+																		});
+																	return result;
+																},[]);
+																break;
+															case 'table':
+																res=Object.values(fieldinfo.fields).concat(fieldinfo);
+																break;
+															default:
+																res.push(fieldinfo);
+																break;
+														}
+														return res;
+													})());
 												})
 												.catch((error) => pd.alert(error.message));
 											});
@@ -6716,7 +6749,7 @@ pd.modules={
 								this.keep.sections.formula.container=container;
 								container.elm('.pd-box-container').append(this.keep.sections.formula.table);
 								return container;
-							})(pd.ui.box.create(pd.constants.action.caption.formula[pd.lang]).addclass('pd-kumaneko-section'))
+							})(pd.ui.box.create('',pd.constants.action.caption.formula[pd.lang]).addclass('pd-kumaneko-section'))
 						)
 						.append(
 							((container) => {
@@ -6796,7 +6829,7 @@ pd.modules={
 									return res;
 								})(pd.ui.field.create(this.app.fields.orientation).css({width:'50%'})),this.app));
 								return container;
-							})(pd.ui.box.create(pd.constants.action.caption.report[pd.lang]).addclass('pd-kumaneko-section'))
+							})(pd.ui.box.create('',pd.constants.action.caption.report[pd.lang]).addclass('pd-kumaneko-section'))
 						)
 						.append(
 							((container) => {
@@ -6925,7 +6958,7 @@ pd.modules={
 									return e;
 								});
 								return container;
-							})(pd.ui.box.create(pd.constants.action.caption.transfer[pd.lang]).addclass('pd-kumaneko-section'))
+							})(pd.ui.box.create('',pd.constants.action.caption.transfer[pd.lang]).addclass('pd-kumaneko-section'))
 						)
 						.append(
 							((container) => {
@@ -6944,14 +6977,14 @@ pd.modules={
 									})(pd.ui.field.activate(pd.ui.field.create(this.app.fields.body).css({width:'100%'}),this.app))
 								);
 								return container;
-							})(pd.ui.box.create(pd.constants.action.caption.mail[pd.lang]).addclass('pd-kumaneko-section'))
+							})(pd.ui.box.create('',pd.constants.action.caption.mail[pd.lang]).addclass('pd-kumaneko-section'))
 						)
 						.append(
 							((container) => {
 								this.keep.sections.style.container=container;
 								container.elm('.pd-box-container').append(this.keep.sections.style.table);
 								return container;
-							})(pd.ui.box.create(pd.constants.action.caption.style[pd.lang]).addclass('pd-kumaneko-section'))
+							})(pd.ui.box.create('',pd.constants.action.caption.style[pd.lang]).addclass('pd-kumaneko-section'))
 						)
 						.append(
 							((container) => {
@@ -6963,14 +6996,14 @@ pd.modules={
 								})(pd.ui.field.create(this.app.fields.record)).css({width:'100%'}),this.app))
 								.append(this.keep.sections.disabled.table);
 								return container;
-							})(pd.ui.box.create(pd.constants.action.caption.disabled[pd.lang]).addclass('pd-kumaneko-section'))
+							})(pd.ui.box.create('',pd.constants.action.caption.disabled[pd.lang]).addclass('pd-kumaneko-section'))
 						)
 						.append(
 							((container) => {
 								this.keep.sections.hidden.container=container;
 								container.elm('.pd-box-container').append(this.keep.sections.hidden.table);
 								return container;
-							})(pd.ui.box.create(pd.constants.action.caption.hide[pd.lang]).addclass('pd-kumaneko-section'))
+							})(pd.ui.box.create('',pd.constants.action.caption.hide[pd.lang]).addclass('pd-kumaneko-section'))
 						)
 						.append(
 							((container) => {
@@ -6982,7 +7015,7 @@ pd.modules={
 									return res;
 								})(pd.ui.field.create(this.app.fields.continue)).css({width:'100%'}),this.app));
 								return container;
-							})(pd.ui.box.create(pd.constants.action.caption.suspend[pd.lang]).addclass('pd-kumaneko-section'))
+							})(pd.ui.box.create('',pd.constants.action.caption.suspend[pd.lang]).addclass('pd-kumaneko-section'))
 						);
 						/* event */
 						pd.event.on(this.app.id,'pd.change.record',(e) => {

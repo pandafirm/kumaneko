@@ -2569,7 +2569,7 @@ class panda_user_interface{
 	constructor(){
 		this.uri='';
 		this.box={
-			create:(caption) => {
+			create:(app,caption) => {
 				var res=pd.create('div').addclass('pd-box')
 				.append(
 					pd.create('span').addclass('pd-box-caption')
@@ -2590,10 +2590,12 @@ class panda_user_interface{
 				res.open=() => {
 					res.elm('.pd-box-container').show();
 					res.elm('.pd-icon-arrow').removeclass('pd-icon-arrow-down').addclass('pd-icon-arrow-up');
+					if (app) pd.event.call(app,'pd.box.open.'+res.attr('field-id'),{container:res});
 				};
 				res.close=() => {
 					res.elm('.pd-box-container').hide();
 					res.elm('.pd-icon-arrow').removeclass('pd-icon-arrow-up').addclass('pd-icon-arrow-down');
+					if (app) pd.event.call(app,'pd.box.close.'+res.attr('field-id'),{container:res});
 				};
 				return res;
 			}
@@ -3991,7 +3993,7 @@ class panda_user_interface{
 								((res,rows) => {
 									rows.each((row,index) => res.elm('.pd-box-container').append(createrow(row.fields)));
 									return res;
-								})(this.box.create(layout.caption).attr('field-id',layout.id),layout.rows)
+								})(this.box.create(app.id,layout.caption).attr('field-id',layout.id),layout.rows)
 							);
 							break;
 						case 'table':
