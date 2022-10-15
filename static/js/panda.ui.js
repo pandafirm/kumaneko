@@ -4290,7 +4290,7 @@ class panda_user_interface{
 			create:(container,app,viewid) => {
 				var style={
 					key:() => {
-						return 'view_'+app.id+'_'+viewid+'_'+window.location.href.replace(/\/$/g,'').replace(/http(s)?:\/\//g,'').replace(/\//g,'_');
+						return 'view_'+app.id+'_'+viewid+'_'+(location.protocol+'//'+location.host+location.pathname).replace(/\/$/g,'').replace(/http(s)?:\/\//g,'').replace(/\//g,'_');
 					},
 					set:(initialize) => {
 						var key=style.key();

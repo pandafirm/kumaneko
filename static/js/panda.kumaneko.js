@@ -51,6 +51,12 @@ class panda_kumaneko{
 			}
 		};
 		this.view={
+			exists:(app,view) => {
+				var res=false;
+				if (app in this.apps)
+					if (view in this.apps[app].view.ui) res=true;
+				return res;
+			},
 			query:(app,view) => {
 				var res='';
 				if (app in this.apps)
@@ -3238,55 +3244,63 @@ pd.modules={
 												.append(pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-right pd-kumaneko-app-header-option-item-icon'))
 												.on('click',(e) => {
 													option.hide();
-													((fields) => {
-														var datas=[['"Record ID"'].concat(fields.shape((item) => {
-															var res='';
-															switch (this.app.fields[item].type)
-															{
-																case 'file':
-																case 'id':
-																case 'spacer':
-																	res=PD_THROW;
-																	break;
-																default:
-																	res='"'+this.app.fields[item].caption+'"';
-																	break;
-															}
-															return res;
-														}).join(','))];
-														view.body.elm('.pd-view').elms('.pd-scope').each((element,index) => {
-															datas.push(((record) => {
-																return [record['__id'].value].concat(fields.shape((item) => {
+													this.confirm(() => {
+														this.record.bulk({
+															app:this.app.id,
+															query:view.query,
+															sort:view.sort,
+															offset:0,
+															limit:500
+														},[],false,(records) => {
+															((fields) => {
+																var datas=[['"Record ID"'].concat(fields.shape((item) => {
 																	var res='';
 																	switch (this.app.fields[item].type)
 																	{
-																		case 'checkbox':
-																		case 'creator':
-																		case 'department':
-																		case 'group':
-																		case 'modifier':
-																		case 'user':
-																			res='"'+record[item].value.join(':')+'"';
-																			break;
 																		case 'file':
 																		case 'id':
 																		case 'spacer':
 																			res=PD_THROW;
 																			break;
-																		case 'lookup':
-																		case 'number':
-																			res=record[item].value;
-																			break;
 																		default:
-																			res='"'+record[item].value.replace(/"/g,'""')+'"';
+																			res='"'+this.app.fields[item].caption+'"';
 																			break;
 																	}
 																	return res;
-																})).join(',');
-															})(pd.record.get(element,this.app,true).record));
-														});
-														pd.downloadtext(datas.join('\n'),this.app.name+'.csv');
-													})((view.fields.length!=0)?view.fields:Object.keys(this.app.fields));
+																}).join(','))];
+																datas.concat(records.map((record) => {
+																	return [record['__id'].value].concat(fields.shape((item) => {
+																		var res='';
+																		switch (this.app.fields[item].type)
+																		{
+																			case 'checkbox':
+																			case 'creator':
+																			case 'department':
+																			case 'group':
+																			case 'modifier':
+																			case 'user':
+																				res='"'+record[item].value.join(':')+'"';
+																				break;
+																			case 'file':
+																			case 'id':
+																			case 'spacer':
+																				res=PD_THROW;
+																				break;
+																			case 'lookup':
+																			case 'number':
+																				res=record[item].value;
+																				break;
+																			default:
+																				res='"'+record[item].value.replace(/"/g,'""')+'"';
+																				break;
+																		}
+																		return res;
+																	})).join(',');
+																}));
+																pd.downloadtext(datas.join('\n'),this.app.name+'.csv');
+															})((view.fields.length!=0)?view.fields:Object.keys(this.app.fields));
+														},() => reject({}));
+													},viewid);
 												})
 											)
 											.append(
@@ -11892,7 +11906,28 @@ pd.modules={
 				});
 				return dashboard;
 			})(this.ui.contents.elm('.pd-kumaneko-dashboard'));
-			pd.event.call('0','pd.dashboard.build',{space:this.ui.space}).then(() => this.show());
+			pd.event.call('0','pd.dashboard.build',{space:this.ui.space}).then(() => {
+				this.show();
+				((queries) => {
+					if (pd.isnumeric(queries.app))
+					{
+						if (pd.isnumeric(queries.record))
+						{
+							if (queries.record=='0') pd.event.call(queries.app,'pd.create.call',{activate:true});
+							else pd.event.call(queries.app,'pd.edit.call',{recordid:queries.record});
+						}
+						else
+						{
+							if (pd.isnumeric(queries.view))
+							{
+								if (pd.kumaneko.view.exists(queries.app,queries.view))
+									pd.event.call(queries.app,'pd.app.activate',{viewid:(pd.isnumeric(queries.view))?queries.view:'0'});
+							}
+							else pd.event.call(queries.app,'pd.app.activate',{viewid:'0'});
+						}
+					}
+				})(pd.queries());
+			});
 		}
 		/* show */
 		show(){
@@ -12780,12 +12815,13 @@ pd.modules={
 								var fields={};
 								var build=(index,callback) => {
 									var except=(index) => {
-										((column) => {
-											res.error=true;
-											pd.alert(pd.constants.import.message.invalid.file[pd.lang].replace(/\*\*\*/g,column),() => {
-												callback();
-											});
-										})((skip=='yes')?this.keep.csv.first()[index]:'Col '+(parseInt(index)+1).toString());
+										if (!res.error)
+											((column) => {
+												res.error=true;
+												pd.alert(pd.constants.import.message.invalid.file[pd.lang].replace(/\*\*\*/g,column),() => {
+													callback();
+												});
+											})((skip=='yes')?this.keep.csv.first()[index]:'Col '+(parseInt(index)+1).toString());
 									};
 									var finish=() => {
 										index++;
@@ -12972,12 +13008,12 @@ pd.modules={
 								/* setup handler */
 								if (this.handler) this.ok.off('click',this.handler);
 								this.handler=(e) => {
-									pd.loadstart();
-									this.get().then((resp) => {
-										if (!resp.error)
-										{
-											((modifiedtime,records) => {
-												pd.confirm(pd.constants.common.message.confirm.submit[pd.lang],() => {
+									pd.confirm(pd.constants.common.message.confirm.submit[pd.lang],() => {
+										pd.loadstart();
+										this.get().then((resp) => {
+											if (!resp.error)
+											{
+												((modifiedtime,records) => {
 													pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:this.keep.app,records:records.post})
 													.then((resp) => {
 														records.post.each((post,index) => {
@@ -13003,9 +13039,9 @@ pd.modules={
 														.catch((error) => pd.alert(error.message));
 													})
 													.catch((error) => pd.alert(error.message));
-												});
-											})(new Date().format('ISOSEC'),resp.records);
-										}
+												})(new Date().format('ISOSEC'),resp.records);
+											}
+										});
 									});
 								};
 								this.ok.on('click',this.handler);
@@ -13083,7 +13119,7 @@ pd.modules={
 			/* push */
 			push(data){
 				if (this.enabled)
-					pd.request(pd.ui.baseuri()+'/notify.php','PUT',{},{payload:data,subject:location.href.replace(/\/[^\/]*$/g,'')+'/'},true)
+					pd.request(pd.ui.baseuri()+'/notify.php','PUT',{},{payload:data,subject:(location.protocol+'//'+location.host+location.pathname).replace(/\/[^\/]*$/g,'')+'/'},true)
 					.then((resp) => {})
 					.catch((error) => pd.alert(error.message));
 			}

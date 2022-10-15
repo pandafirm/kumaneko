@@ -2453,7 +2453,7 @@ class panda_map{
 		this.markers=[];
 	}
 	/* initialize */
-	init(container,mapoption,idle,clicked){
+	init(container,mapoption,idle,clicked,zoom){
 		if (container)
 		{
 			this.container=container;
@@ -2462,11 +2462,15 @@ class panda_map{
 			this.directionsService=new google.maps.DirectionsService();
 			/* idle event */
 			google.maps.event.addListener(this.map,'idle',() => {
-				this.centerlocation=this.map.getCenter();
+				this.centerlocation=((latlng) => {
+					return (latlng)?new google.maps.LatLng(latlng.lat(),latlng.lng()):null;
+				})(this.map.getCenter());
 				if (idle) idle();
 			});
 			/* click event */
 			if (clicked) google.maps.event.addListener(this.map,'click',(e) => this.searchaddress(e.latLng.lat(),e.latLng.lng(),(address,postalcode) => clicked(address,postalcode,e.latLng)));
+			/* zoom event */
+			if (zoom) google.maps.event.addListener(this.map,'zoom_changed',(e) => zoom(this.map.getZoom()));
 			/* resize event */
 			window.on('resize',(e) => this.map.setCenter(this.centerlocation));
 		}
@@ -2474,13 +2478,27 @@ class panda_map{
 	}
 	/* get bounds */
 	bounds(){
-		var res=this.map.getBounds();
-		return {
-			north:(res)?res.getNorthEast().lat():0,
-			south:(res)?res.getSouthWest().lat():0,
-			east:(res)?res.getNorthEast().lng():0,
-			west:(res)?res.getSouthWest().lng():0
+		var bounds=this.map.getBounds();
+		var res={
+			north:0,
+			south:0,
+			east:0,
+			west:0,
+			distance:{
+				horizontal:0,
+				vertical:0
+			}
 		};
+		if (bounds)
+		{
+			res.north=bounds.getNorthEast().lat();
+			res.south=bounds.getSouthWest().lat();
+			res.east=bounds.getNorthEast().lng();
+			res.west=bounds.getSouthWest().lng();
+			res.distance.horizontal=(google.maps.geometry.spherical.computeDistanceBetween(new google.maps.LatLng(res.north,res.east),new google.maps.LatLng(res.north,res.west)) / 1000).toFixed(2);
+			res.distance.vertical=(google.maps.geometry.spherical.computeDistanceBetween(new google.maps.LatLng(res.north,res.east),new google.maps.LatLng(res.south,res.east)) / 1000).toFixed(2);
+		}
+		return res;
 	}
 	/* close information widnow */
 	closeinfowindow(){
@@ -2503,7 +2521,7 @@ class panda_map{
 					/* load api */
 					pd.elm('head').append(
 						pd.create('script')
-						.attr('src','https://maps.googleapis.com/maps/api/js?key='+apikey)
+						.attr('src','https://maps.googleapis.com/maps/api/js?libraries=geometry&key='+apikey)
 						.attr('type','text/javascript')
 						.on('load',(e) => {
 							this.loaded=true;
@@ -2582,6 +2600,7 @@ class panda_map{
 		{
 			case 0:
 				if (setupcenter) this.map.setCenter(new google.maps.LatLng(0,0));
+				if (callback) callback();
 				break;
 			case 1:
 				/* append markers */

@@ -482,6 +482,9 @@ svg *{
 .pd-kumaneko-main .pd-kumaneko-map *{
 	color:initial;
 }
+.pd-kumaneko-main .pd-kumaneko-map div:not([class]){
+	position:unset;
+}
 .pd-kumaneko-main .pd-kumaneko-map .pd-kumaneko-map-item{
 	cursor:pointer;
 	user-select:none;
