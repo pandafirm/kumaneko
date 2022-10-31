@@ -33,6 +33,26 @@ class panda_kumaneko{
 			action:(app,record,workplace) => {
 				return (app in this.apps)?this.apps[app].actions.value(record,workplace):record;
 			},
+			bootup:(param) => {
+				if (pd.isnumeric(param.app))
+					if (param.app in this.apps)
+					{
+						if (pd.isnumeric(param.record))
+						{
+							if (param.record=='0') pd.event.call(param.app,'pd.create.call',{activate:true});
+							else pd.event.call(param.app,'pd.edit.call',{recordid:param.record});
+						}
+						else
+						{
+							if (pd.isnumeric(param.view))
+							{
+								if (param.view in this.apps[param.app].view.ui)
+									pd.event.call(param.app,'pd.app.activate',{viewid:param.view});
+							}
+							else pd.event.call(param.app,'pd.app.activate',{viewid:'0'});
+						}
+					}
+			},
 			fields:(app) => {
 				return (app in this.apps)?this.apps[app].app.fields:{};
 			}
@@ -51,12 +71,6 @@ class panda_kumaneko{
 			}
 		};
 		this.view={
-			exists:(app,view) => {
-				var res=false;
-				if (app in this.apps)
-					if (view in this.apps[app].view.ui) res=true;
-				return res;
-			},
 			query:(app,view) => {
 				var res='';
 				if (app in this.apps)
@@ -776,6 +790,9 @@ class panda_kumaneko{
 											case 'crosstab':
 												panel.crosstab=pd.ui.chart.create(panel.config.view.type);
 												break;
+											case 'gantt':
+												panel.gantt=pd.ui.gantt.create();
+												break;
 											case 'timeseries':
 												panel.timeseries=pd.ui.chart.create(panel.config.view.type);
 												break;
@@ -999,8 +1016,9 @@ pd.modules={
 												switch (view.type)
 												{
 													case 'crosstab':
+													case 'gantt':
 													case 'timeseries':
-														if (res.body.elm('.pd-crosstab')) res.body.elm('.pd-crosstab').elm('thead').css({top:res.header.innerheight().toString()+'px'});
+														if (res.body.elm('.pd-matrix')) res.body.elm('.pd-matrix').elm('thead').css({top:res.header.innerheight().toString()+'px'});
 														break;
 													case 'edit':
 													case 'list':
@@ -1034,6 +1052,7 @@ pd.modules={
 							loaded:false,
 							calendar:null,
 							crosstab:null,
+							gantt:null,
 							timeseries:null,
 							map:null,
 							monitor:null,
@@ -1095,6 +1114,100 @@ pd.modules={
 									res.header.firstChild
 								);
 								res.crosstab=pd.ui.chart.create(view.type);
+								break;
+							case 'gantt':
+								res.header.insertBefore(
+									pd.create('div').addclass('pd-kumaneko-app-header-filter')
+									.append(
+										pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
+											pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
+												this.view.load(viewid,query,sort).catch(() => {});
+											})
+										})
+									)
+									.append((() => {
+										res.monitor=pd.create('span').addclass('pd-kumaneko-app-header-filter-monitor').html((() => {
+											var res='';
+											switch (view.fields.column.period)
+											{
+												case 'day':
+													res=new Date().format('Y-m-d');
+													break;
+												case 'month':
+													res=new Date().format('Y-m');
+													break;
+											}
+											return res;
+										})());
+										return res.monitor;
+									})())
+									.append(
+										pd.create('button').addclass('pd-icon pd-icon-date').on('click',(e) => {
+											switch (view.fields.column.period)
+											{
+												case 'day':
+													pd.pickupdate(res.monitor.text(),(date) => {
+														res.monitor.html(new Date(date).format('Y-m-d'));
+														this.view.load(viewid).catch(() => {});
+													});
+													break;
+												case 'month':
+													pd.pickupdate(res.monitor.text()+'-01',(date) => {
+														res.monitor.html(new Date(date).format('Y-m'));
+														this.view.load(viewid).catch(() => {});
+													});
+													break;
+											}
+										})
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-app-header-filter-cases pd-dropdown')
+										.append(
+											pd.create('select').assignoption((() => {
+												var res=[];
+												switch (view.fields.column.period)
+												{
+													case 'day':
+														res=[
+															{id:{value:7},caption:{value:'7 days'}},
+															{id:{value:14},caption:{value:'14 days'}},
+															{id:{value:21},caption:{value:'21 days'}},
+															{id:{value:28},caption:{value:'28 days'}},
+															{id:{value:56},caption:{value:'56 days'}},
+															{id:{value:84},caption:{value:'84 days'}}
+														];
+														break;
+													case 'month':
+														res=[
+															{id:{value:12},caption:{value:'12 months'}},
+															{id:{value:24},caption:{value:'24 months'}},
+															{id:{value:36},caption:{value:'36 months'}}
+														];
+														break;
+												}
+												return res;
+											})(),'caption','id')
+											.on('change',(e) => {
+												((element) => {
+													res.offset=0;
+													res.limit=parseInt(element.val());
+													this.view.load(viewid).catch(() => {});
+												})(e.currentTarget);
+											})
+										)
+									),
+									res.header.firstChild
+								);
+								switch (view.fields.column.period)
+								{
+									case 'day':
+										res.limit=7;
+										break;
+									case 'month':
+										res.limit=12;
+										break;
+								}
+								res.gantt=pd.ui.gantt.create();
 								break;
 							case 'timeseries':
 								res.header.insertBefore(
@@ -2273,7 +2386,7 @@ pd.modules={
 										action.hidden.each((hidden,index) => {
 											if (this.app.layout.some((item) => (item.id==hidden.field && item.type=='box')))
 											{
-												if (workplace=='record') this.record.ui.body.elm('[field-id='+CSS.escape(hidden.field)+']').addclass('pd-hidden');
+												if (workplace=='record') this.record.ui.body.elm('[field-id="'+CSS.escape(hidden.field)+'"]').addclass('pd-hidden');
 											}
 											else
 											{
@@ -2333,7 +2446,7 @@ pd.modules={
 												records:[],
 												aggregates:Object.fromEntries(((head) => {
 													return linkage.aggregate.map((item) => {
-														head.elm('[column-id='+CSS.escape(item)+']').addclass('pd-view-head-cell-extension');
+														head.elm('[column-id="'+CSS.escape(item)+'"]').addclass('pd-view-head-cell-extension');
 														return [item,[]];
 													});
 												})(linkage.contents.elm('.pd-view').elm('thead'))),
@@ -2545,7 +2658,7 @@ pd.modules={
 											break;
 									}
 								}
-							})(body.elm('[field-id='+CSS.escape(key)+']'),this.app.fields[key]);
+							})(body.elm('[field-id="'+CSS.escape(key)+'"]'),this.app.fields[key]);
 						}
 						if (body.elm('[data-type=id]')) body.elm('[data-type=id]').val('');
 						if (body.elm('[data-type=autonumber]')) body.elm('[data-type=autonumber]').val('');
@@ -2708,7 +2821,7 @@ pd.modules={
 															cell.append(
 																((cell) => {
 																	cell
-																	.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-readonly').css({width:'100%'}),app))
+																	.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-picker pd-readonly').css({width:'100%'}),app))
 																	.on('click',(e) => {
 																		pd.event.call(this.app.id,'pd.edit.call',{recordid:record['__id'].value});
 																	});
@@ -2754,6 +2867,29 @@ pd.modules={
 						case 'crosstab':
 						case 'timeseries':
 							view[view.type].show(records,view);
+							break;
+						case 'gantt':
+							view.gantt.show(records,view,(task,record) => {
+								if (view.fields.task.title in app.fields)
+									((fieldinfo) => {
+										fieldinfo.nocaption=true;
+										((app) => {
+											task.addclass('pd-scope')
+											.append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-picker pd-readonly').css({width:'100%'}),app))
+											.on('click',(e) => {
+												pd.event.call(this.app.id,'pd.edit.call',{recordid:record['__id'].value});
+											});
+											pd.record.set(task,app,this.actions.value(record,'view'));
+										})({
+											id:app.id,
+											fields:(() => {
+												var res={};
+												res[fieldinfo.id]=fieldinfo;
+												return res;
+											})()
+										});
+									})(pd.extend({},app.fields[view.fields.task.title]));
+							});
 							break;
 						case 'map':
 							((app) => {
@@ -2854,6 +2990,7 @@ pd.modules={
 										},() => reject({}));
 										break;
 									case 'crosstab':
+									case 'gantt':
 									case 'timeseries':
 										pd.request(
 											pd.ui.baseuri()+'/'+view.type+'.php',
@@ -2862,7 +2999,9 @@ pd.modules={
 											pd.extend({
 												app:this.app.id,
 												query:overwrite,
+												sort:(typeof sort==='string')?sort:view.sort,
 												column:{
+													limit:view.limit,
 													starting:(view.monitor)?view.monitor.text():''
 												}
 											},view.fields),
@@ -2881,6 +3020,7 @@ pd.modules={
 													{
 														this.view.build(this.app,view,resp);
 														if (typeof query==='string') view.query=query;
+														if (typeof sort==='string') view.sort=sort;
 														finish(param);
 													}
 													else reject({});
@@ -3160,6 +3300,9 @@ pd.modules={
 								if (view.chart.type!='table') view.body.addclass('pd-fixed').closest('.pd-contents').addclass('pd-fixed');
 								view.body.append(view.crosstab);
 								break;
+							case 'gantt':
+								view.body.append(view.gantt);
+								break;
 							case 'timeseries':
 								if (view.chart.type!='table') view.body.addclass('pd-fixed').closest('.pd-contents').addclass('pd-fixed');
 								view.body.append(view.timeseries);
@@ -3212,7 +3355,7 @@ pd.modules={
 													if (view.fields.postalcode in this.app.fields)
 													{
 														pd.pickuppostal(postalcode.replace(/[^0-9]/g,''),(resp) => {
-															if (resp) this.record.ui.body.elm('[field-id='+CSS.escape(view.fields.postalcode)+']').elm('.pd-field-value').set(resp).then(() => finish());
+															if (resp) this.record.ui.body.elm('[field-id="'+CSS.escape(view.fields.postalcode)+'"]').elm('.pd-field-value').set(resp).then(() => finish());
 															else finish();
 														});
 													}
@@ -3253,7 +3396,35 @@ pd.modules={
 															limit:500
 														},[],false,(records) => {
 															((fields) => {
-																var datas=[['"Record ID"'].concat(fields.shape((item) => {
+																pd.downloadtext(records.reduce((result,current) => {
+																	return result.concat([[current['__id'].value].concat(fields.shape((item) => {
+																		var res='';
+																		switch (this.app.fields[item].type)
+																		{
+																			case 'checkbox':
+																			case 'creator':
+																			case 'department':
+																			case 'group':
+																			case 'modifier':
+																			case 'user':
+																				res='"'+current[item].value.join(':')+'"';
+																				break;
+																			case 'file':
+																			case 'id':
+																			case 'spacer':
+																				res=PD_THROW;
+																				break;
+																			case 'lookup':
+																			case 'number':
+																				res=current[item].value;
+																				break;
+																			default:
+																				res='"'+current[item].value.replace(/"/g,'""')+'"';
+																				break;
+																		}
+																		return res;
+																	})).join(',')]);
+																},[['"Record ID"'].concat(fields.shape((item) => {
 																	var res='';
 																	switch (this.app.fields[item].type)
 																	{
@@ -3267,37 +3438,7 @@ pd.modules={
 																			break;
 																	}
 																	return res;
-																}).join(','))];
-																datas.concat(records.map((record) => {
-																	return [record['__id'].value].concat(fields.shape((item) => {
-																		var res='';
-																		switch (this.app.fields[item].type)
-																		{
-																			case 'checkbox':
-																			case 'creator':
-																			case 'department':
-																			case 'group':
-																			case 'modifier':
-																			case 'user':
-																				res='"'+record[item].value.join(':')+'"';
-																				break;
-																			case 'file':
-																			case 'id':
-																			case 'spacer':
-																				res=PD_THROW;
-																				break;
-																			case 'lookup':
-																			case 'number':
-																				res=record[item].value;
-																				break;
-																			default:
-																				res='"'+record[item].value.replace(/"/g,'""')+'"';
-																				break;
-																		}
-																		return res;
-																	})).join(',');
-																}));
-																pd.downloadtext(datas.join('\n'),this.app.name+'.csv');
+																}).join(','))]).join('\n'),this.app.name+'.csv');
 															})((view.fields.length!=0)?view.fields:Object.keys(this.app.fields));
 														},() => reject({}));
 													},viewid);
@@ -3673,6 +3814,12 @@ pd.modules={
 																case 'crosstab':
 																	res.push({id:view.fields.column.field,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	res.push({id:view.fields.value.field,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
+																	if (view.fields.rows.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
+																	break;
+																case 'gantt':
+																	res.push({id:view.fields.task.start,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
+																	res.push({id:view.fields.task.end,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
+																	res.push({id:view.fields.task.title,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	if (view.fields.rows.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	break;
 																case 'timeseries':
@@ -5014,6 +5161,7 @@ pd.modules={
 													{option:{value:'list'}},
 													{option:{value:'calendar'}},
 													{option:{value:'crosstab'}},
+													{option:{value:'gantt'}},
 													{option:{value:'timeseries'}}
 												];
 												if (map) res.push({option:{value:'map'}});
@@ -5071,6 +5219,20 @@ pd.modules={
 																	value:{
 																		field:'',
 																		func:'CNT'
+																	}
+																};
+																break;
+															case 'gantt':
+																res.fields={
+																	column:{
+																		period:'day',
+																		width:64
+																	},
+																	rows:[],
+																	task:{
+																		start:'',
+																		end:'',
+																		title:''
 																	}
 																};
 																break;
@@ -10004,6 +10166,7 @@ pd.modules={
 										this.menus.timeseries.lib.load();
 										break;
 									default:
+										if (this.keep.view.type=='gantt') this.menus.gantt.lib.load();
 										this.keep.view.sort=sort;
 										break;
 								}
@@ -10201,6 +10364,93 @@ pd.modules={
 									}
 									return res;
 								})(pd.record.get(this.menus.crosstab.contents,this.menus.crosstab.app,true).record);
+							}
+						}
+					},
+					gantt:{
+						id:'gantt',
+						app:{},
+						contents:null,
+						preview:null,
+						table:null,
+						lib:{
+							load:(view) => {
+								view=pd.extend({},(view instanceof Object)?view:this.menus.gantt.lib.remodel());
+								if (this.keep.app)
+									if (view.fields.task.start && view.fields.task.end && view.fields.task.title)
+									{
+										pd.request(
+											pd.ui.baseuri()+'/gantt.php',
+											'POST',
+											{},
+											pd.extend({
+												app:this.keep.app,
+												query:this.keep.view.query,
+												sort:this.keep.view.sort,
+												column:{
+													limit:((view.fields.column.period=='month')?12:7),
+													starting:((view.fields.column.period=='month')?new Date().format('Y-01'):new Date().format('Y-m-01'))
+												}
+											},view.fields)
+										)
+										.then((resp) => {
+											this.menus.gantt.preview.show(resp,view,(task,record) => {
+												((fieldinfo) => {
+													fieldinfo.nocaption=true;
+													((app) => {
+														task.addclass('pd-scope').append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-picker pd-readonly').css({width:'100%'}),app));
+														pd.record.set(task,app,pd.kumaneko.app.action(app.id,record,'view'));
+													})({
+														id:this.keep.app,
+														fields:(() => {
+															var res={};
+															res[fieldinfo.id]=fieldinfo;
+															return res;
+														})()
+													});
+												})(pd.extend({},this.keep.fields[view.fields.task.title]));
+											});
+										})
+										.catch((error) => {
+											pd.alert(error.message);
+										});
+									}
+							},
+							remodel:() => {
+								var res={
+									fields:{
+										column:{
+											period:'',
+											width:0
+										},
+										rows:[],
+										task:{
+											start:'',
+											end:'',
+											title:''
+										}
+									}
+								};
+								return ((record) => {
+									res.fields.column.period=record.columnperiod.value;
+									res.fields.column.width=record.columnwidth.value;
+									res.fields.task.start=record.taskstart.value;
+									res.fields.task.end=record.taskend.value;
+									res.fields.task.title=record.tasktitle.value;
+									res.fields.rows=(() => {
+										var res=[];
+										this.menus.gantt.table.tr.each((element,index) => {
+											if (element.elm('[field-id=rowfield]').elm('select').val())
+												res.push({
+													field:element.elm('[field-id=rowfield]').elm('select').val(),
+													format:element.elm('[field-id=rowformat]').elm('select').val(),
+													sort:element.elm('[field-id=rowsort]').elm('select').val()
+												});
+										});
+										return res;
+									})();
+									return res;
+								})(pd.record.get(this.menus.gantt.contents,this.menus.gantt.app,true).record);
 							}
 						}
 					},
@@ -10864,6 +11114,237 @@ pd.modules={
 									return e;
 								});
 								break;
+							case 'gantt':
+								menu.app={
+									id:'viewbuilder_'+menu.id,
+									fields:{
+										columnperiod:{
+											id:'columnperiod',
+											type:'dropdown',
+											caption:pd.constants.view.caption.gantt.period[pd.lang],
+											required:true,
+											nocaption:false,
+											options:[]
+										},
+										columnwidth:{
+											id:'columnwidth',
+											type:'number',
+											caption:pd.constants.view.caption.gantt.width[pd.lang],
+											required:true,
+											nocaption:false,
+											demiliter:false,
+											decimals:'0',
+											unit:'px',
+											unitposition:'suffix'
+										},
+										taskstart:{
+											id:'taskstart',
+											type:'dropdown',
+											caption:pd.constants.view.caption.gantt.start[pd.lang],
+											required:true,
+											nocaption:false,
+											options:[]
+										},
+										taskend:{
+											id:'taskend',
+											type:'dropdown',
+											caption:pd.constants.view.caption.gantt.end[pd.lang],
+											required:true,
+											nocaption:false,
+											options:[]
+										},
+										tasktitle:{
+											id:'tasktitle',
+											type:'dropdown',
+											caption:pd.constants.view.caption.gantt.title[pd.lang],
+											required:true,
+											nocaption:false,
+											options:[]
+										}
+									}
+								};
+								menu.preview=pd.ui.gantt.create();
+								menu.table=pd.ui.table.create({
+									id:'rows',
+									type:'table',
+									caption:'',
+									nocaption:true,
+									fields:{
+										rowfield:{
+											id:'rowfield',
+											type:'dropdown',
+											caption:'',
+											required:true,
+											nocaption:true,
+											options:[]
+										},
+										rowformat:{
+											id:'rowformat',
+											type:'dropdown',
+											caption:'',
+											required:false,
+											nocaption:true,
+											options:[]
+										},
+										rowsort:{
+											id:'rowsort',
+											type:'dropdown',
+											caption:'',
+											required:false,
+											nocaption:true,
+											options:[
+												{option:{value:'asc'}},
+												{option:{value:'desc'}}
+											]
+										}
+									}
+								}).addclass('pd-table-rows').spread((row,index) => {
+									/* event */
+									row.elm('.pd-table-row-add').on('click',(e) => {
+										menu.table.insertrow(row);
+									});
+									row.elm('.pd-table-row-del').on('click',(e) => {
+										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+											menu.table.delrow(row);
+										});
+									});
+									/* modify elements */
+									((cells) => {
+										cells.field.on('change',(e) => e.currentTarget.rebuild().then(() => menu.lib.load())).rebuild=() => {
+											return new Promise((resolve,reject) => {
+												cells.format.empty().append(pd.create('option'));
+												if (cells.field.val())
+												{
+													((fieldinfo) => {
+														switch (fieldinfo.type)
+														{
+															case 'createdtime':
+															case 'date':
+															case 'datetime':
+															case 'modifiedtime':
+																((format) => {
+																	format.closest('td').show();
+																	return format;
+																})(cells.format)
+																.append(pd.create('option').attr('value','year').html(pd.constants.common.caption.grouping.date.year[pd.lang]))
+																.append(pd.create('option').attr('value','month').html(pd.constants.common.caption.grouping.date.month[pd.lang]))
+																.append(pd.create('option').attr('value','day').html(pd.constants.common.caption.grouping.date.day[pd.lang]));
+																break;
+															case 'time':
+																((format) => {
+																	format.closest('td').show();
+																	return format;
+																})(cells.format)
+																.append(pd.create('option').attr('value','hour').html(pd.constants.common.caption.grouping.date.hour[pd.lang]));
+																break;
+															default:
+																cells.format.closest('td').hide();
+																break;
+														}
+													})(this.keep.fields[cells.field.val()]);
+												}
+												else cells.format.closest('td').hide();
+												resolve({});
+											});
+										};
+										cells.format.on('change',(e) => menu.lib.load()).closest('td').hide();
+										cells.sort.on('change',(e) => menu.lib.load());
+									})({
+										field:row.elm('[field-id=rowfield]').elm('select'),
+										format:row.elm('[field-id=rowformat]').elm('select'),
+										sort:row.elm('[field-id=rowsort]').elm('select')
+									});
+								},(table,index) => {
+									if (table.tr.length==0) table.addrow();
+									menu.lib.load();
+								},false);
+								menu.table.template.elm('[field-id=rowsort]').elms('option').each((element,index) => {
+									if (element.val()) element.html(pd.constants.common.caption.sort[element.val()][pd.lang]);
+								});
+								menu.contents
+								.append(
+									pd.create('nav').addclass('pd-kumaneko-nav pd-kumaneko-nav-extension')
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-main')
+										.append(
+											((res) => {
+												res.elm('select').on('change',(e) => menu.lib.load());
+												return res;
+											})(pd.ui.field.create(menu.app.fields.taskstart))
+										)
+										.append(
+											((res) => {
+												res.elm('select').on('change',(e) => menu.lib.load());
+												return res;
+											})(pd.ui.field.create(menu.app.fields.taskend))
+										)
+										.append(
+											((res) => {
+												res.elm('select').on('change',(e) => menu.lib.load());
+												return res;
+											})(pd.ui.field.create(menu.app.fields.tasktitle))
+										)
+										.append(
+											((res) => {
+												res.elm('select')
+												.append(pd.create('option').attr('value','month').html(pd.constants.common.caption.grouping.date.month[pd.lang]))
+												.append(pd.create('option').attr('value','day').html(pd.constants.common.caption.grouping.date.day[pd.lang]))
+												.on('change',(e) => menu.lib.load());
+												return res;
+											})(pd.ui.field.create(menu.app.fields.columnperiod))
+										)
+										.append(pd.ui.field.activate(pd.ui.field.create(menu.app.fields.columnwidth),menu.app))
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-main pd-kumaneko-border-left pd-kumaneko-inset-left')
+										.append(
+											((container) => {
+												container
+												.append(pd.create('span').addclass('pd-table-caption').html(pd.constants.view.caption.gantt.row[pd.lang]))
+												.append(menu.table);
+												return container;
+											})(pd.create('div').addclass('pd-kumaneko-section'))
+										)
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-footer pd-kumaneko-border-top pd-kumaneko-inset-top')
+										.append(
+											pd.create('button').addclass('pd-icon pd-icon-filter pd-kumaneko-nav-icon').on('click',(e) => {
+												this.keep.filter.show();
+												e.stopPropagation();
+												e.preventDefault();
+											})
+										)
+										.append(pd.create('span').addclass('pd-kumaneko-filter-monitor'))
+									)
+								)
+								.append(
+									((element) => {
+										element.append(
+											pd.create('div').addclass('pd-container')
+											.append(
+												pd.create('div').addclass('pd-contents pd-kumaneko-'+menu.id)
+												.append(menu.preview)
+											)
+										);
+										return element;
+									})(pd.create('div').addclass('pd-kumaneko-block pd-kumaneko-border-left pd-kumaneko-inset-left'))
+								);
+								/* event */
+								pd.event.on(menu.app.id,'pd.change.columnwidth',(e) => {
+									if (pd.isnumeric(e.record.columnwidth.value))
+									{
+										if (parseInt(e.record.columnwidth.value)<64 || isNaN(e.record.columnwidth.value))
+										{
+											pd.alert(pd.constants.view.message.invalid.gantt.width[pd.lang]);
+											e.record.columnwidth.value=64;
+										}
+										this.menus.gantt.lib.load();
+									}
+									else e.record.columnwidth.value=64;
+									return e;
+								});
+								break;
 							case 'timeseries':
 								menu.app={
 									id:'viewbuilder_'+menu.id,
@@ -11355,6 +11836,16 @@ pd.modules={
 								return res.error;
 							})(pd.record.get(this.menus.crosstab.contents,this.menus.crosstab.app),res.view);
 							break;
+						case 'gantt':
+							res.error=((res,view) => {
+								if (!res.error)
+								{
+									var config=this.menus.gantt.lib.remodel();
+									view.fields=config.fields;
+								}
+								return res.error;
+							})(pd.record.get(this.menus.gantt.contents,this.menus.gantt.app),res.view);
+							break;
 						case 'timeseries':
 							res.error=((res,view) => {
 								if (!res.error)
@@ -11550,6 +12041,80 @@ pd.modules={
 								this.menus.crosstab.preview.hide();
 								this.menus.crosstab.preview.chart.hide();
 							}
+							break;
+						case 'gantt':
+							pd.record.set(this.menus.gantt.contents,this.menus.gantt.app,((elements) => {
+								elements.task.start.empty().append(pd.create('option'));
+								elements.task.end.empty().append(pd.create('option'));
+								elements.task.title.empty().append(pd.create('option'));
+								elements.rows.field.empty().append(pd.create('option'));
+								for (var key in this.keep.fields)
+								{
+									switch (this.keep.fields[key].type)
+									{
+										case 'box':
+										case 'spacer':
+										case 'table':
+											break;
+										case 'createdtime':
+										case 'date':
+										case 'datetime':
+										case 'modifiedtime':
+											elements.task.start.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											elements.task.end.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											elements.rows.field.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											break;
+										case 'file':
+										case 'textarea':
+											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											break;
+										default:
+											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											elements.rows.field.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											break;
+									}
+								}
+								elements.column.period.val(this.keep.view.fields.column.period);
+								elements.column.width.val(this.keep.view.fields.column.width);
+								elements.task.start.val(this.keep.view.fields.task.start);
+								elements.task.end.val(this.keep.view.fields.task.end);
+								elements.task.title.val(this.keep.view.fields.task.title);
+								elements.rows.table.clearrows();
+								this.keep.view.fields.rows.each((values,index) => {
+									if (values.field in this.keep.fields)
+										((row) => {
+											row.elm('[field-id=rowfield]').elm('select').val(values.field).rebuild().then(() => {
+												row.elm('[field-id=rowformat]').elm('select').val(values.format);
+												row.elm('[field-id=rowsort]').elm('select').val(values.sort);
+											});
+										})(elements.rows.table.addrow());
+								});
+								if (elements.rows.table.tr.length==0) elements.rows.table.addrow().elm('[field-id=rowfield]').elm('select').val('').rebuild();
+								return {};
+							})({
+								column:{
+									period:this.menus.gantt.contents.elm('[field-id=columnperiod]').elm('select'),
+									width:this.menus.gantt.contents.elm('[field-id=columnwidth]').elm('input')
+								},
+								task:{
+									start:this.menus.gantt.contents.elm('[field-id=taskstart]').elm('select'),
+									end:this.menus.gantt.contents.elm('[field-id=taskend]').elm('select'),
+									title:this.menus.gantt.contents.elm('[field-id=tasktitle]').elm('select')
+								},
+								rows:{
+									field:this.menus.gantt.table.template.elm('[field-id=rowfield]').elm('select'),
+									table:this.menus.gantt.table
+								}
+							}));
+							for (var key in this.menus)
+							{
+								if (key==this.keep.view.type) this.menus[key].contents.show();
+								else this.menus[key].contents.hide();
+							}
+							this.keep.filter.monitor=this.menus.gantt.contents.elm('.pd-kumaneko-filter-monitor');
+							if (this.keep.view.fields.task.start && this.keep.view.fields.task.end && this.keep.view.fields.task.title) this.menus.gantt.lib.load(this.keep.view);
+							else this.menus.gantt.preview.hide();
 							break;
 						case 'timeseries':
 							pd.record.set(this.menus.timeseries.contents,this.menus.timeseries.app,((elements) => {
@@ -11821,6 +12386,9 @@ pd.modules={
 								case 'crosstab':
 									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({crosstab:panel.crosstab},view),records:e.records});
 									break;
+								case 'gantt':
+									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({gantt:panel.gantt},view),records:e.records});
+									break;
 								case 'timeseries':
 									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({timeseries:panel.timeseries},view),records:e.records});
 									break;
@@ -11853,6 +12421,9 @@ pd.modules={
 												case 'crosstab':
 													if (panel.config.view.chart.type!='table') panel.body.addclass('pd-fixed');
 													panel.body.append(panel.crosstab);
+													break;
+												case 'gantt':
+													panel.body.append(panel.gantt);
 													break;
 												case 'timeseries':
 													if (panel.config.view.chart.type!='table') panel.body.addclass('pd-fixed');
@@ -11908,25 +12479,7 @@ pd.modules={
 			})(this.ui.contents.elm('.pd-kumaneko-dashboard'));
 			pd.event.call('0','pd.dashboard.build',{space:this.ui.space}).then(() => {
 				this.show();
-				((queries) => {
-					if (pd.isnumeric(queries.app))
-					{
-						if (pd.isnumeric(queries.record))
-						{
-							if (queries.record=='0') pd.event.call(queries.app,'pd.create.call',{activate:true});
-							else pd.event.call(queries.app,'pd.edit.call',{recordid:queries.record});
-						}
-						else
-						{
-							if (pd.isnumeric(queries.view))
-							{
-								if (pd.kumaneko.view.exists(queries.app,queries.view))
-									pd.event.call(queries.app,'pd.app.activate',{viewid:(pd.isnumeric(queries.view))?queries.view:'0'});
-							}
-							else pd.event.call(queries.app,'pd.app.activate',{viewid:'0'});
-						}
-					}
-				})(pd.queries());
+				pd.kumaneko.app.bootup(pd.queries());
 			});
 		}
 		/* show */
@@ -13984,6 +14537,10 @@ pd.constants=pd.extend({
 						en:'crosstab',
 						ja:'クロス集計'
 					},
+					gantt:{
+						en:'gantt',
+						ja:'ガント'
+					},
 					timeseries:{
 						en:'timeseries',
 						ja:'時系列集計'
@@ -14010,6 +14567,10 @@ pd.constants=pd.extend({
 						en:'Crosstab view',
 						ja:'クロス集計'
 					},
+					gantt:{
+						en:'Gantt view',
+						ja:'ガントチャート'
+					},
 					timeseries:{
 						en:'Time series calculation view',
 						ja:'時系列集計'
@@ -14035,6 +14596,10 @@ pd.constants=pd.extend({
 					crosstab:{
 						en:'Crosstab view',
 						ja:'クロス集計形式'
+					},
+					gantt:{
+						en:'Gantt view',
+						ja:'ガントチャート形式'
 					},
 					timeseries:{
 						en:'Time series calculation view',
@@ -14640,6 +15205,32 @@ pd.constants=pd.extend({
 					ja:'取得するレコードの絞り込み条件'
 				}
 			},
+			gantt:{
+				end:{
+					en:'End date Field',
+					ja:'終了日付フィールド'
+				},
+				period:{
+					en:'Display in',
+					ja:'表示単位'
+				},
+				row:{
+					en:'Rows',
+					ja:'行'
+				},
+				start:{
+					en:'Start date Field',
+					ja:'開始日付フィールド'
+				},
+				title:{
+					en:'Title Field',
+					ja:'タイトルフィールド'
+				},
+				width:{
+					en:'Column Width',
+					ja:'列幅'
+				}
+			},
 			list:{
 				readonly:{
 					en:'Read-only',
@@ -14697,6 +15288,12 @@ pd.constants=pd.extend({
 		},
 		message:{
 			invalid:{
+				gantt:{
+					width:{
+						en:'Column width must be at least 64px',
+						ja:'列幅は64px以上にする必要があります'
+					}
+				},
 				list:{
 					field:{
 						en:'Please place one or more fields',

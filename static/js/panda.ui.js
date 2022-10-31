@@ -1653,7 +1653,7 @@ class panda_record{
 								break;
 						}
 					}
-				})(container.elm('[field-id='+CSS.escape(key)+']'),app.fields[key]);
+				})(container.elm('[field-id="'+CSS.escape(key)+'"]'),app.fields[key]);
 				if (res.error) break;
 			}
 		if (!res.error)
@@ -1770,7 +1770,7 @@ class panda_record{
 								break;
 						}
 					}
-				})(container.elm('[field-id='+CSS.escape(key)+']'),app.fields[key]);
+				})(container.elm('[field-id="'+CSS.escape(key)+'"]'),app.fields[key]);
 			/* reserved field */
 			if (container.elm('[data-type=id]')) res.record['__id']={value:((container.elm('[data-type=id]').val())?parseInt(container.elm('[data-type=id]').val()):container.elm('[data-type=id]').val())};
 			if (container.elm('[data-type=autonumber]')) res.record['__autonumber']={value:container.elm('[data-type=autonumber]').val()};
@@ -1802,7 +1802,7 @@ class panda_record{
 						delete record[fieldinfo.id];
 					}
 				}
-			})(container.elm('[field-id='+CSS.escape(fieldinfo.id)+']'));
+			})(container.elm('[field-id="'+CSS.escape(fieldinfo.id)+'"]'));
 		});
 		for (var key in record)
 			((field,fieldinfo,value) => {
@@ -2042,7 +2042,7 @@ class panda_record{
 							break;
 					}
 				}
-			})(container.elm('[field-id='+CSS.escape(key)+']'),app.fields[key],record[key]);
+			})(container.elm('[field-id="'+CSS.escape(key)+'"]'),app.fields[key],record[key]);
 		/* reserved field */
 		if ('__id' in record)
 			if (container.elm('[data-type=id]')) container.elm('[data-type=id]').val(record['__id'].value);
@@ -2604,8 +2604,8 @@ class panda_user_interface{
 			create:(type) => {
 				return ((table,chart) => {
 					table
-					.append(pd.create('thead').append(pd.create('tr').addclass('pd-crosstab-head')))
-					.append(pd.create('tbody').append(pd.create('tr').addclass('pd-crosstab-row')))
+					.append(pd.create('thead').append(pd.create('tr').addclass('pd-matrix-head')))
+					.append(pd.create('tbody').append(pd.create('tr').addclass('pd-matrix-row')))
 					.spread(null,null,false).show=(source,view) => {
 						switch (view.chart.type)
 						{
@@ -2619,11 +2619,11 @@ class panda_user_interface{
 											{
 												parsed[source.rows[index].field]={value:records[key].caption};
 												row=((res) => {
-													row.elm('[field-id='+CSS.escape(source.rows[index].field)+']').closest('td').attr('rowspan',res.span);
+													row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').attr('rowspan',res.span);
 													((id) => {
 														(res.span-1).each((index) => {
 															row=row.nextElementSibling;
-															row.elm('[field-id='+CSS.escape(id)+']').closest('td').hide();
+															row.elm('[field-id="'+CSS.escape(id)+'"]').closest('td').hide();
 														});
 													})(source.rows[index].field);
 													return res.row;
@@ -2642,19 +2642,19 @@ class panda_user_interface{
 									table.clearrows();
 									source.fields.each((field,index) => {
 										head.append(
-											pd.create('th').addclass('pd-crosstab-head-cell')
-											.append(pd.create('span').addclass('pd-crosstab-head-caption').html(field.caption))
+											pd.create('th').addclass('pd-matrix-head-cell')
+											.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
 										);
 										template.append(
 											pd.create('td').append(
 												((style) => {
-													return pd.ui.field.create(field).addclass('pd-readonly pd-crosstab-row-cell'+((index<source.rows.length)?'':style));
-												})((type=='timeseries')?' pd-crosstab-row-cell-numeric':'')
+													return pd.ui.field.create(field).addclass('pd-readonly pd-matrix-row-cell'+((index<source.rows.length)?'':style));
+												})((type=='timeseries')?' pd-matrix-row-cell-numeric':'')
 											)
 										);
 										fields[field.id]=field;
 									});
-									set(0,source.records,table.addrow(),{});
+									if (!Array.isArray(source.records)) set(0,source.records,table.addrow(),{});
 								})(table.css({display:'table'}).elm('thead tr').empty(),table.template.empty(),{});
 								break;
 							default:
@@ -2798,7 +2798,7 @@ class panda_user_interface{
 					};
 					table.chart=chart;
 					return table;
-				})(pd.create('table').addclass('pd-crosstab'),pd.create('div').css({overflow:'hidden'}));
+				})(pd.create('table').addclass('pd-matrix'),pd.create('div').css({overflow:'hidden'}));
 			},
 			types:((types) => ['table'].concat(types))(pd.chart.types)
 		};
@@ -2866,8 +2866,8 @@ class panda_user_interface{
 													field.map.map.reloadmap([resp],true);
 												}
 											})({
-												lat:scope.elm('[field-id='+CSS.escape(fieldinfo.mapping.lat)+']').elm('.pd-field-value').elm('input').val(),
-												lng:scope.elm('[field-id='+CSS.escape(fieldinfo.mapping.lng)+']').elm('.pd-field-value').elm('input').val()
+												lat:scope.elm('[field-id="'+CSS.escape(fieldinfo.mapping.lat)+'"]').elm('.pd-field-value').elm('input').val(),
+												lng:scope.elm('[field-id="'+CSS.escape(fieldinfo.mapping.lng)+'"]').elm('.pd-field-value').elm('input').val()
 											});
 										})(field.closest('.pd-scope'));
 									});
@@ -3555,14 +3555,14 @@ class panda_user_interface{
 													pd.pickupaddress((() => {
 														var res='';
 														if (fieldinfo.mapping.prefecturename)
-															if (scope.elm('[field-id='+CSS.escape(fieldinfo.mapping.prefecturename)+']'))
-																res=scope.elm('[field-id='+CSS.escape(fieldinfo.mapping.prefecturename)+']').elm('.pd-field-value').elm('input').val();
+															if (scope.elm('[field-id="'+CSS.escape(fieldinfo.mapping.prefecturename)+'"]'))
+																res=scope.elm('[field-id="'+CSS.escape(fieldinfo.mapping.prefecturename)+'"]').elm('.pd-field-value').elm('input').val();
 														return res;
 													})(),(() => {
 														var res='';
 														if (fieldinfo.mapping.cityname)
-															if (scope.elm('[field-id='+CSS.escape(fieldinfo.mapping.cityname)+']'))
-																res=scope.elm('[field-id='+CSS.escape(fieldinfo.mapping.cityname)+']').elm('.pd-field-value').elm('input').val();
+															if (scope.elm('[field-id="'+CSS.escape(fieldinfo.mapping.cityname)+'"]'))
+																res=scope.elm('[field-id="'+CSS.escape(fieldinfo.mapping.cityname)+'"]').elm('.pd-field-value').elm('input').val();
 														return res;
 													})(),(resp) => {
 														if (resp) field.set(resp).then(() => call('pd.change.'+fieldinfo.id));
@@ -3622,7 +3622,7 @@ class panda_user_interface{
 													});
 												}
 												else address.set({}).then(() => resolve());
-											})(field.closest('.pd-scope').elm('[field-id='+CSS.escape(fieldinfo.mapping.address)+']').elm('.pd-field-value'));
+											})(field.closest('.pd-scope').elm('[field-id="'+CSS.escape(fieldinfo.mapping.address)+'"]').elm('.pd-field-value'));
 										}
 										else resolve();
 									});
@@ -4012,7 +4012,7 @@ class panda_user_interface{
 							);
 							for (var key in app.fields[layout.id].fields)
 								if (key in app.styles)
-									container.elm('[field-id='+CSS.escape(layout.id)+']').template.elm('[field-id='+CSS.escape(key)+']').css({width:app.styles[key].width});
+									container.elm('[field-id="'+CSS.escape(layout.id)+'"]').template.elm('[field-id="'+CSS.escape(key)+'"]').css({width:app.styles[key].width});
 							break;
 					}
 				});
@@ -4023,7 +4023,7 @@ class panda_user_interface{
 						{
 							for (var key in fieldinfo.mapping)
 								if (fieldinfo.mapping[key])
-									if (container.elm('[field-id='+CSS.escape(fieldinfo.mapping[key])+']')) container.elm('[field-id='+CSS.escape(fieldinfo.mapping[key])+']').addclass('pd-readonly');
+									if (container.elm('[field-id="'+CSS.escape(fieldinfo.mapping[key])+'"]')) container.elm('[field-id="'+CSS.escape(fieldinfo.mapping[key])+'"]').addclass('pd-readonly');
 						}
 					})(app.fields[key]);
 				/* setup to validation method */
@@ -4041,8 +4041,8 @@ class panda_user_interface{
 						var res=[];
 						if (field)
 						{
-							if (container.elm('[field-id='+CSS.escape(field)+']'))
-								res=container.elm('[field-id='+CSS.escape(field)+']').elms('input[type=text],input[type=password],select,textarea');
+							if (container.elm('[field-id="'+CSS.escape(field)+'"]'))
+								res=container.elm('[field-id="'+CSS.escape(field)+'"]').elms('input[type=text],input[type=password],select,textarea');
 						}
 						else res=container.elms('input[type=text],input[type=password],select,textarea');
 						return res;
@@ -4050,6 +4050,191 @@ class panda_user_interface{
 					if (elements.length!=0) elements.first().focus();
 				};
 				return container;
+			}
+		};
+		this.gantt={
+			create:() => {
+				return ((table) => {
+					const resizeObserver=new ResizeObserver((entries) => {
+						var rect=(target) => {
+							var res=new DOMRect(0,0,0,0);
+							if (target)
+							{
+								((rect) => {
+									res=new DOMRect(target.offsetLeft,target.offsetTop,rect.width,rect.height);
+								})(target.getBoundingClientRect());
+							}
+							return {
+								top:res.top,
+								bottom:res.bottom,
+								left:res.left,
+								right:res.right,
+								height:res.height,
+								width:res.width
+							};
+						};
+						((rows) => {
+							rows.each((row,index) => {
+								((cells,matrix) => {
+									cells.each((cell,index) => {
+										((pos) => {
+											var set=(task) => {
+												if (pos.row<matrix.length)
+												{
+													((row) => {
+														if (row[pos.column].entry!=pos.column)
+														{
+															((height) => {
+																if (height>0)
+																{
+																	task.css({marginTop:(parseFloat(task.css('margin-top'))+height).toString()+'px'});
+																	pos.row++;
+																	set(task);
+																}
+																else
+																{
+																	task.rect=rect(task);
+																	((origin) => {
+																		matrix.slice(pos.row+1).some((item,index) => {
+																			if (item[pos.column].rect.top>task.rect.bottom-1) return true;
+																			else
+																			{
+																				if (item[pos.column].rect.top)
+																				{
+																					if (!task.previousElementSibling) task.css({marginTop:item[pos.column].rect.bottom.toString()+'px'});
+																					else
+																					{
+																						((rect) => {
+																							task.css({marginTop:(item[pos.column].rect.bottom-rect.bottom).toString()+'px'});
+																						})(rect(task.previousElementSibling));
+																					}
+																					task.rect=rect(task);
+																					pos.row=origin+index+1;
+																				}
+																			}
+																		});
+																	})(pos.row+1);
+																	if (pos.row>matrix.length-1)
+																	{
+																		matrix.push(
+																			new Array(cells.length).fill().map((item,index) => {
+																				return (index<pos.column || index>pos.column+task.taskspan-1)?{entry:-1,rect:rect()}:{entry:pos.column,rect:rect(task)};
+																			})
+																		);
+																		pos.row=matrix.length;
+																	}
+																	else
+																	{
+																		matrix[pos.row]=row.map((item,index) => {
+																			return (index<pos.column || index>pos.column+task.taskspan-1)?item:{entry:pos.column,rect:pd.extend({},task.rect)};
+																		});
+																	}
+																}
+															})(row.reduce((result,current,index) => {
+																if (index>pos.column-1 && index<pos.column+task.taskspan)
+																	if (result<current.rect.height) result=current.rect.height;
+																return result;
+															},0));
+														}
+														else
+														{
+															pos.row++;
+															set(task);
+														}
+													})(matrix[pos.row]);
+												}
+												else
+												{
+													matrix.push(
+														new Array(cells.length).fill().map((item,index) => {
+															return (index<pos.column || index>pos.column+task.taskspan-1)?{entry:-1,rect:rect()}:{entry:pos.column,rect:rect(task)};
+														})
+													);
+													pos.row=matrix.length;
+												}
+											};
+											pd.children(cell).each((task,index) => set(task));
+										})({column:index,row:0});
+									});
+								})(row.elms('.pd-matrix-row-cell-task'),[]);
+							});
+						})((() => {
+							var res=[];
+							for (var entry of entries)
+								((row) => {
+									if (!res.includes(row)) res.push(row);
+								})(entry.target.closest('tr'));
+							return res;
+						})());
+					});
+					table
+					.append(pd.create('thead').append(pd.create('tr').addclass('pd-matrix-head')))
+					.append(pd.create('tbody').append(pd.create('tr').addclass('pd-matrix-row')))
+					.spread(null,null,false).show=(source,view,callback) => {
+						((head,template,fields) => {
+							var set=(index,records,row,parsed) => {
+								if (index<source.rows.length)
+								{
+									for (var key in records)
+									{
+										parsed[source.rows[index].field]={value:records[key].caption};
+										row=((res) => {
+											row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').attr('rowspan',res.span);
+											((id) => {
+												(res.span-1).each((index) => {
+													row=row.nextElementSibling;
+													row.elm('[field-id="'+CSS.escape(id)+'"]').closest('td').hide();
+												});
+											})(source.rows[index].field);
+											return res.row;
+										})(set(index+1,records[key].rows,row,parsed));
+										if (Object.keys(records).last()!=key) row=table.insertrow(row);
+									}
+									return {row:row,span:Object.keys(records).length};
+								}
+								else
+								{
+									for (var key in records)
+										((cell,records) => {
+											records.each((record,index) => {
+												((task) => {
+													task.taskspan=record.__taskspan.value;
+													cell.append(task.css({'width':(parseInt(view.fields.column.width)*record.__taskspan.value).toString()+'px'}));
+													resizeObserver.observe(task);
+													callback(task,record);
+												})(pd.create('div'))
+											});
+										})(row.elm('.'+key),records[key]);
+									pd.record.set(row,{fields:fields},parsed);
+									return {row:row,span:1};
+								}
+							};
+							resizeObserver.disconnect();
+							table.clearrows();
+							source.fields.each((field,index) => {
+								head.append(
+									pd.create('th').addclass('pd-matrix-head-cell')
+									.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
+								);
+								template.append(
+									((cell) => {
+										if (index<source.rows.length) cell.append(pd.ui.field.create(field).addclass('pd-readonly pd-matrix-row-cell'));
+										else
+										{
+											((width,order) => {
+												cell.addclass('pd-matrix-row-cell-task '+field.id).css({'max-width':width+'px','width':width+'px','z-index':order});
+											})(view.fields.column.width.toString(),(source.fields.length-source.rows.length-index+1).toString());
+										}
+										return cell;
+									})(pd.create('td'))
+								);
+								fields[field.id]=field;
+							});
+							if (!Array.isArray(source.records)) set(0,source.records,table.addrow(),{});
+						})(table.css({display:'table'}).elm('thead tr').empty(),table.template.empty(),{});
+					};
+					return table;
+				})(pd.create('table').addclass('pd-matrix'));
 			}
 		};
 		this.panel={
@@ -4279,7 +4464,7 @@ class panda_user_interface{
 							{
 								for (var key in fieldinfo.mapping)
 									if (fieldinfo.mapping[key])
-										if (res.elm('[field-id='+CSS.escape(fieldinfo.mapping[key])+']')) res.elm('[field-id='+CSS.escape(fieldinfo.mapping[key])+']').addclass('pd-readonly');
+										if (res.elm('[field-id="'+CSS.escape(fieldinfo.mapping[key])+'"]')) res.elm('[field-id="'+CSS.escape(fieldinfo.mapping[key])+'"]').addclass('pd-readonly');
 							}
 						})(table.fields[key]);
 					return res.attr('field-id',table.id);
@@ -4311,11 +4496,11 @@ class panda_user_interface{
 									else res=(cell.outerwidth(false) || res);
 									return res;
 								})();
-								pd.elm('[view-id=view_'+app.id+'_'+viewid+']').elms('[field-id='+CSS.escape(id)+']').each((element,index) => {
+								pd.elm('[view-id=view_'+app.id+'_'+viewid+']').elms('[field-id="'+CSS.escape(id)+'"]').each((element,index) => {
 									if (width<element.outerwidth(false)) width=element.outerwidth(false);
 								});
-								css+='[view-id=view_'+app.id+'_'+viewid+'] [column-id='+CSS.escape(id)+']{max-width:'+width+'px;width:'+width+'px;}';
-								css+='[view-id=view_'+app.id+'_'+viewid+'] [field-id='+CSS.escape(id)+']{width:'+width+'px;}';
+								css+='[view-id=view_'+app.id+'_'+viewid+'] [column-id="'+CSS.escape(id)+'"]{max-width:'+width+'px;width:'+width+'px;}';
+								css+='[view-id=view_'+app.id+'_'+viewid+'] [field-id="'+CSS.escape(id)+'"]{width:'+width+'px;}';
 							})(cell.attr('column-id'));
 						});
 						/* embed stylesheet */
@@ -4347,8 +4532,8 @@ class panda_user_interface{
 									var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
 									var width=keep.width+pointer.pageX-keep.position;
 									keep.cell.css({'max-width':width.toString()+'px','width':width.toString()+'px'});
-									res.elms('[field-id='+CSS.escape(id)+']').each((element,index) => element.css({'width':width.toString()+'px'}));
-									res.elms('[field-id='+CSS.escape(id)+']').each((element,index) => {
+									res.elms('[field-id="'+CSS.escape(id)+'"]').each((element,index) => element.css({'width':width.toString()+'px'}));
+									res.elms('[field-id="'+CSS.escape(id)+'"]').each((element,index) => {
 										if (width<element.outerwidth(false))
 										{
 											width=element.outerwidth(false);
@@ -4482,7 +4667,7 @@ class panda_user_interface{
 									{
 										for (var key in fieldinfo.mapping)
 											if (fieldinfo.mapping[key])
-												if (res.elm('[field-id='+CSS.escape(fieldinfo.mapping[key])+']')) res.elm('[field-id='+CSS.escape(fieldinfo.mapping[key])+']').addclass('pd-readonly');
+												if (res.elm('[field-id="'+CSS.escape(fieldinfo.mapping[key])+'"]')) res.elm('[field-id="'+CSS.escape(fieldinfo.mapping[key])+'"]').addclass('pd-readonly');
 									}
 								})(app.fields[key]);
 						}
