@@ -866,10 +866,10 @@ class clsDriver
 				$query=preg_replace("/[ ]*FROM_/u"," \$me->FROM_",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+not in[ ]+\(([^\)]*)\)/u","!in_array($1,[$2],true)",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+in[ ]+\(([^\)]*)\)/u","in_array($1,[$2],true)",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+\"([^\"]+)\"/u","!preg_match(\"/$2/u\",$1)",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+\"([^\"]+)\"/u","preg_match(\"/$2/u\",$1)",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+'([^']+)'/u","!preg_match('/$2/u',$1)",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+'([^']+)'/u","preg_match('/$2/u',$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+\"((?:\\\"|[^\"])+)\"/u","!preg_match(\"/$2/u\",$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+\"((?:\\\"|[^\"])+)\"/u","preg_match(\"/$2/u\",$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+'((?:\\'|[^'])+)'/u","!preg_match('/$2/u',$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+'((?:\\'|[^'])+)'/u","preg_match('/$2/u',$1)",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+(\"\"|'')/u","$1 != \"\"",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+(\"\"|'')/u","$1 == \"\"",$query);
 			}
@@ -880,7 +880,7 @@ class clsDriver
 		}
 		catch (ParseError $e)
 		{
-			throw new Exception("Your query is incorrect");
+			throw new Exception("Your query is incorrect: ".$arg_query);
 		}
 		finally
 		{
