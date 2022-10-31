@@ -153,9 +153,9 @@ class clsRequest extends clsBase
 				foreach ($this->queries["columns"] as $key=>$query)
 				{
 					$this->response["fields"][]=[
-						"id"=>$key,
+						"id"=>strval($key),
 						"type"=>"text",
-						"caption"=>$key,
+						"caption"=>strval($key),
 						"required"=>false,
 						"nocaption"=>true,
 						"format"=>"text"
@@ -203,85 +203,74 @@ class clsRequest extends clsBase
 	public function createquery($arg_config,$arg_timezone)
 	{
 		$res=[];
+		$limit=0;
+		$modify="";
 		$timezone=new DateTimeZone($arg_timezone);
 		switch ($arg_config["period"])
 		{
 			case "month":
-				for ($i=0;$i<12;$i++)
-				{
-					$start=new DateTime($arg_config["starting"],$timezone);
-					$end=new DateTime($arg_config["starting"],$timezone);
-					$start->modify("{$i} month");
-					$end->modify(strval($i+1)." month")->modify("-1 day");
-					$key=(intval($start->format("m"))==1)?$start->format("Y-m"):$start->format("m");
-					$res[$key]=array("current"=>"","previous"=>"");
-					switch ($this->fields[$arg_config["field"]]["type"])
-					{
-						case "date":
-							$res[$key]["current"]=$arg_config["field"]." >= \"".$start->format("Y-m-d")."\" and ";
-							$res[$key]["current"].=$arg_config["field"]." <= \"".$end->format("Y-m-d")."\"";
-							$start->modify("-1 year");
-							$end->modify("-1 year");
-							$res[$key]["previous"]=$arg_config["field"]." >= \"".$start->format("Y-m-d")."\" and ";
-							$res[$key]["previous"].=$arg_config["field"]." <= \"".$end->format("Y-m-d")."\"";
-							break;
-						case "createdtime":
-						case "datetime":
-						case "modifiedtime":
-							$start->modify(strval($timezone->getOffset($start)*-1)." second");
-							$res[$key]["current"]=$arg_config["field"]." >= \"".$start->format("Y-m-d\TH:i:s")."Z\" and ";
-							$end->modify("1 day")->modify("-1 second")->modify(strval($timezone->getOffset($end)*-1)." second");
-							$res[$key]["current"].=$arg_config["field"]." <= \"".$end->format("Y-m-d\TH:i:s")."Z\"";
-							$start->modify("-1 year");
-							$end->modify("-1 year");
-							$start->modify(strval($timezone->getOffset($start)*-1)." second");
-							$res[$key]["previous"]=$arg_config["field"]." >= \"".$start->format("Y-m-d\TH:i:s")."Z\" and ";
-							$end->modify("1 day")->modify("-1 second")->modify(strval($timezone->getOffset($end)*-1)." second");
-							$res[$key]["previous"].=$arg_config["field"]." <= \"".$end->format("Y-m-d\TH:i:s")."Z\"";
-							break;
-					}
-				}
+				$limit=12;
+				$modify="-1 year";
 				break;
 			case "day":
 				$start=new DateTime($arg_config["starting"],$timezone);
 				$end=new DateTime($arg_config["starting"],$timezone);
 				$end->modify("1 month");
-				while ($start<$end)
-				{
+				$limit=$end->diff($start)->days;
+				$modify="-1 month";
+				break;
+		}
+		for ($i=0;$i<$limit;$i++)
+		{
+			$start=new DateTime($arg_config["starting"],$timezone);
+			$end=new DateTime($arg_config["starting"],$timezone);
+			switch ($arg_config["period"])
+			{
+				case "month":
+					$start->modify("{$i} month");
+					$end->modify(strval($i+1)." month")->modify("-1 day");
+					$key=(intval($start->format("m"))==1)?$start->format("Y-m"):$start->format("m");
+					break;
+				case "day":
+					$start->modify("{$i} day");
+					$end->modify("{$i} day");
 					$key=(intval($start->format("d"))==1)?$start->format("m-d"):$start->format("d");
-					$res[$key]=array("current"=>"","previous"=>"");
-					switch ($this->fields[$arg_config["field"]]["type"])
+					break;
+			}
+			$res[$key]=array("current"=>"","previous"=>"");
+			switch ($this->fields[$arg_config["field"]]["type"])
+			{
+				case "date":
+					$res[$key]["current"]=$arg_config["field"]." >= \"".$start->format("Y-m-d")."\" and ".$arg_config["field"]." <= \"".$end->format("Y-m-d")."\"";
+					$start->modify($modify);
+					$end->modify($modify);
+					$res[$key]["previous"]=$arg_config["field"]." >= \"".$start->format("Y-m-d")."\" and ".$arg_config["field"]." <= \"".$end->format("Y-m-d")."\"";
+					break;
+				case "createdtime":
+				case "datetime":
+				case "modifiedtime":
+					$start->modify(strval($timezone->getOffset($start)*-1)." second");
+					$end->modify("1 day")->modify("-1 second")->modify(strval($timezone->getOffset($end)*-1)." second");
+					$keep=$end->format("m");
+					$res[$key]["current"]=$arg_config["field"]." >= \"".$start->format("Y-m-d\TH:i:s")."Z\" and ".$arg_config["field"]." <= \"".$end->format("Y-m-d\TH:i:s")."Z\"";
+					$start->modify($modify);
+					$end->modify($modify);
+					switch ($arg_config["period"])
 					{
-						case "date":
-							$res[$key]["current"]=$arg_config["field"]." = \"".$start->format("Y-m-d")."\"";
-							$date=new DateTime($start->format("Y-m-d"),$timezone);
-							$date->modify("-1 month");
-							if ($date->format("d")!=$start->format("d")) $res[$key]["previous"]=$arg_config["field"]." = \"1900-01-01\"";
-							else $res[$key]["previous"]=$arg_config["field"]." = \"".$date->format("Y-m-d")."\"";
+						case "month":
+							$res[$key]["previous"]=$arg_config["field"]." >= \"".$start->format("Y-m-d\TH:i:s")."Z\" and ".$arg_config["field"]." <= \"".$end->format("Y-m-d\TH:i:s")."Z\"";
 							break;
-						case "createdtime":
-						case "datetime":
-						case "modifiedtime":
-							$date=new DateTime($start->format("Y-m-d"),$timezone);
-							$date->modify(strval($timezone->getOffset($date)*-1)." second");
-							$res[$key]["current"]=$arg_config["field"]." >= \"".$date->format("Y-m-d\TH:i:s")."Z\" and ";
-							$date->modify("1 day")->modify("-1 second");
-							$res[$key]["current"].=$arg_config["field"]." <= \"".$date->format("Y-m-d\TH:i:s")."Z\"";
-							$date=new DateTime($start->format("Y-m-d"),$timezone);
-							$date->modify("-1 month");
-							$date->modify(strval($timezone->getOffset($date)*-1)." second");
-							if ($date->format("d")!=$start->format("d")) $res[$key]["previous"]=$arg_config["field"]." = \"1900-01-01T00:00:00Z\"";
+						case "day":
+							if ($start>$end) $start->modify("-".$start->format("d")." day");
 							else
 							{
-								$res[$key]["previous"]=$arg_config["field"]." >= \"".$date->format("Y-m-d\TH:i:s")."Z\" and ";
-								$date->modify("1 day")->modify("-1 second");
-								$res[$key]["previous"].=$arg_config["field"]." <= \"".$date->format("Y-m-d\TH:i:s")."Z\"";
+								if ($end->format("m")==$keep) $end=new DateTime("1900-01-01",$timezone);
 							}
+							$res[$key]["previous"]=$arg_config["field"]." >= \"".$start->format("Y-m-d\TH:i:s")."Z\" and ".$arg_config["field"]." <= \"".$end->format("Y-m-d\TH:i:s")."Z\"";
 							break;
 					}
-					$start->modify("1 day");
-				}
-				break;
+					break;
+			}
 		}
 		return $res;
 	}

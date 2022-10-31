@@ -1,6 +1,6 @@
 <?php
 /*
-* PandaFirm-PHP-Module "crosstab.php"
+* PandaFirm-PHP-Module "gantt.php"
 * Version: 1.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
@@ -46,22 +46,84 @@ class clsRequest extends clsBase
 		{
 			if (!is_array($this->body["rows"])) $this->callrequesterror(400);
 		}
-		if (!isset($this->body["value"])) $this->callrequesterror(400);
+		if (!isset($this->body["task"])) $this->callrequesterror(400);
 		else
 		{
-			if (!is_array($this->body["value"])) $this->callrequesterror(400);
+			if (!is_array($this->body["task"])) $this->callrequesterror(400);
 		}
 		$this->fields=$this->driver->fields($this->body["app"]);
 		$this->queries=[
 			"columns"=>[],
+			"record"=>(function($column,$task,$fields,$timezone){
+				$res=[];
+				if (array_key_exists($task["start"],$fields) && array_key_exists($task["end"],$fields))
+				{
+					$start=[
+						"start"=>($column["period"]=="month")?new DateTime($column["starting"]."-01",$timezone):new DateTime($column["starting"],$timezone),
+						"end"=>($column["period"]=="month")?new DateTime($column["starting"]."-01",$timezone):new DateTime($column["starting"],$timezone)
+					];
+					$end=[
+						"start"=>($column["period"]=="month")?new DateTime($column["starting"]."-01",$timezone):new DateTime($column["starting"],$timezone),
+						"end"=>($column["period"]=="month")?new DateTime($column["starting"]."-01",$timezone):new DateTime($column["starting"],$timezone)
+					];
+					switch ($column["period"])
+					{
+						case "month":
+							$start["end"]->modify($column["limit"]." month");
+							$end["end"]->modify($column["limit"]." month");
+							break;
+						case "day":
+							$start["end"]->modify($column["limit"]." day");
+							$end["end"]->modify($column["limit"]." day");
+							break;
+					}
+					$start["end"]->modify("-1 day");
+					$end["end"]->modify("-1 day");
+					switch ($fields[$task["start"]]["type"])
+					{
+						case "date":
+							$start["start"]=$start["start"]->format('Y-m-d');
+							$start["end"]=$start["end"]->format('Y-m-d');
+							break;
+						case "createdtime":
+						case "datetime":
+						case "modifiedtime":
+							$start["start"]=$start["start"]->modify(strval($timezone->getOffset($start["start"])*-1)." second")->format("Y-m-d\TH:i:s")."Z";
+							$start["end"]=$start["end"]->modify("1 day")->modify("-1 second")->modify(strval($timezone->getOffset($start["end"])*-1)." second")->format("Y-m-d\TH:i:s")."Z";
+							break;
+					}
+					switch ($fields[$task["end"]]["type"])
+					{
+						case "date":
+							$end["start"]=$end["start"]->format('Y-m-d');
+							$end["end"]=$end["end"]->format('Y-m-d');
+							break;
+						case "createdtime":
+						case "datetime":
+						case "modifiedtime":
+							$end["start"]=$end["start"]->modify(strval($timezone->getOffset($end["start"])*-1)." second")->format("Y-m-d\TH:i:s")."Z";
+							$end["end"]=$end["end"]->modify("1 day")->modify("-1 second")->modify(strval($timezone->getOffset($end["end"])*-1)." second")->format("Y-m-d\TH:i:s")."Z";
+							break;
+					}
+					$res[]="(".$task["start"]." >= \"".$start["start"]."\" and ".$task["start"]." <= \"".$start["end"]."\")";
+					$res[]="(".$task["end"]." >= \"".$end["start"]."\" and ".$task["end"]." <= \"".$end["end"]."\")";
+					$res[]="(".$task["start"]." < \"".$start["start"]."\" and ".$task["end"]." > \"".$end["end"]."\")";
+				}
+				return implode(" or ",$res);
+			})(
+				$this->body["column"],
+				$this->body["task"],
+				$this->fields,
+				new DateTimeZone(isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get())
+			),
 			"rows"=>[]
 		];
 		$this->records=$this->driver->records(
 			$this->body["app"],
-			mb_convert_encoding($this->body["query"],'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),
-			"",
+			mb_convert_encoding($this->body["query"].(($this->queries["record"]!="")?(($this->body["query"]!="")?" and ":"").$this->queries["record"]:""),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),
+			(array_key_exists($this->body["task"]["start"],$this->fields))?$this->body["task"]["start"]." asc":"",
 			0,
-			(isset($this->body["limit"]))?$this->body["limit"]:0,
+			0,
 			$this->operator
 		);
 		$this->response["fields"]=[];
@@ -81,64 +143,79 @@ class clsRequest extends clsBase
 				$this->queries["rows"][]=$this->createquery($row,isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
 			}
 			else $this->callrequesterror(400);
-		if (array_key_exists($this->body["column"]["field"],$this->fields))
+		if (array_key_exists($this->body["task"]["start"],$this->fields) && array_key_exists($this->body["task"]["end"],$this->fields) && array_key_exists($this->body["task"]["title"],$this->fields))
 		{
 			$departments=$this->driver->records("departments");
 			$groups=$this->driver->records("groups");
 			$users=$this->driver->records("users");
-			$this->queries["columns"]=$this->createquery($this->body["column"],isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
-			foreach ($this->queries["columns"] as $key=>$value)
-			{
-				$caption=strval($value["caption"]);
-				switch ($value["type"])
+			$this->queries["columns"]=(function($column,$task,$fields,$timezone){
+				$res=[];
+				for ($i=0;$i<intval($column["limit"]);$i++)
 				{
-					case "creator":
-					case "modifier":
-					case "user":
-						$filter=array_filter($users,function($values,$key) use ($caption){
-							return $values["__id"]["value"]==$caption;
-						},ARRAY_FILTER_USE_BOTH);
-						if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
-						break;
-					case "department":
-						$filter=array_filter($departments,function($values,$key) use ($caption){
-							return $values["__id"]["value"]==$caption;
-						},ARRAY_FILTER_USE_BOTH);
-						if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
-						break;
-					case "group":
-						$filter=array_filter($groups,function($values,$key) use ($caption){
-							return $values["__id"]["value"]==$caption;
-						},ARRAY_FILTER_USE_BOTH);
-						if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
-						break;
-				}
-				if (array_key_exists($this->body["value"]["field"],$this->fields))
-				{
-					$this->response["fields"][]=(function($field,$key,$caption){
-						$field["id"]=strval($key);
-						$field["caption"]=$caption;
-						$field["required"]=false;
-						$field["nocaption"]=true;
-						return $field;
-					})($this->fields[$this->body["value"]["field"]],$key,$caption);
-				}
-				else
-				{
+					$start=($column["period"]=="month")?new DateTime($column["starting"]."-01",$timezone):new DateTime($column["starting"],$timezone);
+					$end=($column["period"]=="month")?new DateTime($column["starting"]."-01",$timezone):new DateTime($column["starting"],$timezone);
+					switch ($column["period"])
+					{
+						case "month":
+							$start->modify("{$i} month");
+							$end->modify(strval($i+1)." month")->modify("-1 day");
+							break;
+						case "day":
+							$start->modify("{$i} day");
+							$end->modify("{$i} day");
+							break;
+					}
+					$key="_".$start->format("Ymd");
 					$this->response["fields"][]=[
-						"id"=>strval($key),
-						"type"=>"number",
-						"caption"=>$caption,
-						"required"=>false,
-						"nocaption"=>true,
-						"demiliter"=>true,
-						"decimals"=>"0",
-						"unit"=>"",
-						"unitposition"=>"Suffix"
+						"id"=>$key,
+						"caption"=>($column["period"]=="month")?$start->format('m'):$start->format('d'),
+						"subcaption"=>($column["period"]=="month")?((intval($start->format("m"))==1 || $i==0)?$start->format("Y"):""):((intval($start->format("d"))==1 || $i==0)?$start->format("Y-m"):"")
 					];
+					switch ($fields[$task["start"]]["type"])
+					{
+						case "date":
+							switch ($i)
+							{
+								case 0:
+									$res[$key]=$task["start"]." <= \"".$end->format('Y-m-d')."\"";
+									break;
+								default:
+									$res[$key]=$task["start"]." >= \"".$start->format('Y-m-d')."\" and ".$task["start"]." <= \"".$end->format('Y-m-d')."\"";
+									break;
+							}
+							break;
+						case "createdtime":
+						case "datetime":
+						case "modifiedtime":
+							$start->modify(strval($timezone->getOffset($start)*-1)." second");
+							$end->modify("1 day")->modify("-1 second")->modify(strval($timezone->getOffset($end)*-1)." second");
+							switch ($i)
+							{
+								case 0:
+									$res[$key]=$task["start"]." <= \"".$end->format("Y-m-d\TH:i:s")."Z\"";
+									break;
+								default:
+									$res[$key]=$task["start"]." >= \"".$start->format("Y-m-d\TH:i:s")."Z\" and ".$task["start"]." <= \"".$end->format("Y-m-d\TH:i:s")."Z\"";
+									break;
+							}
+							break;
+					}
 				}
+				return $res;
+			})(
+				$this->body["column"],
+				$this->body["task"],
+				$this->fields,
+				new DateTimeZone(isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get())
+			);
+			if (count($this->records)==0)
+			{
+				header("HTTP/1.1 200 OK");
+				header('Content-Type: application/json; charset=utf-8');
+				echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
+				exit(0);
 			}
-			$this->response["records"]=$this->createrecords(0,$this->body["value"],$this->records,$users,$departments,$groups);
+			$this->response["records"]=$this->createrecords(0,$this->records,$users,$departments,$groups);
 		}
 		else $this->callrequesterror(500,"The field specified in the \"Column\" section is not registered with the server.");
 		header("HTTP/1.1 200 OK");
@@ -297,7 +374,7 @@ class clsRequest extends clsBase
 		else krsort($res);
 		return $res;
 	}
-	public function createrecords($arg_index,$arg_config,$arg_records,$arg_users,$arg_departments,$arg_groups)
+	public function createrecords($arg_index,$arg_records,$arg_users,$arg_departments,$arg_groups)
 	{
 		$res=[];
 		if (count($this->queries["rows"])>$arg_index)
@@ -332,41 +409,83 @@ class clsRequest extends clsBase
 							if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
 							break;
 					}
-					$cells=$this->createrecords($arg_index+1,$arg_config,$records,$arg_users,$arg_departments,$arg_groups);
+					$cells=$this->createrecords($arg_index+1,$records,$arg_users,$arg_departments,$arg_groups);
 					if (count($cells)!=0) $res[$key]=["caption"=>$caption,"rows"=>$cells];
 				}
 			}
 		}
 		else
 		{
+			$timezone=new DateTimeZone(isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
+			$start=($this->body["column"]["period"]=="month")?new DateTime($this->body["column"]["starting"]."-01",$timezone):new DateTime($this->body["column"]["starting"],$timezone);
+			$end=($this->body["column"]["period"]=="month")?new DateTime($this->body["column"]["starting"]."-01",$timezone):new DateTime($this->body["column"]["starting"],$timezone);
+			switch ($this->body["column"]["period"])
+			{
+				case "month":
+					$end->modify($this->body["column"]["limit"]." month")->modify("-1 day");
+					break;
+				case "day":
+					$end->modify($this->body["column"]["limit"]." day")->modify("-1 day");
+					break;
+			}
 			foreach ($this->queries["columns"] as $key=>$value)
 			{
-				$records=$this->driver->filter($arg_records,$this->fields,$value["query"],"");
-				if ($arg_config["func"]!="CNT")
+				$res[$key]=[];
+				$source=array_values($this->driver->filter($arg_records,$this->fields,$value,""));
+				if (isset($this->body["sort"]))
 				{
-					$res[$key]="";
-					if (count($records)!=0)
-						if (array_key_exists($arg_config["field"],$this->fields))
+					if ($this->body["sort"]!="")
+					{
+						$sorts=explode(",",$this->body["sort"]);
+						$params=[];
+						foreach ($sorts as $sort)
 						{
-							$values=array_column(array_column($records,$arg_config["field"]),"value");
-							switch ($arg_config["func"])
-							{
-								case "SUM":
-									$res[$key]=array_sum($values);
-									break;
-								case "AVG":
-									$res[$key]=array_sum($values)/count($records);
-									break;
-								case "MAX":
-									$res[$key]=max($values);
-									break;
-								case "MIN":
-									$res[$key]=min($values);
-									break;
-							}
+							$sort=explode(" ",$sort);
+							$params[]=array_column(array_column($source,trim($sort[0])),"value");
+							if (count($sort)==1) $params[]=SORT_ASC;
+							else $params[]=(strtolower(trim($sort[1]))=="desc")?SORT_DESC:SORT_ASC;
 						}
+						$params[]=&$source;
+						call_user_func_array('array_multisort',$params);
+					}
 				}
-				else $res[$key]=count($records);
+				foreach ($source as $value)
+				{
+					$taskstart=new DateTime($value[$this->body["task"]["start"]]["value"],$timezone);
+					$taskend=new DateTime($value[$this->body["task"]["end"]]["value"],$timezone);
+					switch ($this->fields[$this->body["task"]["start"]]["type"])
+					{
+						case "createdtime":
+						case "datetime":
+						case "modifiedtime":
+							$taskstart=new DateTime($taskstart->modify(strval($timezone->getOffset($taskstart))." second")->format("Y-m-d"),$timezone);
+							break;
+					}
+					switch ($this->fields[$this->body["task"]["end"]]["type"])
+					{
+						case "createdtime":
+						case "datetime":
+						case "modifiedtime":
+							$taskend=new DateTime($taskend->modify(strval($timezone->getOffset($taskend))." second")->format("Y-m-d"),$timezone);
+							break;
+					}
+					if ($taskstart<$start) $taskstart=clone $start;
+					if ($taskend>$end) $taskend=clone $end;
+					if ($taskstart<$taskend)
+					{
+						switch ($this->body["column"]["period"])
+						{
+							case "month":
+								$value["__taskspan"]=["value"=>((intval($taskend->format('Y'))*12+intval($taskend->format('m')))-(intval($taskstart->format('Y'))*12+intval($taskstart->format('m'))))+1];
+								break;
+							case "day":
+								$value["__taskspan"]=["value"=>$taskend->diff($taskstart)->days+1];
+								break;
+						}
+					}
+					else $value["__taskspan"]=["value"=>1];
+					$res[$key][]=$value;
+				}
 			}
 		}
 		return $res;
