@@ -1826,56 +1826,202 @@ class panda_colorpicker extends panda_dialog{
 		super(999997,false,false);
 		/* setup properties */
 		this.callback=null;
-		this.colors=[
-			'#d7000f',
-			'#e60012',
-			'#ea5532',
-			'#f6ad3c',
-			'#f39800',
-			'#e48e00',
-			'#f3e100',
-			'#fff100',
-			'#fff33f',
-			'#aacf52',
-			'#8fc31f',
-			'#86b81b',
-			'#009140',
-			'#009944',
-			'#00a95f',
-			'#00ada9',
-			'#009e96',
-			'#00958d',
-			'#0097db',
-			'#00a0e9',
-			'#00afec',
-			'#187fc4',
-			'#0068b7',
-			'#0062ac',
-			'#1b1c80',
-			'#1d2088',
-			'#4d4398',
-			'#a64a97',
-			'#920783',
-			'#8a017c',
-			'#d60077',
-			'#e4007f',
-			'#e85298',
-			'#e9546b',
-			'#e5004f',
-			'#d7004a',
-			'#ffffff',
-			'#eeeeee',
-			'#bdbdbd',
-			'#757575',
-			'#424242',
-			'#000000'
-		];
+		this.colors={
+			hue:[
+				'#d93636',
+				'#d95136',
+				'#d96c36',
+				'#d98736',
+				'#d9a336',
+				'#d9be36',
+				'#d9d936',
+				'#bed936',
+				'#a3d936',
+				'#87d936',
+				'#6cd936',
+				'#51d936',
+				'#36d936',
+				'#36d951',
+				'#36d96c',
+				'#36d987',
+				'#36d9a3',
+				'#36d9be',
+				'#36d9d9',
+				'#36bed9',
+				'#36a3d9',
+				'#3687d9',
+				'#366cd9',
+				'#3651d9',
+				'#3636d9',
+				'#5136d9',
+				'#6c36d9',
+				'#8736d9',
+				'#a336d9',
+				'#be36d9',
+				'#d936d9',
+				'#d936be',
+				'#d936a3',
+				'#d93687',
+				'#d9366c',
+				'#d93651',
+				'#ffffff',
+				'#eeeeee',
+				'#bdbdbd',
+				'#757575',
+				'#424242',
+				'#000000'
+			],
+			palette:[
+				'#72afd5',
+				'#4394c7',
+				'#9ebdb5',
+				'#8b8bbb',
+				'#6565a4',
+				'#b2b2d2',
+				'#afdea6',
+				'#7ac86a',
+				'#8ed081',
+				'#fde549',
+				'#fef19a',
+				'#fde75e',
+				'#6b999e',
+				'#6d9c92',
+				'#598288',
+				'#a1cae3',
+				'#cf6371',
+				'#e7b1b8',
+				'#d8838d',
+				'#ef6643',
+				'#d1b1c8',
+				'#e08e45',
+				'#9ec5ab',
+				'#e3c567',
+				'#baab68',
+				'#ed1c24',
+				'#77966d',
+				'#a69888',
+				'#f2f7f2',
+				'#426b69',
+				'#bcaa99',
+				'#f0803c',
+				'#bf211e',
+				'#ea9010',
+				'#437c90',
+				'#e85f5c',
+				'#ffffff',
+				'#eeeeee',
+				'#bdbdbd',
+				'#757575',
+				'#424242',
+				'#000000'
+			],
+			forest:[
+				'#347321',
+				'#44780a',
+				'#558620',
+				'#1b5e20',
+				'#8ba03e',
+				'#90b566',
+				'#638538',
+				'#79ae37',
+				'#87bc42',
+				'#61964b',
+				'#3d7085',
+				'#64988e',
+				'#345644',
+				'#6b7f5c',
+				'#b0b17c',
+				'#ecddba',
+				'#e1c584',
+				'#b4a18f',
+				'#c89660',
+				'#a17d5e',
+				'#796e63',
+				'#89542f',
+				'#692f11',
+				'#913636',
+				'#ad5f52',
+				'#473c31',
+				'#473731',
+				'#786159',
+				'#ad9b95',
+				'#a39a8e',
+				'#6e6262',
+				'#70624d',
+				'#997e6e',
+				'#bdb1a4',
+				'#bdbca4',
+				'#87866c',
+				'#ffffff',
+				'#eeeeee',
+				'#bdbdbd',
+				'#757575',
+				'#424242',
+				'#000000'
+			],
+			emotion:[
+				'#f8b195',
+				'#f67280',
+				'#c06c84',
+				'#6c5b7b',
+				'#355c7d',
+				'#99b898',
+				'#feceab',
+				'#ff847c',
+				'#e84a5f',
+				'#a8a7a7',
+				'#cc527a',
+				'#e8175d',
+				'#a8e6ce',
+				'#dcedc2',
+				'#ffd3b5',
+				'#ffaaa6',
+				'#ff8c94',
+				'#a7226e',
+				'#ec2049',
+				'#f26b38',
+				'#f7db4f',
+				'#2f9599',
+				'#e1f5c4',
+				'#ede574',
+				'#f9d423',
+				'#fc913a',
+				'#ff4e50',
+				'#e5fcc2',
+				'#9de0ad',
+				'#45ada8',
+				'#547980',
+				'#fe4365',
+				'#fc9d9a',
+				'#f9cdad',
+				'#c8c8a9',
+				'#83af9b',
+				'#ffffff',
+				'#eeeeee',
+				'#bdbdbd',
+				'#757575',
+				'#424242',
+				'#000000'
+			]
+		};
 		this.input=this.parts.input.clone().css({
 			borderBottomLeftRadius:'0.25em',
 			width:'calc(100% - 5em)'
 		})
 		.attr('placeholder',pd.constants.dialog.color.prompt[pd.lang])
 		.attr('type','text');
+		this.theme=this.parts.select.clone().css({
+			textAlign:'center',
+			width:'calc(100% + 2em)'
+		})
+		.assignoption(Object.keys(this.colors).map((item) => ({id:{value:item}})),'id','id')
+		.on('change',(e) => {
+			this.contents.elms('div').each((element,index) => {
+				element.css({
+					backgroundColor:this.colors[this.theme.val()][index]
+				})
+			});
+		});
 		this.ok.css({
 			borderBottomLeftRadius:'',
 			borderBottomRightRadius:'0.25em',
@@ -1899,9 +2045,10 @@ class panda_colorpicker extends panda_dialog{
 			padding:'3px 2px 2px 2px',
 			textAlign:'center'
 		});
+		this.header.append(this.theme);
 		this.footer.insertBefore(this.input,this.ok);
 		/* create cells */
-		this.colors.each((color,index) => {
+		this.colors.hue.each((color,index) => {
 			this.contents.append(
 				this.parts.div.clone().css({
 					backgroundColor:color,
@@ -1912,7 +2059,7 @@ class panda_colorpicker extends panda_dialog{
 					width:'calc((100% / 6) - 4px)'
 				})
 				.on('click',(e) => {
-					if (this.callback) this.callback(color);
+					if (this.callback) this.callback(this.colors[this.theme.val()][index]);
 					this.hide();
 				})
 			);
