@@ -1871,7 +1871,7 @@ class panda_colorpicker extends panda_dialog{
 				'#424242',
 				'#000000'
 			],
-			palette:[
+			mellow:[
 				'#72afd5',
 				'#4394c7',
 				'#9ebdb5',
