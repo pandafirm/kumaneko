@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.0
+* Version: 1.1.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -284,7 +284,7 @@ class panda_filter extends panda_dialog{
 	}
 	/* build */
 	build(app,query,sort,callback){
-		var fieldinfos=pd.ui.field.parallelize(app.fields);
+		var fieldinfos=pd.ui.field.embed(pd.ui.field.parallelize(app.fields));
 		var fields=(exclude) => {
 			var res=[];
 			res.push({
@@ -302,56 +302,6 @@ class panda_filter extends panda_dialog{
 				}
 			return res;
 		};
-		if (!('__id' in fieldinfos))
-		{
-			fieldinfos['__id']={
-				id:'__id',
-				type:'id',
-				caption:'id',
-				required:false,
-				nocaption:false
-			};
-		}
-		if (!('__creator' in fieldinfos))
-		{
-			fieldinfos['__creator']={
-				id:'__creator',
-				type:'creator',
-				caption:'creator',
-				required:false,
-				nocaption:false
-			};
-		}
-		if (!('__createdtime' in fieldinfos))
-		{
-			fieldinfos['__createdtime']={
-				id:'__createdtime',
-				type:'createdtime',
-				caption:'createdtime',
-				required:false,
-				nocaption:false
-			};
-		}
-		if (!('__modifier' in fieldinfos))
-		{
-			fieldinfos['__modifier']={
-				id:'__modifier',
-				type:'modifier',
-				caption:'modifier',
-				required:false,
-				nocaption:false
-			};
-		}
-		if (!('__modifiedtime' in fieldinfos))
-		{
-			fieldinfos['__modifiedtime']={
-				id:'__modifiedtime',
-				type:'modifiedtime',
-				caption:'modifiedtime',
-				required:false,
-				nocaption:false
-			};
-		}
 		/* create table */
 		this.tables.query=pd.ui.table.create({
 			id:'queries',
@@ -1118,7 +1068,7 @@ class panda_filter extends panda_dialog{
 						}
 					})(fieldinfos[query.field]);
 			});
-		})((parallelize)?pd.ui.field.parallelize(app.fields):app.fields);
+		})(pd.ui.field.embed((parallelize)?pd.ui.field.parallelize(app.fields):pd.extend({},app.fields)));
 		return (queries.length==matches)?this.result:false;
 	}
 };
@@ -3844,6 +3794,59 @@ class panda_user_interface{
 					if (fieldinfo.placeholder) field.elms('input,select,textarea').each((element,index) => element.attr('placeholder',fieldinfo.placeholder));
 					return field;
 				})(pd.create('div').addclass('pd-field').attr('field-id',fieldinfo.id));
+			},
+			embed:(fields) => {
+				if (!('__id' in fields))
+				{
+					fields['__id']={
+						id:'__id',
+						type:'id',
+						caption:'id',
+						required:false,
+						nocaption:false
+					};
+				}
+				if (!('__creator' in fields))
+				{
+					fields['__creator']={
+						id:'__creator',
+						type:'creator',
+						caption:'creator',
+						required:false,
+						nocaption:false
+					};
+				}
+				if (!('__createdtime' in fields))
+				{
+					fields['__createdtime']={
+						id:'__createdtime',
+						type:'createdtime',
+						caption:'createdtime',
+						required:false,
+						nocaption:false
+					};
+				}
+				if (!('__modifier' in fields))
+				{
+					fields['__modifier']={
+						id:'__modifier',
+						type:'modifier',
+						caption:'modifier',
+						required:false,
+						nocaption:false
+					};
+				}
+				if (!('__modifiedtime' in fields))
+				{
+					fields['__modifiedtime']={
+						id:'__modifiedtime',
+						type:'modifiedtime',
+						caption:'modifiedtime',
+						required:false,
+						nocaption:false
+					};
+				}
+				return fields;
 			},
 			parallelize:(fields) => {
 				return ((fields) => {
