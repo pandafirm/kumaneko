@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.1.2
+* Version: 1.1.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1774,9 +1774,9 @@ class panda_coloradjuster extends panda_dialog{
 		rgb.b/=255;
 		hsb.b=Math.max(rgb.r,rgb.g,rgb.b);
 		diff.check=hsb.b-Math.min(rgb.r,rgb.g,rgb.b);
-		diff.r=(hsb.b-rgb.r)/6/diff.check+1/2;;
-		diff.g=(hsb.b-rgb.g)/6/diff.check+1/2;;
-		diff.b=(hsb.b-rgb.b)/6/diff.check+1/2;;
+		diff.r=(hsb.b-rgb.r)/6/diff.check+1/2;
+		diff.g=(hsb.b-rgb.g)/6/diff.check+1/2;
+		diff.b=(hsb.b-rgb.b)/6/diff.check+1/2;
 		if (diff.check!==0)
 		{
 			hsb.s=diff.check/hsb.b;
@@ -3832,6 +3832,31 @@ HTMLSelectElement.prototype.assignoption=function(records,label,value){
 			.html(record[label].value)
 		);
 	});
+	return this;
+}
+HTMLSelectElement.prototype.filteroption=function(options){
+	this.elms('option').each((element,index) => {
+		if (element.parentNode.tagName.toLowerCase()=='span')
+		{
+			((span) => {
+				this.insertBefore(element,span);
+				this.removeChild(span);
+			})(element.parentNode);
+		}
+	});
+	if (((Array.isArray(options))?options:[]).length!=0)
+	{
+		this.elms('option').each((element,index) => {
+			if (!options.includes(element.val()))
+			{
+				if (element.parentNode.tagName.toLowerCase()!='span')
+					((span) => {
+						element.parentNode.insertBefore(span,element);
+						span.append(element);
+					})(pd.create('span').css({display:'none'}));
+			}
+		});
+	}
 	return this;
 }
 HTMLSelectElement.prototype.selectedtext=function(){

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.1.2
+* Version: 1.1.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1653,27 +1653,24 @@ pd.modules={
 									call:false,
 									formula:() => {
 										return new Promise((resolve,reject) => {
-											if (action.formula.length!=0)
-											{
-												action.formula.each((formula,index) => {
-													if (formula.field in fieldinfos)
-														((fieldinfo) => {
-															if (fieldinfo.tableid)
-															{
-																result[fieldinfo.tableid].value.each((row,index) => {
-																	row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,record,fieldinfos);
-																	if (fieldinfo.type=='lookup') row[fieldinfo.id].lookup=true;
-																});
-															}
-															else
-															{
-																result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,record,fieldinfos);
-																if (fieldinfo.type=='lookup') result[fieldinfo.id].lookup=true;
-															}
-															actions.call=true;
-														})(fieldinfos[formula.field]);
-												});
-											}
+											action.formula.each((formula,index) => {
+												if (formula.field in fieldinfos)
+													((fieldinfo) => {
+														if (fieldinfo.tableid)
+														{
+															result[fieldinfo.tableid].value.each((row,index) => {
+																row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,record,fieldinfos);
+																if (fieldinfo.type=='lookup') row[fieldinfo.id].lookup=true;
+															});
+														}
+														else
+														{
+															result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,record,fieldinfos);
+															if (fieldinfo.type=='lookup') result[fieldinfo.id].lookup=true;
+														}
+														actions.call=true;
+													})(fieldinfos[formula.field]);
+											});
 											resolve();
 										});
 									},
@@ -1984,38 +1981,36 @@ pd.modules={
 									},
 									rows:() => {
 										return new Promise((resolve,reject) => {
-											if (action.rows)
-											{
-												action.rows.del.each((del,index) => {
-													if (del.table in this.app.fields)
-													{
-														record[del.table].value=record[del.table].value.filter((item) => {
-															return !result[del.table].value.includes(item);
-														});
-														result[del.table].value=[];
-														actions.call=true;
-													}
-												});
-												action.rows.fill.each((fill,index) => {
-													if (fill.table in this.app.fields)
-													{
-														((range) => {
-															if (range>0)
-															{
-																new Array(range).fill().map(() => pd.record.create(this.app.fields[fill.table],false)).each((row,index) => {
-																	if (record[fill.table]==result[fill.table]) record[fill.table].value.push(row);
-																	else
-																	{
-																		record[fill.table].value.push(row);
-																		result[fill.table].value.push(row);
-																	}
-																});
-																actions.call=true;
-															}
-														})(fill.range-result[fill.table].value.length);
-													}
-												});
-											}
+											action.rows.del.each((del,index) => {
+												if (del.table in this.app.fields)
+												{
+													record[del.table].value=record[del.table].value.filter((item) => {
+														return !result[del.table].value.includes(item);
+													});
+													result[del.table].value=[];
+													actions.call=true;
+												}
+											});
+											action.rows.fill.each((fill,index) => {
+												if (fill.table in this.app.fields)
+												{
+													((range) => {
+														range=(pd.isnumeric(range))?parseInt(range)-result[fill.table].value.length:0;
+														if (range>0)
+														{
+															new Array(range).fill().map(() => pd.record.create(this.app.fields[fill.table],false)).each((row,index) => {
+																if (record[fill.table]==result[fill.table]) record[fill.table].value.push(row);
+																else
+																{
+																	record[fill.table].value.push(row);
+																	result[fill.table].value.push(row);
+																}
+															});
+															actions.call=true;
+														}
+													})(pd.formula.calculate({field:'__id',formula:fill.range},result,result,record,pd.ui.field.embed(pd.extend({},fieldinfos))));
+												}
+											});
 											resolve();
 										});
 									},
@@ -2376,36 +2371,34 @@ pd.modules={
 							{
 								if ((action.user.length!=0)?(pd.kumaneko.permit({admin:action.user})=='admin'):true)
 								{
-									if (action.rows)
-									{
-										action.rows.del.each((del,index) => {
-											if (del.table in this.app.fields)
-											{
-												record[del.table].value=record[del.table].value.filter((item) => {
-													return !result[del.table].value.includes(item);
-												});
-												result[del.table].value=[];
-											}
-										});
-										action.rows.fill.each((fill,index) => {
-											if (fill.table in this.app.fields)
-											{
-												((range) => {
-													if (range>0)
-													{
-														new Array(range).fill().map(() => pd.record.create(this.app.fields[fill.table],false)).each((row,index) => {
-															if (record[fill.table]==result[fill.table]) record[fill.table].value.push(row);
-															else
-															{
-																record[fill.table].value.push(row);
-																result[fill.table].value.push(row);
-															}
-														});
-													}
-												})(fill.range-result[fill.table].value.length);
-											}
-										});
-									}
+									action.rows.del.each((del,index) => {
+										if (del.table in this.app.fields)
+										{
+											record[del.table].value=record[del.table].value.filter((item) => {
+												return !result[del.table].value.includes(item);
+											});
+											result[del.table].value=[];
+										}
+									});
+									action.rows.fill.each((fill,index) => {
+										if (fill.table in this.app.fields)
+										{
+											((range) => {
+												range=(pd.isnumeric(range))?parseInt(range)-result[fill.table].value.length:0;
+												if (range>0)
+												{
+													new Array(range).fill().map(() => pd.record.create(this.app.fields[fill.table],false)).each((row,index) => {
+														if (record[fill.table]==result[fill.table]) record[fill.table].value.push(row);
+														else
+														{
+															record[fill.table].value.push(row);
+															result[fill.table].value.push(row);
+														}
+													});
+												}
+											})(pd.formula.calculate({field:'__id',formula:fill.range},result,result,record,pd.ui.field.embed(pd.extend({},fieldinfos))));
+										}
+									});
 									action.formula.each((formula,index) => {
 										if (formula.field in fieldinfos)
 											((fieldinfo) => {
@@ -2487,6 +2480,38 @@ pd.modules={
 													if (hidden.field in this.app.fields)
 														if (this.app.fields[hidden.field].type=='table') result[this.app.fields[hidden.field].id].hidden=true;
 												}
+											}
+										});
+										action.option.each((option,index) => {
+											if (option.field in fieldinfos)
+											{
+												((fieldinfo) => {
+													switch (fieldinfo.type)
+													{
+														case 'checkbox':
+														case 'dropdown':
+														case 'radio':
+															if (fieldinfo.tableid)
+															{
+																result[fieldinfo.tableid].value.each((row,index) => {
+																	if (!Array.isArray(row[fieldinfo.id].option)) row[fieldinfo.id].option=[];
+																	row[fieldinfo.id].option=option.options.reduce((result,current) => {
+																		if (!result.includes(current)) result.push(current);
+																		return result;
+																	},row[fieldinfo.id].option);
+																});
+															}
+															else
+															{
+																if (!Array.isArray(result[fieldinfo.id].option)) result[fieldinfo.id].option=[];
+																result[fieldinfo.id].option=option.options.reduce((result,current) => {
+																	if (!result.includes(current)) result.push(current);
+																	return result;
+																},result[fieldinfo.id].option);
+															}
+															break;
+													}
+												})(fieldinfos[option.field]);
 											}
 										});
 									}
@@ -3934,11 +3959,8 @@ pd.modules={
 															switch (action.trigger)
 															{
 																case 'button':
-																	if (action.rows)
-																	{
-																		if (action.rows.del.some((item) => item.table==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
-																		if (action.rows.fill.some((item) => item.table==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
-																	}
+																	if (action.rows.del.some((item) => item.table==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
+																	if (action.rows.fill.some((item) => item.table==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.formula.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.report.saveas) res.push({id:action.report.saveas,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.report.store) res.push({id:action.report.store,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
@@ -3953,15 +3975,13 @@ pd.modules={
 																	if (action.mail.attachment) res.push({id:action.mail.attachment,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	break;
 																case 'value':
-																	if (action.rows)
-																	{
-																		if (action.rows.del.some((item) => item.table==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
-																		if (action.rows.fill.some((item) => item.table==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
-																	}
+																	if (action.rows.del.some((item) => item.table==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
+																	if (action.rows.fill.some((item) => item.table==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.formula.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.style.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.disabled.fields.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.hidden.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
+																	if (action.option.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	break;
 															}
 														});
@@ -5574,7 +5594,8 @@ pd.modules={
 																		record:false,
 																		fields:[]
 																	},
-																	hidden:[]
+																	hidden:[],
+																	option:[]
 																},res);
 																break;
 														}
@@ -6397,15 +6418,11 @@ pd.modules={
 								},
 								range:{
 									id:'range',
-									type:'number',
+									type:'text',
 									caption:'',
 									required:false,
 									nocaption:true,
-									placeholder:pd.constants.action.prompt.rows.range[pd.lang],
-									demiliter:false,
-									decimals:'0',
-									unit:'rows',
-									unitposition:'suffix'
+									placeholder:pd.constants.action.prompt.rows.range[pd.lang]
 								}
 							}
 						},
@@ -6688,6 +6705,10 @@ pd.modules={
 							container:null,
 							table:null
 						},
+						option:{
+							container:null,
+							table:null
+						},
 						suspend:{
 							container:null
 						}
@@ -6792,7 +6813,7 @@ pd.modules={
 														field.addclass('pd-lookup').append(
 															pd.create('button').addclass('pd-icon pd-icon-lookup pd-search').on('click',(e) => {
 																pd.pickupsingle(
-																	fieldinfo.options.map((item) => ({option:{value:item.option.value}})),
+																	fieldinfo.options.filter((item) => item.option.value),
 																	{option:{align:'left',text:'option'}},
 																	(resp) => field.elm('input').val('"'+resp.option.value+'"')
 																);
@@ -7023,6 +7044,71 @@ pd.modules={
 					})({
 						external:row.elm('[field-id=external]').elm('select'),
 						internal:row.elm('[field-id=internal]').elm('select')
+					});
+				},(table,index) => {
+					if (table.tr.length==0) table.addrow();
+				},false);
+				this.keep.sections.option.table=pd.ui.table.create({
+					id:'options',
+					type:'table',
+					caption:'',
+					nocaption:true,
+					fields:{
+						field:{
+							id:'field',
+							type:'dropdown',
+							caption:'',
+							required:false,
+							nocaption:true,
+							options:[]
+						},
+						option:{
+							id:'option',
+							type:'spacer',
+							caption:'',
+							required:false,
+							nocaption:true
+						}
+					}
+				}).spread((row,index) => {
+					/* event */
+					row.elm('.pd-table-row-add').on('click',(e) => {
+						this.keep.sections.option.table.insertrow(row);
+					});
+					row.elm('.pd-table-row-del').on('click',(e) => {
+						pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+							this.keep.sections.option.table.delrow(row);
+						});
+					});
+					/* modify elements */
+					((cells) => {
+						cells.field.on('change',(e) => e.currentTarget.rebuild()).rebuild=() => {
+							return new Promise((resolve,reject) => {
+								cells.option.empty();
+								if (cells.field.val())
+								{
+									((fieldinfo) => {
+										cells.option.append(
+											((field) => {
+												fieldinfo.options.each((option,index) => {
+													field
+													.append(
+														pd.create('label')
+														.append(pd.create('input').attr('type','checkbox').attr('data-type',fieldinfo.type).val(option.option.value))
+														.append(pd.create('span').html((option.option.value)?option.option.value:'&#9251;'))
+													);
+												});
+												return field;
+											})(pd.create('div').addclass('pd-field-value'))
+										);
+									})(pd.ui.field.parallelize(this.keep.fields)[cells.field.val()]);
+								}
+								resolve({});
+							});
+						};
+					})({
+						field:row.elm('[field-id=field]').elm('select'),
+						option:row.elm('[field-id=option]')
 					});
 				},(table,index) => {
 					if (table.tr.length==0) table.addrow();
@@ -7351,6 +7437,13 @@ pd.modules={
 						)
 						.append(
 							((container) => {
+								this.keep.sections.option.container=container;
+								container.elm('.pd-box-container').append(this.keep.sections.option.table);
+								return container;
+							})(pd.ui.box.create('',pd.constants.action.caption.option[pd.lang]).addclass('pd-kumaneko-section'))
+						)
+						.append(
+							((container) => {
 								this.keep.sections.suspend.container=container
 								container.elm('.pd-box-container')
 								.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.suspend).css({width:'100%'}),this.app))
@@ -7394,35 +7487,27 @@ pd.modules={
 							{
 								if (['button','value'].includes(res.action.trigger))
 								{
-									var formula=[];
-									this.keep.sections.formula.table.tr.each((element,index) => {
-										if (element.elm('[field-id=field]').elm('select').val())
-										{
-											if (((formula) => {
-												if (formula.match(/class /g)) return true;
-												if (formula.match(/fetch\(/g)) return true;
-												if (formula.match(/function\(/g)) return true;
-												if (formula.match(/XMLHttpRequest\(/g)) return true;
-												if (formula.match(/=>/g)) return true;
-												if (formula.match(/(var|let|const) /g)) return true;
-												return false;
-											})(element.elm('[field-id=formula]').elm('input').val()))
+									var formula=this.keep.sections.formula.table.tr.reduce((result,current) => {
+										if (!res.error)
+											if (current.elm('[field-id=field]').elm('select').val())
 											{
-												res.error=true;
-												pd.alert(pd.constants.action.message.invalid.formula[pd.lang],() => {
-													resolve(res);
-												});
-												return PD_BREAK;
+												if (current.elm('[field-id=formula]').elm('input').val().match(/(class |fetch\(|function\(|XMLHttpRequest\(|=>|var |let |const )/g))
+												{
+													res.error=true;
+													pd.alert(pd.constants.action.message.invalid.formula[pd.lang],() => {
+														resolve(res);
+													});
+												}
+												else
+												{
+													result.push({
+														field:current.elm('[field-id=field]').elm('select').val(),
+														formula:current.elm('[field-id=formula]').elm('input').val()
+													});
+												}
 											}
-											else
-											{
-												formula.push({
-													field:element.elm('[field-id=field]').elm('select').val(),
-													formula:element.elm('[field-id=formula]').elm('input').val()
-												});
-											}
-										}
-									});
+										return result;
+									},[]);
 									if (!res.error) res.action.formula=formula;
 								}
 								if (!res.error)
@@ -7791,6 +7876,34 @@ pd.modules={
 												}
 											}
 											break;
+										case 'value':
+											var option=this.keep.sections.option.table.tr.reduce((result,current) => {
+												if (!res.error)
+													if (current.elm('[field-id=field]').elm('select').val())
+													{
+														var options=current.elm('[field-id=option]').elms('input').reduce((result,current) => {
+															if (current.checked) result.push(current.val());
+															return result
+														},[])
+														if (options.length==0)
+														{
+															res.error=true;
+															pd.alert(pd.constants.action.message.invalid.option[pd.lang],() => {
+																resolve(res);
+															});
+														}
+														else
+														{
+															result.push({
+																field:current.elm('[field-id=field]').elm('select').val(),
+																options:options
+															});
+														}
+													}
+												return result;
+											},[]);
+											if (!res.error) res.action.option=option;
+											break;
 									}
 								}
 							}
@@ -7815,7 +7928,7 @@ pd.modules={
 											if (row.table.value)
 												res.push({
 													table:row.table.value,
-													range:(pd.isnumeric(row.range.value))?parseInt(row.range.value):1
+													range:row.range.value
 												});
 										});
 										return res;
@@ -7946,7 +8059,7 @@ pd.modules={
 												});
 										});
 										return res;
-									})((this.keep.action.rows)?this.keep.action.rows.del:[])};
+									})(this.keep.action.rows.del)};
 									res['fill']={value:((fills) => {
 										var res=[];
 										this.keep.sections.fill.table.clearrows();
@@ -7960,7 +8073,7 @@ pd.modules={
 												});
 										});
 										return res;
-									})((this.keep.action.rows)?this.keep.action.rows.fill:[])};
+									})(this.keep.action.rows.fill)};
 								})(Object.values(this.keep.fields).reduce((result,current) => {
 									if (['table'].includes(current.type))
 									{
@@ -8244,6 +8357,38 @@ pd.modules={
 										});
 										return res;
 									})(this.keep.action.hidden)};
+									this.keep.sections.option.table.clearrows();
+									this.keep.sections.option.table.template.elm('[field-id=field]').elm('select').empty().assignoption((() => {
+										var res=[];
+										res.push({
+											id:{value:''},
+											caption:{value:''}
+										});
+										for (var key in fieldinfos)
+											((fieldinfo) => {
+												switch (fieldinfo.type)
+												{
+													case 'checkbox':
+													case 'dropdown':
+													case 'radio':
+														res.push({
+															id:{value:fieldinfo.id},
+															caption:{value:fieldinfo.caption}
+														});
+														break;
+												}
+											})(fieldinfos[key]);
+										return res;
+									})(),'caption','id');
+									this.keep.action.option.each((values,index) => {
+										if (values.field in fieldinfos)
+											((row) => {
+												row.elm('[field-id=field]').elm('select').val(values.field).rebuild().then(() => {
+													row.elm('[field-id=option]').elms('input').each((element,index) => element.checked=values.options.includes(element.val()));
+												});
+											})(this.keep.sections.option.table.addrow());
+									});
+									if (this.keep.sections.option.table.tr.length==0) this.keep.sections.option.table.addrow();
 									break;
 							}
 							return res;
@@ -8255,18 +8400,10 @@ pd.modules={
 						switch (this.keep.action.trigger)
 						{
 							case 'button':
-								if (this.keep.action.rows)
-								{
-									if (this.keep.action.rows.del.length!=0) this.keep.sections.del.container.open();
-									else this.keep.sections.del.container.close();
-									if (this.keep.action.rows.fill.length!=0) this.keep.sections.fill.container.open();
-									else this.keep.sections.fill.container.close();
-								}
-								else
-								{
-									this.keep.sections.del.container.close();
-									this.keep.sections.fill.container.close();
-								}
+								if (this.keep.action.rows.del.length!=0) this.keep.sections.del.container.open();
+								else this.keep.sections.del.container.close();
+								if (this.keep.action.rows.fill.length!=0) this.keep.sections.fill.container.open();
+								else this.keep.sections.fill.container.close();
 								if (this.keep.action.formula.length!=0) this.keep.sections.formula.container.open();
 								else this.keep.sections.formula.container.close();
 								if (this.keep.action.report.spreadsheet) this.keep.sections.report.container.open();
@@ -8286,6 +8423,7 @@ pd.modules={
 								this.keep.sections.style.container.hide();
 								this.keep.sections.disabled.container.hide();
 								this.keep.sections.hidden.container.hide();
+								this.keep.sections.option.container.hide();
 								this.keep.sections.suspend.container.hide();
 								break;
 							case 'saving':
@@ -8302,21 +8440,14 @@ pd.modules={
 								this.keep.sections.style.container.hide();
 								this.keep.sections.disabled.container.hide();
 								this.keep.sections.hidden.container.hide();
+								this.keep.sections.option.container.hide();
 								this.keep.sections.suspend.container.show();
 								break;
 							case 'value':
-								if (this.keep.action.rows)
-								{
-									if (this.keep.action.rows.del.length!=0) this.keep.sections.del.container.open();
-									else this.keep.sections.del.container.close();
-									if (this.keep.action.rows.fill.length!=0) this.keep.sections.fill.container.open();
-									else this.keep.sections.fill.container.close();
-								}
-								else
-								{
-									this.keep.sections.del.container.close();
-									this.keep.sections.fill.container.close();
-								}
+								if (this.keep.action.rows.del.length!=0) this.keep.sections.del.container.open();
+								else this.keep.sections.del.container.close();
+								if (this.keep.action.rows.fill.length!=0) this.keep.sections.fill.container.open();
+								else this.keep.sections.fill.container.close();
 								if (this.keep.action.formula.length!=0) this.keep.sections.formula.container.open();
 								else this.keep.sections.formula.container.close();
 								if (this.keep.action.style.length!=0) this.keep.sections.style.container.open();
@@ -8325,6 +8456,8 @@ pd.modules={
 								else this.keep.sections.disabled.container.close();
 								if (this.keep.action.hidden.length!=0) this.keep.sections.hidden.container.open();
 								else this.keep.sections.hidden.container.close();
+								if (this.keep.action.option.length!=0) this.keep.sections.option.container.open();
+								else this.keep.sections.option.container.close();
 								this.keep.sections.trigger.caption.hide();
 								this.keep.sections.trigger.message.hide();
 								this.keep.sections.del.container.show();
@@ -8336,6 +8469,7 @@ pd.modules={
 								this.keep.sections.style.container.show();
 								this.keep.sections.disabled.container.show();
 								this.keep.sections.hidden.container.show();
+								this.keep.sections.option.container.show();
 								this.keep.sections.suspend.container.hide();
 								break;
 						}
@@ -14356,6 +14490,10 @@ pd.constants=pd.extend({
 				en:'Action Name',
 				ja:'アクション名'
 			},
+			option:{
+				en:'Switch Options',
+				ja:'選択項目の表示制限'
+			},
 			report:{
 				en:'Report',
 				ja:'レポート',
@@ -14521,6 +14659,10 @@ pd.constants=pd.extend({
 					en:'Please enter the action name',
 					ja:'アクション名を入力して下さい'
 				},
+				option:{
+					en:'Please specify one or more display options',
+					ja:'表示する選択項目を指定して下さい'
+				},
 				report:{
 					orientation:{
 						en:'Please specify orientation',
@@ -14626,8 +14768,8 @@ pd.constants=pd.extend({
 			},
 			rows:{
 				range:{
-					en:'Enter the lower limit number of rows',
-					ja:'下限行数を入力'
+					en:'Enter the lower limit number of rows or formula',
+					ja:'下限行数または計算式を入力'
 				}
 			},
 			style:{
@@ -15239,7 +15381,7 @@ pd.constants=pd.extend({
 			invalid:{
 				lookup:{
 					app:{
-						en:'Please select an app from [Datasource App] dropdown',
+						en:'Please specify an app from [Datasource App] dropdown',
 						ja:'参照元アプリを指定して下さい'
 					}
 				},
@@ -15334,7 +15476,7 @@ pd.constants=pd.extend({
 		message:{
 			invalid:{
 				app:{
-					en:'Please select an app from [Datasource App] dropdown',
+					en:'Please specify an app from [Datasource App] dropdown',
 					ja:'リンク元アプリを指定して下さい'
 				},
 				criteria:{

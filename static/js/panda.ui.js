@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.1.2
+* Version: 1.1.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -643,7 +643,7 @@ class panda_filter extends panda_dialog{
 																.append(
 																	pd.create('label')
 																	.append(pd.create('input').attr('type','checkbox').attr('data-type',fieldinfo.type).val(option.option.value))
-																	.append(pd.create('span').html(option.option.value))
+																	.append(pd.create('span').html((option.option.value)?option.option.value:'&#9251;'))
 																);
 															});
 															return field;
@@ -1530,7 +1530,7 @@ class panda_record{
 					case 'file':
 					case 'group':
 					case 'user':
-						res[key]={value:[]};;
+						res[key]={value:[]};
 						break;
 					case 'lookup':
 						res[key]={search:'',value:''};
@@ -1620,7 +1620,7 @@ class panda_record{
 									value:(() => {
 										var res=[];
 										field.elms('input').each((element,index) => {
-											if (element.checked) res.push(element.val());
+											if (element.checked && !element.parentNode.hasclass('pd-hidden')) res.push(element.val());
 										});
 										return res;
 									})()
@@ -1670,7 +1670,7 @@ class panda_record{
 									value:(() => {
 										var res='';
 										field.elms('[data-name='+fieldinfo.id+']').each((element,index) => {
-											if (element.checked) res=element.val();
+											if (element.checked && !element.parentNode.hasclass('pd-hidden')) res=element.val();
 										});
 										return res;
 									})()
@@ -1805,7 +1805,13 @@ class panda_record{
 							field.elm('.pd-guide').html(value.value);
 							break;
 						case 'checkbox':
-							field.elms('input').each((element,index) => element.checked=value.value.includes(element.val()));
+							field.elms('input').each((element,index) => element.parentNode.removeclass('pd-hidden'));
+							field.elms('input').each((element,index) => {
+								if (value.option)
+									if (!value.option.includes(element.val()))
+										element.parentNode.addclass('pd-hidden');
+								element.checked=value.value.includes(element.val());
+							});
 							field.elm('.pd-guide').html(value.value.join('<br>'));
 							break;
 						case 'color':
@@ -1850,7 +1856,7 @@ class panda_record{
 							else field.elm('input').val('[]');
 							break;
 						case 'dropdown':
-							field.elm('select').val(value.value);
+							field.elm('select').filteroption(value.option).val(value.value);
 							field.elm('.pd-guide').html(field.elm('select').selectedtext());
 							break;
 						case 'lookup':
@@ -1912,7 +1918,13 @@ class panda_record{
 							}
 							break;
 						case 'radio':
-							field.elms('[data-name='+key+']').each((element,index) => element.checked=(value.value==element.val()));
+							field.elms('[data-name='+key+']').each((element,index) => element.parentNode.removeclass('pd-hidden'));
+							field.elms('[data-name='+key+']').each((element,index) => {
+								if (value.option)
+									if (!value.option.includes(element.val()))
+										element.parentNode.addclass('pd-hidden');
+								element.checked=(value.value==element.val());
+							});
 							field.elm('.pd-guide').html(value.value);
 							break;
 						case 'text':
