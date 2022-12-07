@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.0
+* Version: 1.1.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -27,6 +27,38 @@ class clsRequest extends clsBase
 			if (file_exists($file))
 			{
 				$this->response["file"]=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'));
+				if (is_array($this->response["file"]->apps->user)) $this->response["file"]->apps->user=json_decode("{}");
+				else
+				{
+					$update=false;
+					foreach ($this->response["file"]->apps->user as $key=>$value)
+						$value->actions=array_map(function($item) use (&$update){
+							switch ($item->trigger)
+							{
+								case "button":
+									if (!property_exists($item,"rows"))
+									{
+										$item->rows=["del"=>[],"fill"=>[]];
+										$update=true;
+									}
+									break;
+								case "value":
+									if (!property_exists($item,"rows"))
+									{
+										$item->rows=["del"=>[],"fill"=>[]];
+										$update=true;
+									}
+									if (!property_exists($item,"option"))
+									{
+										$item->option=[];
+										$update=true;
+									}
+									break;
+							}
+							return $item;
+						},$value->actions);
+					if ($update) file_put_contents($file,json_encode($this->response["file"],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
+				}
 				header("HTTP/1.1 200 OK");
 				header('Content-Type: application/json; charset=utf-8');
 				echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
