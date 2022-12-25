@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.1.3
+* Version: 1.1.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1728,297 +1728,335 @@ class panda_record{
 			if (container.elm('[data-type=createdtime]')) res.record['__createdtime']={value:container.elm('[data-type=createdtime]').val()};
 			if (container.elm('[data-type=modifier]')) res.record['__modifier']={value:((container.elm('[data-type=modifier]').val())?JSON.parse(container.elm('[data-type=modifier]').val()):[])};
 			if (container.elm('[data-type=modifiedtime]')) res.record['__modifiedtime']={value:container.elm('[data-type=modifiedtime]').val()};
+			if (container.hasAttribute('row-rel')) res.record['__row_rel']={value:container.attr('row-rel')};
+			if (container.hasAttribute('row-uid')) res.record['__row_uid']={value:container.attr('row-uid')};
 		}
 		else pd.alert(pd.constants.common.message.invalid.record[pd.lang]);
 		return res;
 	}
 	/* set record */
-	set(container,app,record){
-		if ('__uneditable' in record)
-		{
-			if (record['__uneditable'].value) container.addclass('pd-uneditable');
-			else container.removeclass('pd-uneditable');
-			delete record['__uneditable'];
-		}
-		else container.removeclass('pd-uneditable');
-		Object.values(app.fields).filter((item) => item.type=='spacer').each((fieldinfo,index) => {
-			((field) => {
-				if (field)
+	set(container,app,record,adjust=true){
+		return new Promise((resolve,reject) => {
+			var assign=(container,app,record,callback) => {
+				var res=[];
+				if ('__uneditable' in record)
 				{
-					field.removeclass('pd-hidden');
-					if (fieldinfo.id in record)
-					{
-						if (record[fieldinfo.id].hidden) field.addclass('pd-hidden');
-						delete record[fieldinfo.id];
-					}
+					if (record['__uneditable'].value) container.addclass('pd-uneditable');
+					else container.removeclass('pd-uneditable');
+					delete record['__uneditable'];
 				}
-			})(container.elm('[field-id="'+CSS.escape(fieldinfo.id)+'"]'));
-		});
-		for (var key in record)
-			((field,fieldinfo,value) => {
-				if (field)
-				{
-					if (value.disabled) field.addclass('pd-disabled');
-					else field.removeclass('pd-disabled');
-					if (value.hidden) field.addclass('pd-hidden');
-					else field.removeclass('pd-hidden');
-					if (fieldinfo.type!='table')
-					{
-						field=field.elm('.pd-field-value');
-						if (value.backcolor) field.addclass('pd-force-backcolor').elm('.pd-guide').css({backgroundColor:value.backcolor});
-						else field.removeclass('pd-force-backcolor').elm('.pd-guide').css({backgroundColor:''});
-						if (value.forecolor) field.addclass('pd-force-forecolor').elm('.pd-guide').css({color:value.forecolor});
-						else field.removeclass('pd-force-forecolor').elm('.pd-guide').css({color:''});
-						switch (fieldinfo.type)
+				else container.removeclass('pd-uneditable');
+				Object.values(app.fields).filter((item) => item.type=='spacer').each((fieldinfo,index) => {
+					((field) => {
+						if (field)
 						{
-							case 'autonumber':
-							case 'checkbox':
-							case 'creator':
-							case 'createdtime':
-							case 'department':
-							case 'file':
-							case 'group':
-							case 'id':
-							case 'modifier':
-							case 'modifiedtime':
-							case 'radio':
-							case 'user':
-								field.css({
-									backgroundColor:(value.backcolor)?value.backcolor:'',
-									color:(value.forecolor)?value.forecolor:''
-								});
-								break;
-							default:
-								field.elms('input,select,textarea').each((element,index) => {
-									element.css({
-										backgroundColor:(value.backcolor)?value.backcolor:'',
-										color:(value.forecolor)?value.forecolor:''
-									});
-								});
-								break;
+							field.removeclass('pd-hidden');
+							if (fieldinfo.id in record)
+							{
+								if (record[fieldinfo.id].hidden) field.addclass('pd-hidden');
+								delete record[fieldinfo.id];
+							}
 						}
-					}
-					switch (fieldinfo.type)
-					{
-						case 'autonumber':
-						case 'id':
-							field.elm('.pd-guide').html(value.value);
-							break;
-						case 'checkbox':
-							field.elms('input').each((element,index) => element.parentNode.removeclass('pd-hidden'));
-							field.elms('input').each((element,index) => {
-								if (value.option)
-									if (!value.option.includes(element.val()))
-										element.parentNode.addclass('pd-hidden');
-								element.checked=value.value.includes(element.val());
-							});
-							field.elm('.pd-guide').html(value.value.join('<br>'));
-							break;
-						case 'color':
-							field.css({backgroundColor:(value.value)?value.value:'transparent'}).elm('input').val(value.value);
-							field.elm('.pd-guide').html(value.value);
-							break;
-						case 'creator':
-							if (value.value.length>0) field.guide(value.value.first());
-							else field.guide('0');
-							break;
-						case 'createdtime':
-							if (value.value) field.elm('.pd-guide').html(new Date(value.value).format('Y-m-d H:i'));
-							else field.elm('.pd-guide').html('');
-							break;
-						case 'datetime':
-							if (value.value)
+					})(container.elm('[field-id="'+CSS.escape(fieldinfo.id)+'"]'));
+				});
+				for (var key in record)
+					((field,fieldinfo,value) => {
+						if (field)
+						{
+							if (value.disabled) field.addclass('pd-disabled');
+							else field.removeclass('pd-disabled');
+							if (value.hidden) field.addclass('pd-hidden');
+							else field.removeclass('pd-hidden');
+							if (fieldinfo.type!='table')
 							{
-								var date=value.value.parseDateTime();
-								field.elm('input').val(date.format('Y-m-d'));
-								field.elm('.pd-hour').elm('select').val(date.format('H'));
-								field.elm('.pd-minute').elm('select').val(date.format('i'));
-								field.elm('.pd-guide').html(date.format('Y-m-d H:i'));
-							}
-							else
-							{
-								field.elm('input').val('');
-								field.elm('.pd-hour').elm('select').val('');
-								field.elm('.pd-minute').elm('select').val('');
-								field.elm('.pd-guide').html('');
-							}
-							break;
-						case 'department':
-						case 'file':
-						case 'group':
-						case 'user':
-							field.elm('.pd-guide').empty();
-							if (value.value)
-							{
-								field.elm('input').val(JSON.stringify(value.value));
-								value.value.each((value,index) => field.guide(value));
-							}
-							else field.elm('input').val('[]');
-							break;
-						case 'dropdown':
-							field.elm('select').filteroption(value.option).val(value.value);
-							field.elm('.pd-guide').html(field.elm('select').selectedtext());
-							break;
-						case 'lookup':
-							if (value.lookup) field.lookup(value.value,record);
-							else
-							{
-								field.elm('.pd-lookup-search').val(value.search);
-								field.elm('.pd-lookup-value').val(value.value);
-								field.elm('.pd-guide').html(value.search);
-							}
-							break;
-						case 'modifier':
-							if (value.value.length>0) field.guide(value.value.first());
-							else field.guide('0');
-							break;
-						case 'modifiedtime':
-							if (value.value) field.elm('.pd-guide').html(new Date(value.value).format('Y-m-d H:i'));
-							else field.elm('.pd-guide').html('');
-							break;
-						case 'number':
-							if (fieldinfo.demiliter)
-							{
-								if (pd.isnumeric(value.value))
+								field=field.elm('.pd-field-value');
+								if (value.backcolor) field.addclass('pd-force-backcolor').elm('.pd-guide').css({backgroundColor:value.backcolor});
+								else field.removeclass('pd-force-backcolor').elm('.pd-guide').css({backgroundColor:''});
+								if (value.forecolor) field.addclass('pd-force-forecolor').elm('.pd-guide').css({color:value.forecolor});
+								else field.removeclass('pd-force-forecolor').elm('.pd-guide').css({color:''});
+								switch (fieldinfo.type)
 								{
-									field.elm('input').val(Number(value.value).comma(fieldinfo.decimals));
-									field.elm('.pd-guide').html(Number(value.value).comma(fieldinfo.decimals));
+									case 'autonumber':
+									case 'checkbox':
+									case 'creator':
+									case 'createdtime':
+									case 'department':
+									case 'file':
+									case 'group':
+									case 'id':
+									case 'modifier':
+									case 'modifiedtime':
+									case 'radio':
+									case 'user':
+										field.css({
+											backgroundColor:(value.backcolor)?value.backcolor:'',
+											color:(value.forecolor)?value.forecolor:''
+										});
+										break;
+									default:
+										field.elms('input,select,textarea').each((element,index) => {
+											element.css({
+												backgroundColor:(value.backcolor)?value.backcolor:'',
+												color:(value.forecolor)?value.forecolor:''
+											});
+										});
+										break;
 								}
-								else
-								{
-									field.elm('input').val(value.value);
+							}
+							switch (fieldinfo.type)
+							{
+								case 'autonumber':
+								case 'id':
 									field.elm('.pd-guide').html(value.value);
-								}
-							}
-							else
-							{
-								if (fieldinfo.decimals)
-								{
-									if (pd.isnumeric(value.value))
+									break;
+								case 'checkbox':
+									field.elms('input').each((element,index) => element.parentNode.removeclass('pd-hidden'));
+									field.elms('input').each((element,index) => {
+										if (value.option)
+											if (!value.option.includes(element.val()))
+												element.parentNode.addclass('pd-hidden');
+										element.checked=value.value.includes(element.val());
+									});
+									field.elm('.pd-guide').html(value.value.join('<br>'));
+									break;
+								case 'color':
+									field.css({backgroundColor:(value.value)?value.value:'transparent'}).elm('input').val(value.value);
+									field.elm('.pd-guide').html(value.value);
+									break;
+								case 'creator':
+									if (value.value.length>0) field.guide(value.value.first());
+									else field.guide('0');
+									break;
+								case 'createdtime':
+									if (value.value) field.elm('.pd-guide').html(new Date(value.value).format('Y-m-d H:i'));
+									else field.elm('.pd-guide').html('');
+									break;
+								case 'datetime':
+									if (value.value)
 									{
-										field.elm('input').val(Number(value.value).toFixed(parseInt(fieldinfo.decimals)));
-										field.elm('.pd-guide').html(Number(value.value).toFixed(parseInt(fieldinfo.decimals)));
+										var date=value.value.parseDateTime();
+										field.elm('input').val(date.format('Y-m-d'));
+										field.elm('.pd-hour').elm('select').val(date.format('H'));
+										field.elm('.pd-minute').elm('select').val(date.format('i'));
+										field.elm('.pd-guide').html(date.format('Y-m-d H:i'));
 									}
 									else
 									{
-										field.elm('input').val(value.value);
+										field.elm('input').val('');
+										field.elm('.pd-hour').elm('select').val('');
+										field.elm('.pd-minute').elm('select').val('');
+										field.elm('.pd-guide').html('');
+									}
+									break;
+								case 'department':
+								case 'file':
+								case 'group':
+								case 'user':
+									field.elm('.pd-guide').empty();
+									if (value.value)
+									{
+										field.elm('input').val(JSON.stringify(value.value));
+										value.value.each((value,index) => field.guide(value));
+									}
+									else field.elm('input').val('[]');
+									break;
+								case 'dropdown':
+									field.elm('select').filteroption(value.option).val(value.value);
+									field.elm('.pd-guide').html(field.elm('select').selectedtext());
+									break;
+								case 'lookup':
+									if (value.lookup) res.push({field:field,value:value.value});
+									else
+									{
+										field.elm('.pd-lookup-search').val(value.search);
+										field.elm('.pd-lookup-value').val(value.value);
+										field.elm('.pd-guide').html(value.search);
+									}
+									break;
+								case 'modifier':
+									if (value.value.length>0) field.guide(value.value.first());
+									else field.guide('0');
+									break;
+								case 'modifiedtime':
+									if (value.value) field.elm('.pd-guide').html(new Date(value.value).format('Y-m-d H:i'));
+									else field.elm('.pd-guide').html('');
+									break;
+								case 'number':
+									if (fieldinfo.demiliter)
+									{
+										if (pd.isnumeric(value.value))
+										{
+											field.elm('input').val(Number(value.value).comma(fieldinfo.decimals));
+											field.elm('.pd-guide').html(Number(value.value).comma(fieldinfo.decimals));
+										}
+										else
+										{
+											field.elm('input').val(value.value);
+											field.elm('.pd-guide').html(value.value);
+										}
+									}
+									else
+									{
+										if (fieldinfo.decimals)
+										{
+											if (pd.isnumeric(value.value))
+											{
+												field.elm('input').val(Number(value.value).toFixed(parseInt(fieldinfo.decimals)));
+												field.elm('.pd-guide').html(Number(value.value).toFixed(parseInt(fieldinfo.decimals)));
+											}
+											else
+											{
+												field.elm('input').val(value.value);
+												field.elm('.pd-guide').html(value.value);
+											}
+										}
+										else
+										{
+											field.elm('input').val(value.value);
+											field.elm('.pd-guide').html(value.value);
+										}
+									}
+									if (fieldinfo.unit)
+									{
+										if (fieldinfo.unitposition=='prefix') field.elm('.pd-guide').html(fieldinfo.unit+field.elm('.pd-guide').text());
+										else field.elm('.pd-guide').html(field.elm('.pd-guide').text()+fieldinfo.unit);
+									}
+									break;
+								case 'radio':
+									field.elms('[data-name='+key+']').each((element,index) => element.parentNode.removeclass('pd-hidden'));
+									field.elms('[data-name='+key+']').each((element,index) => {
+										if (value.option)
+											if (!value.option.includes(element.val()))
+												element.parentNode.addclass('pd-hidden');
+										element.checked=(value.value==element.val());
+									});
+									field.elm('.pd-guide').html(value.value);
+									break;
+								case 'text':
+									field.elm('input').val(value.value);
+									switch (fieldinfo.format)
+									{
+										case 'mail':
+											field.elm('.pd-guide').append(
+												pd.create('a').attr('href','mailto:'+value.value).html(value.value)
+											);
+											break;
+										case 'tel':
+											field.elm('.pd-guide').append(
+												pd.create('a').attr('href','tel:'+value.value).html(value.value)
+											);
+											break;
+										case 'url':
+											field.elm('.pd-guide').append(
+												pd.create('a').attr('href',value.value).attr('target','_blank').html(value.value)
+											);
+											break;
+										default:
+											field.elm('.pd-guide').html(value.value);
+											break;
+									}
+									break;
+								case 'textarea':
+									field.elm('textarea').val(value.value);
+									field.elm('.pd-guide').html(value.value.replace(/\n/g,'<br>'));
+									break;
+								case 'time':
+									if (value.value)
+									{
+										field.elm('.pd-hour').elm('select').val(value.value.split(':')[0]);
+										field.elm('.pd-minute').elm('select').val(value.value.split(':')[1]);
 										field.elm('.pd-guide').html(value.value);
 									}
-								}
-								else
-								{
-									field.elm('input').val(value.value);
-									field.elm('.pd-guide').html(value.value);
-								}
-							}
-							if (fieldinfo.unit)
-							{
-								if (fieldinfo.unitposition=='prefix') field.elm('.pd-guide').html(fieldinfo.unit+field.elm('.pd-guide').text());
-								else field.elm('.pd-guide').html(field.elm('.pd-guide').text()+fieldinfo.unit);
-							}
-							break;
-						case 'radio':
-							field.elms('[data-name='+key+']').each((element,index) => element.parentNode.removeclass('pd-hidden'));
-							field.elms('[data-name='+key+']').each((element,index) => {
-								if (value.option)
-									if (!value.option.includes(element.val()))
-										element.parentNode.addclass('pd-hidden');
-								element.checked=(value.value==element.val());
-							});
-							field.elm('.pd-guide').html(value.value);
-							break;
-						case 'text':
-							field.elm('input').val(value.value);
-							switch (fieldinfo.format)
-							{
-								case 'mail':
-									field.elm('.pd-guide').append(
-										pd.create('a').attr('href','mailto:'+value.value).html(value.value)
-									);
+									else
+									{
+										field.elm('.pd-hour').elm('select').val('');
+										field.elm('.pd-minute').elm('select').val('');
+										field.elm('.pd-guide').html('');
+									}
 									break;
-								case 'tel':
-									field.elm('.pd-guide').append(
-										pd.create('a').attr('href','tel:'+value.value).html(value.value)
-									);
-									break;
-								case 'url':
-									field.elm('.pd-guide').append(
-										pd.create('a').attr('href',value.value).attr('target','_blank').html(value.value)
-									);
+								case 'table':
+									if (value.value.length==0) field.clearrows();
+									else
+									{
+										field.tr.each((element,index) => {
+											if (value.value.length>index)
+												assign(element,fieldinfo,((values) => {
+													if (value.disabled)
+														for (var key in values) values[key].disabled=true;
+													return values;
+												})(value.value[index]),(unassinged) => res=res.concat(unassinged));
+										});
+										for (var i=field.tr.length;i<value.value.length;i++)
+											assign(field.addrow(),fieldinfo,((values) => {
+												if (value.disabled)
+													for (var key in values) values[key].disabled=true;
+												return values;
+											})(value.value[i]),(unassinged) => res=res.concat(unassinged));
+										field.tr.slice(value.value.length).each((element,index) => field.delrow(element));
+									}
+									if (field.tr.length==0)
+										((row) => {
+											if (value.disabled)
+												assign(row,fieldinfo,((values) => {
+													for (var key in values) values[key].disabled=true;
+													return values;
+												})(this.get(row,fieldinfo,true).record),(unassinged) => res=res.concat(unassinged));
+										})(field.addrow());
 									break;
 								default:
+									field.elm('input').val(value.value);
 									field.elm('.pd-guide').html(value.value);
 									break;
 							}
-							break;
-						case 'textarea':
-							field.elm('textarea').val(value.value);
-							field.elm('.pd-guide').html(value.value.replace(/\n/g,'<br>'));
-							break;
-						case 'time':
-							if (value.value)
-							{
-								field.elm('.pd-hour').elm('select').val(value.value.split(':')[0]);
-								field.elm('.pd-minute').elm('select').val(value.value.split(':')[1]);
-								field.elm('.pd-guide').html(value.value);
-							}
-							else
-							{
-								field.elm('.pd-hour').elm('select').val('');
-								field.elm('.pd-minute').elm('select').val('');
-								field.elm('.pd-guide').html('');
-							}
-							break;
-						case 'table':
-							if (value.value.length==0) field.clearrows();
-							else
-							{
-								field.tr.each((element,index) => {
-									if (value.value.length>index)
-										this.set(element,fieldinfo,((values) => {
-											if (value.disabled)
-												for (var key in values) values[key].disabled=true;
-											return values;
-										})(value.value[index]));
-								});
-								for (var i=field.tr.length;i<value.value.length;i++)
-									this.set(field.addrow(),fieldinfo,((values) => {
-										if (value.disabled)
-											for (var key in values) values[key].disabled=true;
-										return values;
-									})(value.value[i]));
-								field.tr.slice(value.value.length).each((element,index) => field.delrow(element));
-							}
-							if (field.tr.length==0)
-								((row) => {
-									if (value.disabled)
-										this.set(row,fieldinfo,((values) => {
-											for (var key in values) values[key].disabled=true;
-											return values;
-										})(this.get(row,fieldinfo,true).record));
-								})(field.addrow());
-							break;
-						default:
-							field.elm('input').val(value.value);
-							field.elm('.pd-guide').html(value.value);
-							break;
+						}
+					})(container.elm('[field-id="'+CSS.escape(key)+'"]'),app.fields[key],record[key]);
+				/* reserved field */
+				if ('__id' in record)
+					if (container.elm('[data-type=id]')) container.elm('[data-type=id]').val(record['__id'].value);
+				if ('__autonumber' in record)
+					if (container.elm('[data-type=autonumber]')) container.elm('[data-type=autonumber]').val(record['__autonumber'].value);
+				if ('__creator' in record)
+					if (container.elm('[data-type=creator]')) container.elm('[data-type=creator]').val(JSON.stringify(record['__creator'].value));
+				if ('__createdtime' in record)
+					if (container.elm('[data-type=createdtime]')) container.elm('[data-type=createdtime]').val(record['__createdtime'].value);
+				if ('__modifier' in record)
+					if (container.elm('[data-type=modifier]')) container.elm('[data-type=modifier]').val(JSON.stringify(record['__modifier'].value));
+				if ('__modifiedtime' in record)
+					if (container.elm('[data-type=modifiedtime]')) container.elm('[data-type=modifiedtime]').val(record['__modifiedtime'].value);
+				if ('__row_rel' in record)
+					container.attr('row-rel',record['__row_rel'].value);
+				if ('__row_uid' in record)
+					container.attr('row-uid',record['__row_uid'].value);
+				callback(res);
+			};
+			assign(container,app,record,(unassinged) => {
+				var overwrite=(index,callback) => {
+					if (unassinged.length!=0)
+					{
+						unassinged[index].field.lookup(unassinged[index].value).then(() => {
+							index++;
+							if (index<unassinged.length) overwrite(index,callback);
+							else callback((adjust)?('id' in app):false);
+						});
 					}
-				}
-			})(container.elm('[field-id="'+CSS.escape(key)+'"]'),app.fields[key],record[key]);
-		/* reserved field */
-		if ('__id' in record)
-			if (container.elm('[data-type=id]')) container.elm('[data-type=id]').val(record['__id'].value);
-		if ('__autonumber' in record)
-			if (container.elm('[data-type=autonumber]')) container.elm('[data-type=autonumber]').val(record['__autonumber'].value);
-		if ('__creator' in record)
-			if (container.elm('[data-type=creator]')) container.elm('[data-type=creator]').val(JSON.stringify(record['__creator'].value));
-		if ('__createdtime' in record)
-			if (container.elm('[data-type=createdtime]')) container.elm('[data-type=createdtime]').val(record['__createdtime'].value);
-		if ('__modifier' in record)
-			if (container.elm('[data-type=modifier]')) container.elm('[data-type=modifier]').val(JSON.stringify(record['__modifier'].value));
-		if ('__modifiedtime' in record)
-			if (container.elm('[data-type=modifiedtime]')) container.elm('[data-type=modifiedtime]').val(record['__modifiedtime'].value);
-		return new Promise((resolve,reject) => resolve(record));
+					else callback(false);
+				};
+				overwrite(0,(adjust) => {
+					if (container.hasOwnProperty('cleanup')) container.cleanup();
+					if (adjust)
+					{
+						pd.event.call(app.id,'pd.action.call',{
+							record:this.get(container,app,true).record,
+							workplace:(container.closest('.pd-view'))?'view':'record'
+						})
+						.then((param) => {
+							pd.record.set(container,app,param.record,false).then(() => resolve());
+						});
+					}
+					else resolve();
+				});
+			});
+		});
 	}
 };
 class panda_recordpicker extends panda_dialog{
@@ -2793,7 +2831,7 @@ class panda_user_interface{
 								container:scope,
 								record:pd.record.get(container,app,true).record
 							};
-							if (scope.hasAttribute('row-id')) res=pd.extend({rowindex:scope.attr('row-id')},res);
+							if (scope.hasAttribute('row-idx')) res=pd.extend({rowindex:parseInt(scope.attr('row-idx'))},res);
 							return res;
 						})())
 						.then((param) => {
@@ -3295,7 +3333,8 @@ class panda_user_interface{
 											};
 										}
 										catch(e){pd.alert(e.message);}
-									});
+									})
+									.catch((error) => pd.alert(error.message));
 								};
 								if (fieldinfo.required)
 								{
@@ -3393,7 +3432,7 @@ class panda_user_interface{
 												})(fieldinfo.criteria,pd.record.get(field.closest('[form-id=form_'+app.id+']'),app,true).record));
 												res.push(fieldinfo.query);
 												return res.filter((item) => item).join(' and ');
-											})((field.closest('.pd-scope').hasAttribute('row-id'))?parseInt(field.closest('.pd-scope').attr('row-id')):0);
+											})((field.closest('.pd-scope').hasAttribute('row-idx'))?parseInt(field.closest('.pd-scope').attr('row-idx')):0);
 											if (search)
 											{
 												fieldinfo.query=(() => {
@@ -3429,46 +3468,10 @@ class panda_user_interface{
 									});
 								});
 								field.recordpicker=new panda_recordpicker();
-								field.lookup=(id,record) => {
+								field.lookup=(id) => {
 									return new Promise((resolve,reject) => {
 										((scope) => {
-											if (id)
-											{
-												pd.request(
-													this.baseuri()+'/records.php',
-													'GET',
-													{},
-													{
-														app:fieldinfo.app,
-														id:id
-													},
-													true
-												)
-												.then((resp) => {
-													if (resp.total!=0)
-													{
-														pd.record.set(scope,((fieldinfo.tableid)?app.fields[fieldinfo.tableid]:app),(() => {
-															var res={};
-															res[fieldinfo.id]={
-																search:resp.record[fieldinfo.search].value,
-																value:resp.record['__id'].value
-															};
-															for (var key in fieldinfo.mapping)
-																if ((key in resp.record) && (fieldinfo.mapping[key] in fieldinfos))
-																	res[fieldinfo.mapping[key]]=pd.extend((fieldinfos[fieldinfo.mapping[key]].type=='lookup')?{lookup:true}:{},{value:resp.record[key].value});
-															return res;
-														})());
-														resolve();
-													}
-													else resolve();
-												})
-												.catch((error) => {
-													pd.alert(error.message);
-													resolve();
-												});
-											}
-											else
-											{
+											var clear=() => {
 												pd.record.set(scope,((fieldinfo.tableid)?app.fields[fieldinfo.tableid]:app),(() => {
 													var res={};
 													res[fieldinfo.id]={
@@ -3495,13 +3498,132 @@ class panda_user_interface{
 																	break;
 															}
 														}
-													if (record instanceof Object)
-														for (var key in res)
-															if (key in record) record[key]=pd.extend({},res[key]);
 													return res;
-												})());
-												resolve();
+												})(),false).then(() => {
+													if (fieldinfo.table.length!=0)
+													{
+														((container,scope) => {
+															pd.record.set(container,app,((record,uid) => {
+																fieldinfo.table.each((table,index) => {
+																	if (table.id.internal in record)
+																		record[table.id.internal].value=record[table.id.internal].value.filter((item) => {
+																			return item['__row_rel'].value!=fieldinfo.tableid+uid+'_'+fieldinfo.id;
+																		});
+																});
+																return record;
+															})(pd.record.get(container,app,true).record,(scope.hasAttribute('row-uid'))?scope.attr('row-uid'):''),false).then(() => resolve());
+														})(field.closest('[form-id=form_'+app.id+']'),field.closest('.pd-scope'));
+													}
+													else resolve();
+												});
+											};
+											if (id)
+											{
+												pd.request(
+													this.baseuri()+'/records.php',
+													'GET',
+													{},
+													{
+														app:fieldinfo.app,
+														id:id
+													},
+													true
+												)
+												.then((resp) => {
+													if (resp.total!=0)
+													{
+														pd.record.set(scope,((fieldinfo.tableid)?app.fields[fieldinfo.tableid]:app),(() => {
+															var res={};
+															res[fieldinfo.id]={
+																search:resp.record[fieldinfo.search].value,
+																value:resp.record['__id'].value
+															};
+															for (var key in fieldinfo.mapping)
+																if ((key in resp.record) && (fieldinfo.mapping[key] in fieldinfos))
+																	res[fieldinfo.mapping[key]]=pd.extend((fieldinfos[fieldinfo.mapping[key]].type=='lookup')?{lookup:true}:{},{value:resp.record[key].value});
+															return res;
+														})(),false).then(() => {
+															if (fieldinfo.table.length!=0)
+															{
+																((container,scope) => {
+																	pd.record.set(container,app,((record,uid) => {
+																		((records) => {
+																			fieldinfo.table.each((table,index) => {
+																				if ((table.id.internal in records.internal) && (table.id.external in records.external))
+																				{
+																					((rows) => {
+																						if (rows.internal.value.length>0)
+																							if (!((row) => {
+																								var res=false;
+																								for (var key in row)
+																								{
+																									switch (key)
+																									{
+																										case '__row_rel':
+																											if (row[key].value) res=true;
+																											break;
+																										case '__row_uid':
+																											break;
+																										default:
+																											((value) => {
+																												if (value!=null)
+																												{
+																													if (fieldinfos[key].type=='radio')
+																													{
+																														if (value!=fieldinfos[key].options.first().option.value) res=true;
+																													}
+																													else
+																													{
+																														if (value.length!=0) res=true;
+																													}
+																												}
+																											})(row[key].value);
+																											break;
+																									}
+																									if (res) break;
+																								}
+																								return res;
+																							})(rows.internal.value.last())) rows.internal.value.pop();
+																						rows.internal.value=rows.internal.value.filter((item) => {
+																							return item['__row_rel'].value!=fieldinfo.tableid+uid+'_'+fieldinfo.id;
+																						});
+																						((rel,uid) => {
+																							rows.external.value.each((row,index) => {
+																								uid++;
+																								rows.internal.value.push(table.fields.reduce((result,current) => {
+																									if ((current.external in row) && (current.internal in fieldinfos))
+																									{
+																										if (fieldinfos[current.internal].type!='lookup') result[current.internal]={value:row[current.external].value};
+																										else result[current.internal]={lookup:true,value:row[current.external].value};
+																									}
+																									return result;
+																								},{'__row_rel':{value:rel},'__row_uid':{value:uid}}));
+																							});
+																						})(
+																							fieldinfo.tableid+uid+'_'+fieldinfo.id,
+																							container.elm('[field-id="'+CSS.escape(table.id.internal)+'"]').tr.reduce((result,current) => {
+																								return (result<parseInt(current.attr('row-uid')))?parseInt(current.attr('row-uid')):result;
+																							},-1)
+																						);
+																					})({external:records.external[table.id.external],internal:records.internal[table.id.internal]});
+																				}
+																			});
+																		})({external:resp.record,internal:record});
+																		return record;
+																	})(pd.record.get(container,app,true).record,(scope.hasAttribute('row-uid'))?scope.attr('row-uid'):''),false).then(() => resolve());
+																})(field.closest('[form-id=form_'+app.id+']'),field.closest('.pd-scope'));
+															}
+															else resolve();
+														});
+													}
+													else clear();
+												})
+												.catch((error) => {
+													pd.alert(error.message);
+													resolve();
+												});
 											}
+											else clear();
 										})(field.closest('.pd-scope'));
 									});
 								};
@@ -4050,6 +4172,12 @@ class panda_user_interface{
 				.append(pd.create('input').attr('type','hidden').attr('data-type','modifier'))
 				.append(pd.create('input').attr('type','hidden').attr('data-type','modifiedtime'))
 				.elms('input,select,textarea').each((element,index) => element.initialize());
+				/* setup to table cleanup method */
+				container.cleanup=() => {
+					container.elms('table').each((element,index) => {
+						if (element.hasOwnProperty('cleanup')) element.cleanup();
+					});
+				};
 				/* setup to focus method */
 				container.focus=(field) => {
 					var elements=(() => {
@@ -4354,6 +4482,22 @@ class panda_user_interface{
 						});
 					});
 				})(table.attr('field-id'));
+				/* setup to table cleanup method */
+				table.cleanup=() => {
+					((container) => {
+						table.tr.each((element,index) => {
+							if (element.hasAttribute('row-rel'))
+							{
+								((rel) => {
+									if ((rel || []).length>1)
+										if (!container.elm('[field-id="'+CSS.escape(rel[1])+'"]').elm('[row-uid="'+CSS.escape(rel[2])+'"]'))
+											table.delrow(element);
+								})(element.attr('row-rel').match(/^(field_[0-9]+_)([0-9]+)_field_[0-9]+_$/));
+							}
+						});
+					})(table.closest('[form-id=form_'+app.id+']'));
+				};
+				/* setup spread */
 				return table.spread((row,index) => {
 					((container) => {
 						/* event */
@@ -4362,7 +4506,7 @@ class panda_user_interface{
 							pd.event.call(app.id,'pd.row.add.'+table.attr('field-id'),{
 								container:table,
 								record:pd.record.get(container,app,true).record,
-								rowindex:parseInt(row.attr('row-id'))+1
+								rowindex:parseInt(row.attr('row-idx'))+1
 							})
 							.then((param) => {
 								if (!param.error)
@@ -4386,10 +4530,14 @@ class panda_user_interface{
 							pd.event.call(app.id,'pd.row.copy.'+table.attr('field-id'),{
 								container:table,
 								record:((record,index) => {
-									record[table.attr('field-id')].value[index+1]=pd.extend({},record[table.attr('field-id')].value[index]);
+									record[table.attr('field-id')].value[index+1]=((row,uid) => {
+										row['__row_rel'].value='';
+										row['__row_uid'].value=uid;
+										return row;
+									})(pd.extend({},record[table.attr('field-id')].value[index]),row.nextSibling.attr('row-uid'));
 									return record;
-								})(pd.record.get(container,app,true).record,parseInt(row.attr('row-id'))),
-								rowindex:parseInt(row.attr('row-id'))+1
+								})(pd.record.get(container,app,true).record,parseInt(row.attr('row-idx'))),
+								rowindex:parseInt(row.attr('row-idx'))+1
 							})
 							.then((param) => {
 								if (!param.error)
@@ -4413,7 +4561,7 @@ class panda_user_interface{
 								pd.event.call(app.id,'pd.row.del.'+table.attr('field-id'),{
 									container:table,
 									record:pd.record.get(container,app,true).record,
-									rowindex:parseInt(row.attr('row-id'))
+									rowindex:parseInt(row.attr('row-idx'))
 								})
 								.then((param) => {
 									if (!param.error)
@@ -4436,21 +4584,24 @@ class panda_user_interface{
 						/* activation */
 						row.elms('.pd-field').each((element,index) => this.field.activate(element,app));
 						/* setup row index */
-						table.tr.each((element,index) => element.attr('row-id',index));
+						row.attr('row-uid',table.tr.reduce((result,current,index) => {
+							current.attr('row-idx',index);
+							return (result<parseInt(current.attr('row-uid')))?parseInt(current.attr('row-uid')):result;
+						},-1)+1);
 					})(table.closest('[form-id=form_'+app.id+']'));
 				},(table,index) => {
 					if (table.tr.length==0) table.addrow();
 					else
 					{
 						/* setup row index */
-						table.tr.each((element,index) => element.attr('row-id',index));
+						table.tr.each((element,index) => element.attr('row-idx',index));
 					}
 				},false);
 			},
 			create:(table,isform,isview) => {
 				return ((res) => {
 					if (!isview) res.append(pd.create('thead').append(pd.create('tr')));
-					res.append(pd.create('tbody').append(pd.create('tr').addclass('pd-scope')));
+					res.append(pd.create('tbody').append(pd.create('tr').addclass('pd-scope').attr('row-idx','').attr('row-rel','').attr('row-uid','')));
 					for (var key in table.fields)
 						((fieldinfo) => {
 							if (!isview)
@@ -4707,7 +4858,7 @@ class panda_user_interface{
 												workplace:'view'
 											})
 											.then((param) => {
-												pd.record.set(row.elm('[form-id=form_'+app.id+']').attr('unsaved','unsaved'),app,param.record).then((record) => {
+												pd.record.set(row.elm('[form-id=form_'+app.id+']').attr('unsaved','unsaved'),app,param.record).then(() => {
 													pd.event.call(app.id,'pd.create.load.complete',{container:row.elm('[form-id=form_'+app.id+']'),viewid:viewid});
 												});
 												((event) => {
@@ -4770,7 +4921,7 @@ class panda_user_interface{
 													workplace:'view'
 												})
 												.then((param) => {
-													pd.record.set(row.elm('[form-id=form_'+app.id+']').attr('unsaved','unsaved'),app,param.record).then((record) => {
+													pd.record.set(row.elm('[form-id=form_'+app.id+']').attr('unsaved','unsaved'),app,param.record).then(() => {
 														pd.event.call(app.id,'pd.create.load.complete',{container:row.elm('[form-id=form_'+app.id+']'),copy:true,viewid:viewid});
 													});
 													((event) => {

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.1.3
+* Version: 1.1.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1447,8 +1447,9 @@ pd.modules={
 												pd.alert('Done!',() => {
 													if ('record' in param)
 													{
-														pd.record.set(this.record.ui.body,this.app,this.actions.value(param.record));
-														this.record.save(true);
+														pd.record.set(this.record.ui.body,this.app,this.actions.value(param.record)).then(() => {
+															this.record.save(true);
+														});
 													}
 												});
 											}).catch(() => pd.loadend());
@@ -1767,7 +1768,8 @@ pd.modules={
 																					index++;
 																					if (index<body.attachment.length) download(index,callback);
 																					else callback();
-																				});
+																				})
+																				.catch((error) => pd.alert(error.message));
 																			}
 																			else callback();
 																		}
@@ -2793,7 +2795,7 @@ pd.modules={
 								.then((param) => {
 									if (!param.error)
 									{
-										pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => {
+										pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then(() => {
 											pd.event.call(this.app.id,'pd.edit.load.complete',{container:this.record.ui.body}).then(() => {
 												this.linkage.load('',pd.record.get(this.record.ui.body,this.app,true).record);
 											});
@@ -3293,7 +3295,7 @@ pd.modules={
 										})
 										.then((param) => {
 											if (!param.error)
-												pd.record.set(this.record.ui.init('copied'),this.app,this.actions.value(param.record)).then((record) => {
+												pd.record.set(this.record.ui.init('copied'),this.app,this.actions.value(param.record)).then(() => {
 													pd.event.call(this.app.id,'pd.create.load.complete',{container:this.record.ui.body,copy:true}).then(() => {
 														this.linkage.load('',pd.record.get(this.record.ui.body,this.app,true).record);
 													});
@@ -3678,7 +3680,7 @@ pd.modules={
 						.then((param) => {
 							if (!param.error)
 							{
-								pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then((record) => {
+								pd.record.set(this.record.ui.init(),this.app,this.actions.value(param.record)).then(() => {
 									pd.event.call(this.app.id,'pd.create.load.complete',{container:this.record.ui.body}).then(() => {
 										this.linkage.load('',pd.record.get(this.record.ui.body,this.app,true).record);
 									});
@@ -3897,11 +3899,26 @@ pd.modules={
 																			switch (fieldinfo.type)
 																			{
 																				case 'lookup':
-																					fieldinfo.criteria.each((criteria,index) => res.push({id:criteria.internal,message:'-&nbsp;'+fieldinfo.caption+'&nbsp;(This app)'}));
+																					((mapping) => {
+																						Array.from(new Set(mapping)).each((mapping,index) => res.push({id:mapping,message:'-&nbsp;'+fieldinfo.caption+'&nbsp;(This app)'}));
+																					})([
+																						...fieldinfo.criteria.map((item) => item.internal),
+																						...fieldinfo.table.reduce((result,current) => {
+																							return result.concat([current.id.internal]).concat(current.fields.map((item) => item.internal));
+																						},[])
+																					]);
 																					if (fieldinfo.app==this.app.id)
 																						((mapping) => {
 																							Array.from(new Set(mapping)).each((mapping,index) => res.push({id:mapping,message:'-&nbsp;'+fieldinfo.caption+'&nbsp;(This app)'}));
-																						})([...fieldinfo.criteria.map((item) => item.external),...Object.keys(fieldinfo.mapping),...fieldinfo.picker,fieldinfo.search]);
+																						})([
+																							...fieldinfo.criteria.map((item) => item.external),
+																							...Object.keys(fieldinfo.mapping),
+																							...fieldinfo.picker,
+																							...fieldinfo.table.reduce((result,current) => {
+																								return result.concat([current.id.external]).concat(current.fields.map((item) => item.external));
+																							},[]),
+																							fieldinfo.search
+																						]);
 																					break;
 																			}
 																			break;
@@ -4002,7 +4019,15 @@ pd.modules={
 																						if (fieldinfo.app==this.app.id)
 																							((mapping) => {
 																								Array.from(new Set(mapping)).each((mapping,index) => res.push({id:mapping,message:'-&nbsp;'+fieldinfo.caption+'&nbsp;('+app.name+')'}));
-																							})([...fieldinfo.criteria.map((item) => item.external),...Object.keys(fieldinfo.mapping),...fieldinfo.picker,fieldinfo.search]);
+																							})([
+																								...fieldinfo.criteria.map((item) => item.external),
+																								...Object.keys(fieldinfo.mapping),
+																								...fieldinfo.picker,
+																								...fieldinfo.table.reduce((result,current) => {
+																									return result.concat([current.id.external]).concat(current.fields.map((item) => item.external));
+																								},[]),
+																								fieldinfo.search
+																							]);
 																						break;
 																				}
 																			})(fieldinfos[key]);
@@ -4115,6 +4140,7 @@ pd.modules={
 																			ignore:true,
 																			criteria:[],
 																			mapping:{},
+																			table:[],
 																			picker:[]
 																		},fieldinfo);
 																		break;
@@ -4816,7 +4842,7 @@ pd.modules={
 				/* modify elements */
 				this.header.addclass('pd-kumaneko-builder-header')
 				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('App Settings'))
-				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'));
 				this.container.css({
 					height:'calc(100% - 1em)',
 					width:'calc(100% - 1em)'
@@ -4979,6 +5005,7 @@ pd.modules={
 																ignore:true,
 																criteria:[],
 																mapping:{},
+																table:[],
 																picker:[]
 															},res);
 															break;
@@ -5877,15 +5904,59 @@ pd.modules={
 															break;
 														}
 														if (!added)
+														{
+															fieldinfo.table.some((item) => {
+																((tableid) => {
+																	if (tableid==fieldinfo.tableid)
+																	{
+																		res.missing.push('-&nbsp;'+fieldinfo.caption);
+																		added=true;
+																	}
+																	else
+																	{
+																		item.fields.some((item) => {
+																			if (tableid!=fieldinfos[item.internal].tableid)
+																			{
+																				res.missing.push('-&nbsp;'+fieldinfo.caption);
+																				added=true;
+																			}
+																			return added;
+																		});
+																	}
+																})(item.id.internal);
+																return added;
+															});
+														}
+														if (!added)
 															((app) => {
 																if (app)
 																{
 																	((mapping) => {
-																		if (Array.from(new Set(mapping)).some((item) => !(item in app.fields))) res.missing.push('-&nbsp;'+fieldinfo.caption);
-																	})([...fieldinfo.criteria.map((item) => item.external),...Object.keys(fieldinfo.mapping),...fieldinfo.picker,fieldinfo.search]);
+																		if (Array.from(new Set(mapping)).some((item) => !(item in app.fields)))
+																		{
+																			res.missing.push('-&nbsp;'+fieldinfo.caption);
+																			added=true;
+																		}
+																	})([
+																		...fieldinfo.criteria.map((item) => item.external),
+																		...Object.keys(fieldinfo.mapping),
+																		...fieldinfo.picker,
+																		...fieldinfo.table.map((item) => item.id.external),
+																		fieldinfo.search
+																	]);
 																}
-																else res.missing.push('-&nbsp;'+fieldinfo.caption);
+																else
+																{
+																	res.missing.push('-&nbsp;'+fieldinfo.caption);
+																	added=true;
+																}
 															})(config.apps.user[fieldinfo.app]);
+														if (!added)
+															((fieldinfos) => {
+																((mapping) => {
+																	if (Array.from(new Set(mapping)).some((item) => !(item in fieldinfos))) res.missing.push('-&nbsp;'+fieldinfo.caption);
+																})(fieldinfo.table.reduce((result,current) => result.concat(current.fields.map((item) => item.external)),[]));
+															})(pd.ui.field.parallelize(config.apps.user[fieldinfo.app].fields));
 														break;
 												}
 												break;
@@ -5930,11 +6001,24 @@ pd.modules={
 														{
 															case 'lookup':
 																if (fieldinfo.app==this.app.id)
+																{
 																	((mapping) => {
 																		Array.from(new Set(mapping)).each((mapping,index) => {
 																			if (!(mapping in fields.internal)) res.push('-&nbsp;'+fieldinfo.caption+'&nbsp;('+app.name+')');
 																		});
-																	})([...fieldinfo.criteria.map((item) => item.external),...Object.keys(fieldinfo.mapping),...fieldinfo.picker,fieldinfo.search]);
+																	})([
+																		...fieldinfo.criteria.map((item) => item.external),
+																		...Object.keys(fieldinfo.mapping),
+																		...fieldinfo.picker,
+																		...fieldinfo.table.reduce((result,current) => result.concat(current.fields.map((item) => item.external)),[]),
+																		fieldinfo.search
+																	]);
+																	((mapping,tables) => {
+																		Array.from(new Set(mapping)).each((mapping,index) => {
+																			if (!tables.includes(mapping)) res.push('-&nbsp;'+fieldinfo.caption+'&nbsp;('+app.name+')');
+																		});
+																	})(fieldinfo.table.map((item) => item.id.external),Array.from(new Set(Object.values(fields.internal).map((item) => item.tableid))));
+																}
 																break;
 														}
 													})(fields.external[key]);
@@ -7120,7 +7204,7 @@ pd.modules={
 				this.keep.sections.hidden.table=pd.ui.table.activate(pd.ui.table.create(this.app.fields.hidden),this.app);
 				this.header.addclass('pd-kumaneko-builder-header')
 				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('Action Settings'))
-				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'));
 				this.container.addclass('pd-kumaneko-main').css({
 					height:'calc(100% - 1em)',
 					width:'55em'
@@ -8633,7 +8717,7 @@ pd.modules={
 				},false);
 				this.header.addclass('pd-kumaneko-builder-header')
 				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('Deduplication Settings'))
-				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'));
 				this.container.addclass('pd-kumaneko-main').css({
 					height:'calc(100% - 1em)',
 					width:'55em'
@@ -9055,14 +9139,383 @@ pd.modules={
 						}
 					}
 				};
+				this.builder={
+					lookup:class extends panda_dialog{
+						/* constructor */
+						constructor(){
+							super(999996,false,false);
+							/* setup properties */
+							this.keep={
+								fields:{}
+							};
+							this.tables={
+								field:null
+							};
+							/* modify elements */
+							this.tables.field=pd.ui.table.create({
+								id:'fields',
+								type:'table',
+								caption:'',
+								nocaption:true,
+								fields:{
+									external:{
+										id:'external',
+										type:'dropdown',
+										caption:'',
+										required:false,
+										nocaption:true,
+										options:[]
+									},
+									guide:{
+										id:'guide',
+										type:'spacer',
+										caption:'',
+										required:false,
+										nocaption:true,
+										contents:'<span class="pd-icon pd-icon-arrow pd-icon-arrow-right"></span>'
+									},
+									internal:{
+										id:'internal',
+										type:'dropdown',
+										caption:'',
+										required:false,
+										nocaption:true,
+										options:[]
+									}
+								}
+							}).addclass('pd-mapping').spread((row,index) => {
+								/* event */
+								row.elm('.pd-table-row-add').on('click',(e) => {
+									this.tables.field.insertrow(row);
+								});
+								row.elm('.pd-table-row-del').on('click',(e) => {
+									pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+										this.tables.field.delrow(row);
+									});
+								});
+								/* modify elements */
+								((cells) => {
+									cells.external.on('change',(e) => e.currentTarget.rebuild()).rebuild=() => {
+										return new Promise((resolve,reject) => {
+											cells.internal.empty().append(pd.create('option'));
+											if (cells.external.val())
+											{
+												resolve(((elements) => {
+													var res={};
+													if (elements.internal.val())
+														((fields) => {
+															for (var key in fields.internal)
+																((fieldinfo) => {
+																	if (pd.ui.field.typing(fields.external[cells.external.val()],fieldinfo))
+																	{
+																		cells.internal.append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
+																		res[fieldinfo.id]=fieldinfo;
+																	}
+																})(fields.internal[key]);
+														})({
+															external:this.keep.fields.external[elements.external.val()].fields,
+															internal:this.keep.fields.internal[elements.internal.val()].fields
+														});
+													return res;
+												})({
+													external:this.contents.elm('[field-id=external]').elm('select'),
+													internal:this.contents.elm('[field-id=internal]').elm('select')
+												}));
+											}
+											else resolve({});
+										});
+									};
+								})({
+									external:row.elm('[field-id=external]').elm('select'),
+									internal:row.elm('[field-id=internal]').elm('select')
+								});
+							},(table,index) => {
+								if (table.tr.length==0) table.addrow();
+							},false);
+							this.header.css({paddingLeft:'0.25em',textAlign:'left'}).html('Lookup Table Settings');
+							this.container.addclass('pd-kumaneko-main').css({
+								height:'calc(100% - 1em)',
+								width:'45em'
+							});
+							this.contents.addclass('pd-kumaneko-fieldbuilder').css({
+								padding:'0'
+							})
+							.append(
+								((contents) => {
+									contents
+									.append(
+										((res) => {
+											res.elm('select').on('change',(e) => e.currentTarget.rebuild()).rebuild=() => {
+												return new Promise((resolve,reject) => {
+													this.tables.field.clearrows();
+													this.tables.field.template.elm('[field-id=external]').elm('select').empty().append(pd.create('option'));
+													this.tables.field.template.elm('[field-id=internal]').elm('select').empty().append(pd.create('option'));
+													this.tables.field.template.elm('[field-id=guide]').parentNode.addclass('pd-mapping-guide');
+													if (res.elm('select').val())
+													{
+														resolve(((fieldinfos) => {
+															for (var key in fieldinfos)
+																((fieldinfo) => {
+																	switch (fieldinfo.type)
+																	{
+																		case 'spacer':
+																			break;
+																		default:
+																			this.tables.field.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
+																			break;
+																	}
+																})(fieldinfos[key]);
+															this.tables.field.addrow();
+															return {};
+														})(this.keep.fields.external[res.elm('select').val()].fields));
+													}
+													else
+													{
+														this.tables.field.addrow();
+														resolve({});
+													}
+												});
+											};
+											return res;
+										})(pd.ui.field.create({
+											id:'external',
+											type:'dropdown',
+											caption:pd.constants.field.caption.lookup.table.builder.external[pd.lang],
+											required:false,
+											nocaption:false,
+											options:[]
+										}).css({width:'50%'}))
+									)
+									.append(
+										((res) => {
+											res.elm('select').on('change',(e) => e.currentTarget.rebuild()).rebuild=() => {
+												return new Promise((resolve,reject) => {
+													this.tables.field.clearrows();
+													this.tables.field.template.elm('[field-id=internal]').elm('select').empty().append(pd.create('option'));
+													this.tables.field.template.elm('[field-id=guide]').parentNode.addclass('pd-mapping-guide');
+													this.tables.field.addrow();
+													resolve({});
+												});
+											};
+											return res;
+										})(pd.ui.field.create({
+											id:'internal',
+											type:'dropdown',
+											caption:pd.constants.field.caption.lookup.table.builder.internal[pd.lang],
+											required:false,
+											nocaption:false,
+											options:[]
+										}).css({width:'50%'}))
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-section')
+										.append(pd.create('span').addclass('pd-table-caption').html(pd.constants.field.caption.lookup.table.builder.fields[pd.lang]))
+										.append(this.tables.field)
+									);
+									return contents;
+								})(pd.create('div').addclass('pd-scope'))
+							);
+							this.contents.elms('input,select,textarea').each((element,index) => element.initialize());
+						}
+						/* get configuration */
+						get(){
+							return new Promise((resolve,reject) => {
+								var res={
+									error:false,
+									table:{
+										id:{
+											external:this.contents.elm('[field-id=external]').elm('select').val(),
+											internal:this.contents.elm('[field-id=internal]').elm('select').val()
+										},
+										fields:this.tables.field.tr.reduce((result,current) => {
+											if (current.elm('[field-id=external]').elm('select').val() && current.elm('[field-id=internal]').elm('select').val())
+												result.push({
+													external:current.elm('[field-id=external]').elm('select').val(),
+													internal:current.elm('[field-id=internal]').elm('select').val()
+												});
+											return result;
+										},[])
+									}
+								};
+								if (!res.error)
+									if (!res.table.id.external)
+									{
+										res.error=true;
+										pd.alert(pd.constants.field.message.invalid.lookup.table.builder.external[pd.lang],() => {
+											resolve(res);
+										});
+									}
+								if (!res.error)
+									if (!res.table.id.internal)
+									{
+										res.error=true;
+										pd.alert(pd.constants.field.message.invalid.lookup.table.builder.internal[pd.lang],() => {
+											resolve(res);
+										});
+									}
+								if (!res.error)
+									if (res.table.fields.length==0)
+									{
+										res.error=true;
+										pd.alert(pd.constants.field.message.invalid.lookup.table.builder.fields[pd.lang],() => {
+											resolve(res);
+										});
+									}
+								if (!res.error) resolve(res);
+							});
+						}
+						/* set configuration */
+						set(table){
+							return new Promise((resolve,reject) => {
+								((elements,fields) => {
+									elements.external.empty().assignoption((() => {
+										var res=[];
+										res.push({
+											id:{value:''},
+											caption:{value:''}
+										});
+										for (var key in fields.external)
+											((fieldinfo) => {
+												res.push({
+													id:{value:fieldinfo.id},
+													caption:{value:fieldinfo.caption}
+												});
+											})(fields.external[key]);
+										return res;
+									})(),'caption','id').val(table.id.external).rebuild().then(() => {
+										elements.internal.empty().assignoption((() => {
+											var res=[];
+											res.push({
+												id:{value:''},
+												caption:{value:''}
+											});
+											for (var key in fields.internal)
+												((fieldinfo) => {
+													res.push({
+														id:{value:fieldinfo.id},
+														caption:{value:fieldinfo.caption}
+													});
+												})(fields.internal[key]);
+											return res;
+										})(),'caption','id').val(table.id.internal).rebuild().then(() => resolve(fields));
+									});
+								})(
+									{
+										external:this.contents.elm('[field-id=external]').elm('select'),
+										internal:this.contents.elm('[field-id=internal]').elm('select')
+									},
+									{
+										external:this.keep.fields.external,
+										internal:this.keep.fields.internal
+									}
+								);
+							});
+						}
+						/* show */
+						show(table,fields,callback){
+							if (table instanceof Object)
+							{
+								/* setup properties */
+								this.keep.fields=fields;
+								/* modify elements */
+								this.contents.elms('input,select,textarea').each((element,index) => {
+									if (element.alert) element.alert.hide();
+								});
+								/* setup handler */
+								if (this.handler) this.ok.off('click',this.handler);
+								this.handler=(e) => {
+									this.get().then((resp) => {
+										if (!resp.error)
+										{
+											callback(resp.table);
+											this.hide();
+										}
+									});
+								};
+								this.ok.on('click',this.handler);
+								this.cancel.on('click',(e) => this.hide());
+								/* set configuration */
+								this.set(table).then((fields) => {
+									this.tables.field.clearrows();
+									if (table.id.external in fields.external)
+										((fields) => {
+											table.fields.each((values,index) => {
+												if (values.external in fields)
+													((row) => {
+														row.elm('[field-id=external]').elm('select').val(values.external).rebuild().then((fields) => {
+															if (values.internal in fields) row.elm('[field-id=internal]').elm('select').val(values.internal);
+														});
+													})(this.tables.field.addrow());
+											});
+										})(fields.external[table.id.external].fields);
+									if (this.tables.field.tr.length==0) this.tables.field.addrow();
+									/* show */
+									super.show();
+								});
+							}
+							else pd.alert(pd.constants.common.message.invalid.config.corrupted[pd.lang]);
+						}
+					}
+				};
 				this.keep={
 					config:{},
 					fields:{},
 					parallelize:{},
+					tables:{},
 					lookup:{
+						builder:null,
 						monitor:null,
 						query:'',
-						sort:''
+						sort:'',
+						lib:{
+							create:(app,table) => {
+								var res=pd.create('div').addclass('pd-row');
+								var setup=(table) => {
+									res.table=table;
+									res.elm('.pd-row-label').html(((label) => {
+										return label.replace(/%external%/g,app.fields[table.id.external].caption).replace(/%internal%/g,this.keep.tables[table.id.internal].caption);
+									})(pd.constants.field.caption.lookup.table.label[pd.lang]));
+									return res;
+								};
+								/* setup properties */
+								res.table=table;
+								/* modify elements */
+								res
+								.append(
+									pd.create('button').addclass('pd-icon pd-icon-edit pd-row-button')
+									.on('click',(e) => {
+										/* show tablebuilder */
+										this.keep.lookup.builder.show(
+											res.table,
+											{
+												external:((fields) => {
+													var res={};
+													for (var key in fields)
+														if (fields[key].type=='table') res[key]=pd.extend({},fields[key]);
+													return res;
+												})(app.fields),
+												internal:((fields) => {
+													var res={};
+													for (var key in fields)
+														if (key!=this.keep.parallelize[this.fieldinfo.id].tableid)
+															res[key]=pd.extend({},fields[key]);
+													return res;
+												})(this.keep.tables)
+											},
+											(table) => setup(table)
+										);
+									})
+								)
+								.append(
+									pd.create('button').addclass('pd-icon pd-icon-del pd-row-button')
+									.on('click',(e) => {
+										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => res.parentNode.removeChild(res));
+									})
+								)
+								.append(pd.create('span').addclass('pd-row-label'));
+								return setup(table);
+							}
+						}
 					}
 				};
 				this.tables={
@@ -9070,7 +9523,8 @@ pd.modules={
 					mapping:null,
 					picker:null,
 					group:null,
-					option:null
+					option:null,
+					table:null
 				};
 				/* modify elements */
 				this.header.css({paddingLeft:'0.25em',textAlign:'left'}).html(this.fieldinfo.type.slice(0,1).toUpperCase()+this.fieldinfo.type.slice(1)+' Settings');
@@ -9328,7 +9782,7 @@ pd.modules={
 											((res) => {
 												res.elm('select').on('change',(e) => e.currentTarget.rebuild()).rebuild=() => {
 													return new Promise((resolve,reject) => {
-														((search,criterias,mappings,pickers) => {
+														((search,criterias,mappings,tables,pickers) => {
 															search.empty().append(pd.create('option'));
 															criterias.clearrows();
 															criterias.template.elm('[field-id=external]').elm('select').empty().append(pd.create('option').attr('value','').html(pd.constants.field.caption.lookup.external[pd.lang]));
@@ -9346,7 +9800,10 @@ pd.modules={
 															if (res.elm('select').val())
 															{
 																resolve(((fieldinfos) => {
-																	var res={};
+																	var res={
+																		origin:fieldinfos,
+																		result:{}
+																	};
 																	for (var key in fieldinfos)
 																		((fieldinfo) => {
 																			switch (fieldinfo.type)
@@ -9354,7 +9811,7 @@ pd.modules={
 																				case 'file':
 																					mappings.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
 																					pickers.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
-																					res[fieldinfo.id]=fieldinfo;
+																					res.result[fieldinfo.id]=fieldinfo;
 																					break;
 																				case 'spacer':
 																				case 'table':
@@ -9363,7 +9820,7 @@ pd.modules={
 																					criterias.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
 																					mappings.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
 																					pickers.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
-																					res[fieldinfo.id]=fieldinfo;
+																					res.result[fieldinfo.id]=fieldinfo;
 																					switch (fieldinfo.type)
 																					{
 																						case 'checkbox':
@@ -9395,9 +9852,9 @@ pd.modules={
 																criterias.addrow();
 																mappings.addrow();
 																pickers.addrow();
-																resolve({});
+																resolve({origin:{},result:{}});
 															}
-														})(contents.elm('[field-id=search]').elm('select'),this.tables.criteria,this.tables.mapping,this.tables.picker)
+														})(contents.elm('[field-id=search]').elm('select'),this.tables.criteria,this.tables.mapping,this.tables.table.empty(),this.tables.picker)
 													});
 												};
 												return res;
@@ -9411,6 +9868,63 @@ pd.modules={
 												.append(this.tables.mapping);
 												return container;
 											})(pd.create('div').addclass('pd-kumaneko-section'))
+										)
+										.append(
+											((res) => {
+												/* build tablebuilder */
+												this.keep.lookup.builder=new this.builder.lookup();
+												/* modify elements */
+												res.elm('.pd-field-value')
+												.append(
+													pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.field.caption.button.lookup.table[pd.lang]).on('click',(e) => {
+														/* show tablebuilder */
+														((app) => {
+															if (app)
+															{
+																this.keep.lookup.builder.show(
+																	{
+																		id:{
+																			external:'',
+																			internal:''
+																		},
+																		fields:[]
+																	},
+																	{
+																		external:((fields) => {
+																			var res={};
+																			for (var key in fields)
+																				if (fields[key].type=='table') res[key]=pd.extend({},fields[key]);
+																			return res;
+																		})(this.keep.config.apps.user[app].fields),
+																		internal:((fields) => {
+																			var res={};
+																			for (var key in fields)
+																				if (key!=this.keep.parallelize[this.fieldinfo.id].tableid)
+																					res[key]=pd.extend({},fields[key]);
+																			return res;
+																		})(this.keep.tables)
+																	},
+																	(table) => this.tables.table.append(this.keep.lookup.lib.create(this.keep.config.apps.user[app],table))
+																);
+															}
+															else pd.alert(pd.constants.field.message.invalid.lookup.app[pd.lang]);
+														})(contents.elm('[field-id=app]').elm('select').val());
+													})
+												)
+												.append(
+													((tables) => {
+														this.tables.table=tables;
+														return tables;
+													})(pd.create('div').addclass('pd-kumaneko-section').css({display:'block'}))
+												)
+												return res;
+											})(pd.ui.field.create({
+												id:'tables',
+												type:'spacer',
+												caption:pd.constants.field.caption.lookup.table[pd.lang],
+												required:false,
+												nocaption:false
+											}).css({width:'100%'}))
 										)
 										.append(
 											((container) => {
@@ -9673,6 +10187,13 @@ pd.modules={
 													});
 													return res;
 												})();
+												this.fieldinfo.table=(() => {
+													var res=[];
+													pd.children(this.tables.table).each((element,index) => {
+														res.push(element.table);
+													});
+													return res;
+												})();
 												this.fieldinfo.picker=(() => {
 													var res=[];
 													this.tables.picker.tr.each((element,index) => {
@@ -9807,10 +10328,10 @@ pd.modules={
 												});
 												return res;
 											})(),'caption','id').val(this.fieldinfo.app).rebuild().then((fields) => {
-												if (this.fieldinfo.search in fields) elements.search.val(this.fieldinfo.search);
+												if (this.fieldinfo.search in fields.result) elements.search.val(this.fieldinfo.search);
 												elements.tables.criteria.clearrows();
 												this.fieldinfo.criteria.each((values,index) => {
-													if (values.external in fields)
+													if (values.external in fields.result)
 														((row) => {
 															row.elm('[field-id=external]').elm('select').val(values.external).rebuild().then((fields) => {
 																if (values.internal in fields)
@@ -9825,7 +10346,7 @@ pd.modules={
 												elements.tables.mapping.clearrows();
 												for (var key in this.fieldinfo.mapping)
 													((values) => {
-														if (values.external in fields)
+														if (values.external in fields.result)
 															((row) => {
 																row.elm('[field-id=external]').elm('select').val(values.external).rebuild().then((fields) => {
 																	if (values.internal in fields) row.elm('[field-id=internal]').elm('select').val(values.internal);
@@ -9833,9 +10354,14 @@ pd.modules={
 															})(elements.tables.mapping.addrow());
 													})({external:key,internal:this.fieldinfo.mapping[key]});
 												if (elements.tables.mapping.tr.length==0) elements.tables.mapping.addrow();
+												elements.tables.table.empty();
+												this.fieldinfo.table.each((table,index) => {
+													if (table.id.external in fields.origin)
+														this.tables.table.append(this.keep.lookup.lib.create({fields:fields.origin},table));
+												});
 												elements.tables.picker.clearrows();
 												this.fieldinfo.picker.each((picker,index) => {
-													if (picker in fields) elements.tables.picker.addrow().elm('select').val(picker);
+													if (picker in fields.result) elements.tables.picker.addrow().elm('select').val(picker);
 												});
 												if (elements.tables.picker.tr.length==0) elements.tables.picker.addrow();
 												elements.ignore.checked=this.fieldinfo.ignore;
@@ -9975,6 +10501,12 @@ pd.modules={
 						this.keep.config=resp.file;
 						this.keep.fields=((fieldinfos) => {
 							this.keep.parallelize=fieldinfos;
+							this.keep.tables=(() => {
+								var res={};
+								for (var key in fields)
+									if (fields[key].type=='table') res[key]=fields[key];
+								return res;
+							})();
 							return (this.fieldinfo.id in fieldinfos)?((fieldinfos[this.fieldinfo.id].tableid)?fields[fieldinfos[this.fieldinfo.id].tableid].fields:fields):fields;
 						})(pd.ui.field.parallelize(fields));
 						/* modify elements */
@@ -10204,7 +10736,7 @@ pd.modules={
 				},false);
 				this.header.addclass('pd-kumaneko-builder-header')
 				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('Linkage View Settings'))
-				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'));
 				this.container.addclass('pd-kumaneko-main').css({
 					height:'calc(100% - 1em)',
 					width:'55em'
@@ -10953,7 +11485,7 @@ pd.modules={
 				/* modify elements */
 				this.header.addclass('pd-kumaneko-builder-header')
 				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('View Settings'))
-				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'));
 				this.container.css({
 					height:'calc(100% - 1em)',
 					width:'calc(100% - 1em)'
@@ -13656,9 +14188,9 @@ pd.modules={
 				this.keep={
 					app:null,
 					buffer:null,
+					table:null,
 					csv:[],
-					fields:{},
-					table:null
+					fields:{}
 				};
 				this.lib={
 					remodel:(skip) => {
@@ -15212,6 +15744,14 @@ pd.constants=pd.extend({
 					ja:'経度フィールド'
 				}
 			},
+			button:{
+				lookup:{
+					table:{
+						en:'Add table mapping',
+						ja:'コピーするテーブルを追加'
+					}
+				}
+			},
 			caption:{
 				en:'Name',
 				ja:'フィールド名'
@@ -15308,6 +15848,28 @@ pd.constants=pd.extend({
 				search:{
 					en:'Key Field',
 					ja:'参照元フィールド'
+				},
+				table:{
+					en:'Table Mappings',
+					ja:'コピーするテーブル',
+					label:{
+						en:'Copy from "%external%" to "%internal%"',
+						ja:'"%external%" から "%internal%" へコピー'
+					},
+					builder:{
+						external:{
+							en:'Datasource App\'s Table',
+							ja:'参照元アプリのテーブル'
+						},
+						fields:{
+							en:'Field Mappings',
+							ja:'コピーするフィールド'
+						},
+						internal:{
+							en:'This App\'s Table',
+							ja:'このアプリのテーブル'
+						}
+					}
 				}
 			},
 			multiuse:{
@@ -15383,6 +15945,22 @@ pd.constants=pd.extend({
 					app:{
 						en:'Please specify an app from [Datasource App] dropdown',
 						ja:'参照元アプリを指定して下さい'
+					},
+					table:{
+						builder:{
+							external:{
+								en:'Please specify a datasource app\'s table',
+								ja:'参照元アプリのテーブルを指定して下さい'
+							},
+							fields:{
+								en:'Please specify one or more field mappings',
+								ja:'コピーするフィールドを指定して下さい'
+							},
+							internal:{
+								en:'Please specify a this app\'s table',
+								ja:'このアプリのテーブルを指定して下さい'
+							}
+						}
 					}
 				},
 				option:{
