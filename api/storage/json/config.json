@@ -16,6 +16,14 @@
                         "nocaption": false,
                         "format": "text"
                     },
+                    "cli_path": {
+                        "id": "cli_path",
+                        "type": "text",
+                        "caption": "The path to your PHP CLI binary",
+                        "required": false,
+                        "nocaption": false,
+                        "format": "text"
+                    },
                     "apikey": {
                         "id": "apikey",
                         "type": "text",
@@ -136,7 +144,8 @@
                             {
                                 "type": "row",
                                 "fields": [
-                                    "name"
+                                    "name",
+                                    "cli_path"
                                 ]
                             }
                         ]

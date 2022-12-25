@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 1.1.3
+* Version: 1.1.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -29,8 +29,8 @@ class clsDriver
 	{
 		return $this->resultnumbers;
 	}
-	/* build */
-	public function build($arg_destination,$arg_source,$arg_fields,$arg_records=null)
+	/* assign */
+	public function assign($arg_destination,$arg_source,$arg_fields,$arg_tables,$arg_parent="")
 	{
 		$continue=false;
 		$lookups=[];
@@ -71,7 +71,7 @@ class clsDriver
 								$lookups[$key]=$arg_fields[$key];
 								break;
 							}
-						$arg_destination[$key]=["search"=>$arg_source[$key]["search"],"value"=>$arg_source[$key]["value"]];
+						$arg_destination[$key]=["search"=>$arg_source[$key]["search"],"value"=>($arg_source[$key]["value"]=="")?null:intval($arg_source[$key]["value"])];
 					}
 					else
 					{
@@ -95,15 +95,32 @@ class clsDriver
 				case "table":
 					if (array_key_exists($key,$arg_source))
 					{
-						$arg_destination[$key]=["value"=>[]];
-						foreach ($arg_source[$key]["value"] as $row) $arg_destination[$key]["value"][]=$this->build([],$row,$arg_fields[$key]["fields"]);
+						$uid=array_reduce($arg_source[$key]["value"],function($result,$current){
+							if (array_key_exists("__row_uid",$current))
+								if (preg_match("/^[0-9]+$/u",$current["__row_uid"]["value"]))
+									if ($result<intval($current["__row_uid"]["value"])) $result=intval($current["__row_uid"]["value"]);
+							return $result;
+						},-1)+1;
+						$arg_rows=[];
+						foreach ($arg_source[$key]["value"] as $row)
+						{
+							if (!array_key_exists("__row_rel",$row)) $row["__row_rel"]=["value"=>""];
+							if (!array_key_exists("__row_uid",$row))
+							{
+								$row["__row_uid"]=["value"=>strval($uid)];
+								$uid++;
+							}
+							[$arg_row,$arg_tables]=$this->assign([],$row,$arg_fields[$key]["fields"],$arg_tables,$key);
+							$arg_rows[]=$arg_row;
+						}
+						$arg_destination[$key]=["value"=>$arg_rows];
 					}
 					else
 					{
 						if (!array_key_exists($key,$arg_destination))
 						{
-							$arg_destination[$key]=["value"=>[]];
-							$arg_destination[$key]["value"][]=$this->build([],[],$arg_fields[$key]["fields"]);
+							[$arg_row,$arg_tables]=$this->assign([],["__row_rel"=>["value"=>""],"__row_uid"=>["value"=>"0"]],$arg_fields[$key]["fields"],$arg_tables,$key);
+							$arg_destination[$key]=["value"=>[$arg_row]];
 						}
 					}
 					break;
@@ -116,108 +133,237 @@ class clsDriver
 					break;
 			}
 		}
-		foreach ($lookups as $key=>$value)
+		if (array_key_exists("__row_rel",$arg_source)) $arg_destination["__row_rel"]=["value"=>$arg_source["__row_rel"]["value"]];
+		if (array_key_exists("__row_uid",$arg_source)) $arg_destination["__row_uid"]=["value"=>$arg_source["__row_uid"]["value"]];
+		foreach ($lookups as $lookup)
 		{
 			$clear=true;
-			$mapping=$value["mapping"];
-			$source=$this->record($value["app"],$arg_source[$key]["value"]);
+			$rel=$arg_parent.((array_key_exists("__row_uid",$arg_source))?$arg_source["__row_uid"]["value"]:"")."_".$lookup["id"];
+			$source=$this->record($lookup["app"],$arg_source[$lookup["id"]]["value"]);
 			if (is_array($source))
 			{
 				if (array_values($source)!==$source)
 				{
-					$arg_destination[$key]=["search"=>$source[$value["search"]]["value"],"value"=>$arg_source[$key]["value"]];
-					foreach ($mapping as $mappingkey => $mappingvalue)
+					$arg_destination[$lookup["id"]]=["search"=>$source[$lookup["search"]]["value"],"value"=>($arg_source[$lookup["id"]]["value"]=="")?null:intval($arg_source[$lookup["id"]]["value"])];
+					foreach ($lookup["mapping"] as $key=>$value)
 					{
-						if (array_key_exists($mappingkey,$source))
-							if (array_key_exists($mappingvalue,$arg_fields))
-								switch ($arg_fields[$mappingvalue]["type"])
+						if (array_key_exists($key,$source))
+							if (array_key_exists($value,$arg_fields))
+								switch ($arg_fields[$value]["type"])
 								{
 									case "lookup":
-										if (!array_key_exists($mappingvalue,$lookups))
+										if (!array_key_exists($value,$lookups))
 										{
-											$arg_destination[$mappingvalue]=["lookup"=>true,"value"=>($source[$mappingkey]["value"]=="")?null:floatval($source[$mappingkey]["value"])];
+											$arg_destination[$value]=["lookup"=>true,"value"=>($source[$key]["value"]=="")?null:floatval($source[$key]["value"])];
 											$continue=true;
 										}
 										break;
 									case "number":
-										$arg_destination[$mappingvalue]=["value"=>($source[$mappingkey]["value"]=="")?null:floatval($source[$mappingkey]["value"])];
+										$arg_destination[$value]=["value"=>($source[$key]["value"]=="")?null:floatval($source[$key]["value"])];
 										break;
 									default:
-										$arg_destination[$mappingvalue]=["value"=>$source[$mappingkey]["value"]];
+										$arg_destination[$value]=["value"=>$source[$key]["value"]];
 										break;
 								}
+					}
+					foreach ($lookup["table"] as $value)
+					{
+						if (array_key_exists($value["id"]["external"],$source))
+						{
+							if (!array_key_exists($value["id"]["internal"],$arg_tables)) $arg_tables[$value["id"]["internal"]]=[];
+							$arg_tables[$value["id"]["internal"]][$rel]=[];
+							foreach ($source[$value["id"]["external"]]["value"] as $row)
+							{
+								$arg_tables[$value["id"]["internal"]][$rel][]=(function($row,$fields){
+									$res=[];
+									foreach ($fields as $field)
+										if (array_key_exists($field["external"],$row)) $res[$field["internal"]]=["value"=>$row[$field["external"]]["value"]];
+									return $res;
+								})($row,$value["fields"]);
+							}
+						}
+						else
+						{
+							if (!array_key_exists($value["id"]["internal"],$arg_tables)) $arg_tables[$value["id"]["internal"]]=[];
+							$arg_tables[$value["id"]["internal"]][$rel]=[];
+						}
 					}
 					$clear=false;
 				}
 			}
 			if ($clear)
 			{
-				$arg_destination[$key]=["search"=>"","value"=>null];
-				foreach ($mapping as $mappingkey => $mappingvalue)
+				$arg_destination[$lookup["id"]]=["search"=>"","value"=>null];
+				foreach ($lookup["mapping"] as $key=>$value)
 				{
-					if (array_key_exists($mappingvalue,$arg_fields))
-						switch ($arg_fields[$mappingvalue]["type"])
+					if (array_key_exists($value,$arg_fields))
+						switch ($arg_fields[$value]["type"])
 						{
 							case "checkbox":
 							case "department":
 							case "file":
 							case "group":
 							case "user":
-								$arg_destination[$mappingvalue]=["value"=>[]];
+								$arg_destination[$value]=["value"=>[]];
 								break;
 							case "lookup":
-								$arg_destination[$mappingvalue]=["lookup"=>true,"search"=>"","value"=>null];
-								$continue=true;
+								if (!array_key_exists($value,$lookups))
+								{
+									$arg_destination[$value]=["lookup"=>true,"search"=>"","value"=>null];
+									$continue=true;
+								}
 								break;
 							case "number":
-								$arg_destination[$mappingvalue]=["value"=>null];
+								$arg_destination[$value]=["value"=>null];
 								break;
 							default:
-								$arg_destination[$mappingvalue]=["value"=>""];
+								$arg_destination[$value]=["value"=>""];
 								break;
 						}
+				}
+				foreach ($lookup["table"] as $value)
+				{
+					if (!array_key_exists($value["id"]["internal"],$arg_tables)) $arg_tables[$value["id"]["internal"]]=[];
+					$arg_tables[$value["id"]["internal"]][$rel]=[];
 				}
 			}
 		}
-		if (is_array($arg_records))
+		if ($continue) [$arg_destination,$arg_tables]=$this->assign($arg_destination,$arg_destination,$arg_fields,$arg_tables,$arg_parent);
+		return [$arg_destination,$arg_tables];
+	}
+	/* build */
+	public function build($arg_destination,$arg_source,$arg_fields,$arg_records)
+	{
+		function overwrite(&$arg_destination,$arg_fields,$arg_tables)
 		{
-			if (array_key_exists("__autonumber",$arg_fields))
-			{
-				$prefix="";
-				foreach ($arg_fields["__autonumber"]["group"] as $group)
-					if (array_key_exists($group,$arg_fields))
-						if (!is_null($arg_destination[$group]["value"]))
-							switch ($arg_fields[$group]["type"])
+			$continue=false;
+			foreach ($arg_tables as $key=>$value)
+				if (array_key_exists($key,$arg_destination))
+				{
+					$rels=array_keys($value);
+					$arg_destination[$key]["value"]=array_values(array_filter($arg_destination[$key]["value"],function($row) use ($rels){
+						return !in_array($row["__row_rel"]["value"],$rels);
+					}));
+					if (count($arg_destination[$key]["value"])!=0)
+						if (!(function($row,$fields){
+							$res=false;
+							foreach ($row as $key=>$value)
+							{
+								switch ($key)
+								{
+									case "__row_rel":
+										if ($value["value"]!="") $res=true;
+										break;
+									case "__row_uid":
+										break;
+									default:
+										if ($value["value"]!=null)
+										{
+											if ($fields[$key]["type"]=="radio")
+											{
+												if ($value["value"]!=current($fields[$key]["options"])["option"]["value"]) $res=true;
+											}
+											else
+											{
+												switch (gettype($value["value"]))
+												{
+													case "array":
+														if (count($value["value"])!=0) $res=true;
+														break;
+													case "double":
+													case "integer":
+														if (strval($value["value"])!="") $res=true;
+														break;
+													case "string":
+														if ($value["value"]!="") $res=true;
+														break;
+												}
+											}
+										}
+										break;
+								}
+							}
+							return $res;
+						})(end($arg_destination[$key]["value"]),$arg_fields[$key]["fields"])) array_pop($arg_destination[$key]["value"]);
+					$uid=array_reduce($arg_destination[$key]["value"],function($result,$current){
+						if (preg_match("/^[0-9]+$/u",$current["__row_uid"]["value"]))
+							if ($result<intval($current["__row_uid"]["value"])) $result=intval($current["__row_uid"]["value"]);
+						return $result;
+					},-1);
+					foreach ($value as $rel=>$rows)
+						foreach ($rows as $row)
+						{
+							$uid++;
+							$arg_destination[$key]["value"][]=(function($rel,$uid,$row,$fields,&$continue){
+								$res=["__row_rel"=>["value"=>$rel],"__row_uid"=>["value"=>strval($uid)]];
+								foreach ($fields as $field)
+									if (array_key_exists($field["id"],$row))
+										switch ($field["type"])
+										{
+											case "lookup":
+												$res[$field["id"]]=["lookup"=>true,"value"=>($row[$field["id"]]["value"]=="")?null:floatval($row[$field["id"]]["value"])];
+												$continue=true;
+												break;
+											case "number":
+												$res[$field["id"]]=["value"=>($row[$field["id"]]["value"]=="")?null:floatval($row[$field["id"]]["value"])];
+												break;
+											default:
+												$res[$field["id"]]=["value"=>$row[$field["id"]]["value"]];
+												break;
+										}
+								return $res;
+							})($rel,$uid,$row,$arg_fields[$key]["fields"],$continue);
+						}
+				}
+			return $continue;
+		}
+		$continue=false;
+		[$arg_destination,$arg_tables]=$this->assign($arg_destination,$arg_source,$arg_fields,[]);
+		$continue=overwrite($arg_destination,$arg_fields,$arg_tables);
+		while ($continue)
+		{
+			[$arg_destination,$arg_tables]=$this->assign($arg_destination,$arg_destination,$arg_fields,[]);
+			$continue=overwrite($arg_destination,$arg_fields,$arg_tables);
+		}
+		foreach ($arg_fields as $key=>$value)
+			if ($arg_fields[$key]["type"]=="table")
+				if (array_key_exists($key,$arg_destination))
+					$arg_destination[$key]["value"]=array_values(array_filter($arg_destination[$key]["value"],function($row) use ($arg_destination){
+						$res=true;
+						if (preg_match("/^(field_[0-9]+_)([0-9]+)_field_[0-9]+_$/u",$row["__row_rel"]["value"],$matches))
+						{
+							if (!array_key_exists($matches[1],$arg_destination)) $res=false;
+							else $res=in_array($matches[2],array_column(array_column($arg_destination[$matches[1]]["value"],"__row_uid"),"value"));
+						}
+						return $res;
+					}));
+		if (array_key_exists("__autonumber",$arg_fields))
+		{
+			$fixed=$arg_fields["__autonumber"]["fixed"];
+			$prefix=(function($destination,$fields){
+				$res="";
+				foreach ($fields["__autonumber"]["group"] as $group)
+					if (array_key_exists($group,$fields))
+						if (!is_null($destination[$group]["value"]))
+							switch ($fields[$group]["type"])
 							{
 								case "id":
 								case "number":
-									$prefix.=strval($arg_destination[$group]["value"]);
+									$res.=strval($destination[$group]["value"]);
 									break;
 								default:
-									$prefix.=$arg_destination[$group]["value"];
+									$res.=$destination[$group]["value"];
 									break;
 							}
-				if (array_key_exists("__autonumber",$arg_source))
-				{
-					if ($prefix!="")
-					{
-						if (preg_match("/^{$prefix}/u",$arg_source["__autonumber"]["value"]))
-						{
-							$arg_destination["__autonumber"]=["value"=>$arg_source["__autonumber"]["value"]];
-							return $arg_destination;
-						}
-					}
-					else
-					{
-						if (preg_match("/^[0-9]+$/u",$arg_source["__autonumber"]["value"]))
-						{
-							$arg_destination["__autonumber"]=["value"=>$arg_source["__autonumber"]["value"]];
-							return $arg_destination;
-						}
-					}
-				}
-				$filters=array_values($this->filter($arg_records,$arg_fields,($prefix)?"__autonumber like \"^{$prefix}\"":"__autonumber like \"^[0-9]+$\"",""));
-				$fixed=$arg_fields["__autonumber"]["fixed"];
+				return $res;
+			})($arg_destination,$arg_fields);
+			if (!preg_match("/^{$prefix}[0-9]{{$fixed}}$/u",$arg_destination["__autonumber"]["value"]))
+			{
+				$query="__autonumber like \"^{$prefix}[0-9]{{$fixed}}$\"";
+				if (array_key_exists("__id",$arg_source))
+					if (preg_match("/^[0-9]+$/u",$arg_source["__id"]["value"]))
+						$query.=" and __id != {$arg_source["__id"]["value"]}";
+				$filters=array_values($this->filter($arg_records,$arg_fields,$query,""));
 				if (count($filters)!=0)
 				{
 					$params=[];
@@ -231,9 +377,8 @@ class clsDriver
 				}
 				else $arg_destination["__autonumber"]=["value"=>$prefix.sprintf("%0".$fixed."d",1)];
 			}
-			else $arg_destination["__autonumber"]=["value"=>""];
 		}
-		if ($continue) $arg_destination=$this->build($arg_destination,$arg_destination,$arg_fields);
+		else $arg_destination["__autonumber"]=["value"=>""];
 		return $arg_destination;
 	}
 	/* deduplications */
@@ -866,10 +1011,10 @@ class clsDriver
 				$query=preg_replace("/[ ]*FROM_/u"," \$me->FROM_",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+not in[ ]+\(([^\)]*)\)/u","!in_array($1,[$2],true)",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+in[ ]+\(([^\)]*)\)/u","in_array($1,[$2],true)",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+\"((?:\\\"|[^\"])+)\"/u","!preg_match(\"/$2/u\",$1)",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+\"((?:\\\"|[^\"])+)\"/u","preg_match(\"/$2/u\",$1)",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+'((?:\\'|[^'])+)'/u","!preg_match('/$2/u',$1)",$query);
-				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+'((?:\\'|[^'])+)'/u","preg_match('/$2/u',$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+\"((?:\\\\\"|[^\"])+)\"/u","!preg_match(\"/$2/u\",$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+\"((?:\\\\\"|[^\"])+)\"/u","preg_match(\"/$2/u\",$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+'((?:\\\\'|[^'])+)'/u","!preg_match('/$2/u',$1)",$query);
+				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+'((?:\\\\'|[^'])+)'/u","preg_match('/$2/u',$1)",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+not like[ ]+(\"\"|'')/u","$1 != \"\"",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+like[ ]+(\"\"|'')/u","$1 == \"\"",$query);
 			}
@@ -1128,39 +1273,47 @@ class clsDriver
 					$fields=$this->fields($arg_file);
 					foreach ($arg_records as $record)
 					{
-						if (array_key_exists(strval($record["__id"]["value"]),$source))
+						if (array_key_exists("__id",$record))
 						{
-							$timezone=new DateTimeZone($this->timezone);
-							$now=new DateTime("now",$timezone);
-							$time=$now->modify(strval($timezone->getOffset($now)*-1)." second")->format("Y-m-d\TH:i:s")."Z";
-							$this->resultid=intval($record["__id"]["value"]);
-							if (array_key_exists("__modifiedtime",$record))
-								if ($source[strval($this->resultid)]["__modifiedtime"]["value"]>$record["__modifiedtime"]["value"])
-								{
-									$error="Someone has updated the record while you are editing";
-									break;
-								}
-							$build=$this->build($source[strval($this->resultid)],$record,$fields,$source);
-							$build["__modifier"]=["value"=>[strval($arg_operator)]];
-							$build["__modifiedtime"]=["value"=>$time];
-							foreach ($deduplications as $deduplication)
+							if (array_key_exists(strval($record["__id"]["value"]),$source))
 							{
-								$queries=[];
-								foreach ($deduplication["criteria"] as $criteria)
+								$timezone=new DateTimeZone($this->timezone);
+								$now=new DateTime("now",$timezone);
+								$time=$now->modify(strval($timezone->getOffset($now)*-1)." second")->format("Y-m-d\TH:i:s")."Z";
+								$this->resultid=intval($record["__id"]["value"]);
+								if (array_key_exists("__modifiedtime",$record))
+									if ($source[strval($this->resultid)]["__modifiedtime"]["value"]>$record["__modifiedtime"]["value"])
+									{
+										$error="Someone has updated the record while you are editing";
+										break;
+									}
+								$build=$this->build($source[strval($this->resultid)],$record,$fields,$source);
+								$build["__modifier"]=["value"=>[strval($arg_operator)]];
+								$build["__modifiedtime"]=["value"=>$time];
+								foreach ($deduplications as $deduplication)
 								{
-									if (array_key_exists($criteria["external"],$fields) && array_key_exists($criteria["internal"],$fields))
-										$queries[]=$this->query($fields[$criteria["external"]],$criteria["operator"],array_merge($record[$criteria["internal"]],["type"=>$fields[$criteria["internal"]]["type"]]));
+									$queries=[];
+									foreach ($deduplication["criteria"] as $criteria)
+									{
+										if (array_key_exists($criteria["external"],$fields) && array_key_exists($criteria["internal"],$fields))
+											$queries[]=$this->query($fields[$criteria["external"]],$criteria["operator"],array_merge($record[$criteria["internal"]],["type"=>$fields[$criteria["internal"]]["type"]]));
+									}
+									$queries[]="__id != ".strval($record["__id"]["value"]);
+									if (count($this->filter($source,$fields,implode(" and ",$queries),$arg_operator))>0)
+									{
+										$error=$deduplication["message"];
+										break;
+									}
 								}
-								$queries[]="__id != ".strval($record["__id"]["value"]);
-								if (count($this->filter($source,$fields,implode(" and ",$queries),$arg_operator))>0)
-								{
-									$error=$deduplication["message"];
-									break;
-								}
+								if ($error!="") break;
+								$source[strval($this->resultid)]=$build;
+								$this->resultnumbers[strval($this->resultid)]=$build["__autonumber"]["value"];
 							}
-							if ($error!="") break;
-							$source[strval($this->resultid)]=$build;
-							$this->resultnumbers[strval($this->resultid)]=$build["__autonumber"]["value"];
+						}
+						else
+						{
+							$error="The ID field with the ID of the record to update must be added to the record object";
+							break;
 						}
 					}
 					if ($error=="")
