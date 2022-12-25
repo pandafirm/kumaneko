@@ -1,16 +1,19 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.1.3
+* Version: 1.1.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
 */
 require_once(dirname(__FILE__)."/lib/base.php");
+require_once(dirname(__FILE__)."/lib/driver.php");
 class clsRequest extends clsBase
 {
 	/* valiable */
 	private $body;
+	private $driver;
+	private $project;
 	private $response;
 	/* constructor */
 	public function __construct()
@@ -30,34 +33,87 @@ class clsRequest extends clsBase
 				if (is_array($this->response["file"]->apps->user)) $this->response["file"]->apps->user=json_decode("{}");
 				else
 				{
-					$update=false;
-					foreach ($this->response["file"]->apps->user as $key=>$value)
-						$value->actions=array_map(function($item) use (&$update){
-							switch ($item->trigger)
+					$modified=(!file_exists("modified.txt"))?"":file_get_contents("modified.txt");
+					$version=(!file_exists("ver.txt"))?"1.0.0":file_get_contents("ver.txt");
+					if ($modified!=$version)
+					{
+						$update=false;
+						foreach ($this->response["file"]->apps->user as $key=>$value)
+						{
+							foreach ($value->fields as $fieldkey=>$fieldvalue)
 							{
-								case "button":
-									if (!property_exists($item,"rows"))
-									{
-										$item->rows=["del"=>[],"fill"=>[]];
-										$update=true;
-									}
-									break;
-								case "value":
-									if (!property_exists($item,"rows"))
-									{
-										$item->rows=["del"=>[],"fill"=>[]];
-										$update=true;
-									}
-									if (!property_exists($item,"option"))
-									{
-										$item->option=[];
-										$update=true;
-									}
-									break;
+								switch ($fieldvalue->type)
+								{
+									case "lookup":
+										if (!property_exists($fieldvalue,"table"))
+										{
+											$fieldvalue->table=[];
+											$update=true;
+										}
+										break;
+									case "table":
+										foreach ($fieldvalue->fields as $tablekey=>$tablevalue)
+										{
+											switch ($tablevalue->type)
+											{
+												case "lookup":
+													if (!property_exists($tablevalue,"table"))
+													{
+														$tablevalue->table=[];
+														$update=true;
+													}
+													break;
+											}
+										}
+										break;
+								}
 							}
-							return $item;
-						},$value->actions);
-					if ($update) file_put_contents($file,json_encode($this->response["file"],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
+							$value->actions=array_map(function($item) use (&$update){
+								switch ($item->trigger)
+								{
+									case "button":
+										if (!property_exists($item,"rows"))
+										{
+											$item->rows=["del"=>[],"fill"=>[]];
+											$update=true;
+										}
+										break;
+									case "value":
+										if (!property_exists($item,"rows"))
+										{
+											$item->rows=["del"=>[],"fill"=>[]];
+											$update=true;
+										}
+										if (!property_exists($item,"option"))
+										{
+											$item->option=[];
+											$update=true;
+										}
+										break;
+								}
+								return $item;
+							},$value->actions);
+						}
+						if (!property_exists($this->response["file"]->apps->system->project->fields,"cli_path"))
+						{
+							$this->response["file"]->apps->system->project->fields->cli_path=[
+								"id"=>"cli_path",
+								"type"=>"text",
+								"caption"=>"The path to your PHP CLI binary",
+								"required"=>false,
+								"nocaption"=>false,
+								"format"=>"text"
+							];
+							$this->response["file"]->apps->system->project->layout[0]->rows[0]->fields[]="cli_path";
+							$update=true;
+							file_put_contents(dirname(__FILE__)."/storage/json/project.json",json_encode((function($project){
+								$project["1"]["cli_path"]=["value"=>""];
+								return $project;
+							})(json_decode(mb_convert_encoding(file_get_contents(dirname(__FILE__)."/storage/json/project.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true))));
+						}
+						if ($update) file_put_contents($file,json_encode($this->response["file"],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
+						file_put_contents(dirname(__FILE__)."/modified.txt",$version);
+					}
 				}
 				header("HTTP/1.1 200 OK");
 				header('Content-Type: application/json; charset=utf-8');
@@ -96,6 +152,8 @@ class clsRequest extends clsBase
 	protected function PUT()
 	{
 		$this->body=json_decode(mb_convert_encoding(file_get_contents('php://input'),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'));
+		$this->driver=new clsDriver(dirname(__FILE__)."/storage/json/",isset($this->body->{"timezone"})?$this->body->{"timezone"}:date_default_timezone_get());
+		$this->project=$this->driver->record("project","1");
 		if (!isset($this->body->{"config"})) $this->callrequesterror(400);
 		if (!isset($this->body->{"type"})) $this->callrequesterror(400);
 		else
@@ -114,8 +172,10 @@ class clsRequest extends clsBase
 					switch ($this->body->{"type"})
 					{
 						case "upd":
-							if (substr(php_uname(),0,7)=="Windows") pclose(popen("start /B php config_processing.php ".$this->body->{"app"},"r"));
-							else exec("nohup php config_processing.php ".$this->body->{"app"}." > /dev/null &");
+							(function($php,$body){
+								if (substr(php_uname(),0,7)=="Windows") pclose(popen("start /B {$php} config_processing.php ".$body->{"app"},"r"));
+								else exec("nohup {$php} config_processing.php ".$body->{"app"}." > /dev/null &");
+							})(($this->project["cli_path"]["value"]=="")?"php":$this->project["cli_path"]["value"],$this->body);
 							break;
 						case "del":
 							if (file_exists(dirname(__FILE__)."/storage/json/".$this->body->{"app"}.".json")) unlink(dirname(__FILE__)."/storage/json/".$this->body->{"app"}.".json");

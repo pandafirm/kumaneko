@@ -1,16 +1,19 @@
 <?php
 /*
 * PandaFirm-PHP-Module "notify.php"
-* Version: 1.1.3
+* Version: 1.1.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
 */
 require_once(dirname(__FILE__)."/lib/base.php");
+require_once(dirname(__FILE__)."/lib/driver.php");
 class clsRequest extends clsBase
 {
 	/* valiable */
 	private $body;
+	private $driver;
+	private $project;
 	private $response;
 	/* constructor */
 	public function __construct()
@@ -65,10 +68,14 @@ class clsRequest extends clsBase
 	protected function PUT()
 	{
 		$this->body=json_decode(mb_convert_encoding(file_get_contents('php://input'),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
+		$this->driver=new clsDriver(dirname(__FILE__)."/storage/json/",isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
+		$this->project=$this->driver->record("project","1");
 		if (!isset($this->body["payload"])) $this->callrequesterror(400);
 		if (!isset($this->body["subject"])) $this->callrequesterror(400);
-		if (substr(php_uname(),0,7)=="Windows") pclose(popen("start /B php notify_processing.php ".$this->body["payload"]." ".$this->body["subject"],"r"));
-		else exec("nohup php notify_processing.php ".$this->body["payload"]." ".$this->body["subject"]." > /dev/null &");
+		(function($php,$body){
+			if (substr(php_uname(),0,7)=="Windows") pclose(popen("start /B {$php} notify_processing.php ".$body["payload"]." ".$body["subject"],"r"));
+			else exec("nohup {$php} notify_processing.php ".$body["payload"]." ".$body["subject"]." > /dev/null &");
+		})(($this->project["cli_path"]["value"]=="")?"php":$this->project["cli_path"]["value"],$this->body);
 		header("HTTP/1.1 200 OK");
 		header('Content-Type: application/json; charset=utf-8');
 		echo json_encode($this->response,JSON_UNESCAPED_UNICODE);

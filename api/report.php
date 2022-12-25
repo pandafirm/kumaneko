@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "report.php"
-* Version: 1.1.3
+* Version: 1.1.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -101,8 +101,10 @@ class clsRequest extends clsBase
 			"timezone"=>isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get()
 		];
 		file_put_contents(dirname(__FILE__)."/report_processing_{$file}.txt",json_encode($args));
-		if (substr(php_uname(),0,7)=="Windows") pclose(popen("start /B php report_processing.php {$file}","r"));
-		else exec("nohup php report_processing.php {$file} > /dev/null &");
+		(function($php,$file){
+			if (substr(php_uname(),0,7)=="Windows") pclose(popen("start /B {$php} report_processing.php {$file}","r"));
+			else exec("nohup {$php} report_processing.php {$file} > /dev/null &");
+		})(($this->project["cli_path"]["value"]=="")?"php":$this->project["cli_path"]["value"],$file);
 		$this->response["filekey"]=$file;
 		header("HTTP/1.1 200 OK");
 		header('Content-Type: application/json; charset=utf-8');
