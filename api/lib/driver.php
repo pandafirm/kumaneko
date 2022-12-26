@@ -29,8 +29,75 @@ class clsDriver
 	{
 		return $this->resultnumbers;
 	}
-	/* assign */
-	public function assign($arg_destination,$arg_source,$arg_fields,$arg_tables,$arg_parent="")
+	/* build */
+	public function build($arg_destination,$arg_source,$arg_fields,$arg_records)
+	{
+		$continue=false;
+		[$arg_destination,$arg_tables]=$this->build_assign($arg_destination,$arg_source,$arg_fields,[]);
+		$continue=$this->build_overwrite($arg_destination,$arg_fields,$arg_tables);
+		while ($continue)
+		{
+			[$arg_destination,$arg_tables]=$this->build_assign($arg_destination,$arg_destination,$arg_fields,[]);
+			$continue=$this->build_overwrite($arg_destination,$arg_fields,$arg_tables);
+		}
+		foreach ($arg_fields as $key=>$value)
+			if ($arg_fields[$key]["type"]=="table")
+				if (array_key_exists($key,$arg_destination))
+					$arg_destination[$key]["value"]=array_values(array_filter($arg_destination[$key]["value"],function($row) use ($arg_destination){
+						$res=true;
+						if (preg_match("/^(field_[0-9]+_)([0-9]+)_field_[0-9]+_$/u",$row["__row_rel"]["value"],$matches))
+						{
+							if (!array_key_exists($matches[1],$arg_destination)) $res=false;
+							else $res=in_array($matches[2],array_column(array_column($arg_destination[$matches[1]]["value"],"__row_uid"),"value"));
+						}
+						return $res;
+					}));
+		if (array_key_exists("__autonumber",$arg_fields))
+		{
+			$fixed=$arg_fields["__autonumber"]["fixed"];
+			$prefix=(function($destination,$fields){
+				$res="";
+				foreach ($fields["__autonumber"]["group"] as $group)
+					if (array_key_exists($group,$fields))
+						if (!is_null($destination[$group]["value"]))
+							switch ($fields[$group]["type"])
+							{
+								case "id":
+								case "number":
+									$res.=strval($destination[$group]["value"]);
+									break;
+								default:
+									$res.=$destination[$group]["value"];
+									break;
+							}
+				return $res;
+			})($arg_destination,$arg_fields);
+			if (!preg_match("/^{$prefix}[0-9]{{$fixed}}$/u",$arg_destination["__autonumber"]["value"]))
+			{
+				$query="__autonumber like \"^{$prefix}[0-9]{{$fixed}}$\"";
+				if (array_key_exists("__id",$arg_source))
+					if (preg_match("/^[0-9]+$/u",$arg_source["__id"]["value"]))
+						$query.=" and __id != {$arg_source["__id"]["value"]}";
+				$filters=array_values($this->filter($arg_records,$arg_fields,$query,""));
+				if (count($filters)!=0)
+				{
+					$params=[];
+					$params[]=array_column(array_column($filters,"__autonumber"),"value");
+					$params[]=SORT_DESC;
+					$params[]=&$filters;
+					call_user_func_array('array_multisort',$params);
+					$increment=intval(($prefix)?preg_replace("/^{$prefix}/u","",$filters[0]["__autonumber"]["value"]):$filters[0]["__autonumber"]["value"]);
+					$increment++;
+					$arg_destination["__autonumber"]=["value"=>$prefix.sprintf("%0".$fixed."d",$increment)];
+				}
+				else $arg_destination["__autonumber"]=["value"=>$prefix.sprintf("%0".$fixed."d",1)];
+			}
+		}
+		else $arg_destination["__autonumber"]=["value"=>""];
+		return $arg_destination;
+	}
+	/* build assign */
+	public function build_assign($arg_destination,$arg_source,$arg_fields,$arg_tables,$arg_parent="")
 	{
 		$continue=false;
 		$lookups=[];
@@ -110,7 +177,7 @@ class clsDriver
 								$row["__row_uid"]=["value"=>strval($uid)];
 								$uid++;
 							}
-							[$arg_row,$arg_tables]=$this->assign([],$row,$arg_fields[$key]["fields"],$arg_tables,$key);
+							[$arg_row,$arg_tables]=$this->build_assign([],$row,$arg_fields[$key]["fields"],$arg_tables,$key);
 							$arg_rows[]=$arg_row;
 						}
 						$arg_destination[$key]=["value"=>$arg_rows];
@@ -119,7 +186,7 @@ class clsDriver
 					{
 						if (!array_key_exists($key,$arg_destination))
 						{
-							[$arg_row,$arg_tables]=$this->assign([],["__row_rel"=>["value"=>""],"__row_uid"=>["value"=>"0"]],$arg_fields[$key]["fields"],$arg_tables,$key);
+							[$arg_row,$arg_tables]=$this->build_assign([],["__row_rel"=>["value"=>""],"__row_uid"=>["value"=>"0"]],$arg_fields[$key]["fields"],$arg_tables,$key);
 							$arg_destination[$key]=["value"=>[$arg_row]];
 						}
 					}
@@ -228,158 +295,92 @@ class clsDriver
 				}
 			}
 		}
-		if ($continue) [$arg_destination,$arg_tables]=$this->assign($arg_destination,$arg_destination,$arg_fields,$arg_tables,$arg_parent);
+		if ($continue) [$arg_destination,$arg_tables]=$this->build_assign($arg_destination,$arg_destination,$arg_fields,$arg_tables,$arg_parent);
 		return [$arg_destination,$arg_tables];
 	}
-	/* build */
-	public function build($arg_destination,$arg_source,$arg_fields,$arg_records)
+	/* build overwrite */
+	function build_overwrite(&$arg_destination,$arg_fields,$arg_tables)
 	{
-		function overwrite(&$arg_destination,$arg_fields,$arg_tables)
-		{
-			$continue=false;
-			foreach ($arg_tables as $key=>$value)
-				if (array_key_exists($key,$arg_destination))
-				{
-					$rels=array_keys($value);
-					$arg_destination[$key]["value"]=array_values(array_filter($arg_destination[$key]["value"],function($row) use ($rels){
-						return !in_array($row["__row_rel"]["value"],$rels);
-					}));
-					if (count($arg_destination[$key]["value"])!=0)
-						if (!(function($row,$fields){
-							$res=false;
-							foreach ($row as $key=>$value)
-							{
-								switch ($key)
-								{
-									case "__row_rel":
-										if ($value["value"]!="") $res=true;
-										break;
-									case "__row_uid":
-										break;
-									default:
-										if ($value["value"]!=null)
-										{
-											if ($fields[$key]["type"]=="radio")
-											{
-												if ($value["value"]!=current($fields[$key]["options"])["option"]["value"]) $res=true;
-											}
-											else
-											{
-												switch (gettype($value["value"]))
-												{
-													case "array":
-														if (count($value["value"])!=0) $res=true;
-														break;
-													case "double":
-													case "integer":
-														if (strval($value["value"])!="") $res=true;
-														break;
-													case "string":
-														if ($value["value"]!="") $res=true;
-														break;
-												}
-											}
-										}
-										break;
-								}
-							}
-							return $res;
-						})(end($arg_destination[$key]["value"]),$arg_fields[$key]["fields"])) array_pop($arg_destination[$key]["value"]);
-					$uid=array_reduce($arg_destination[$key]["value"],function($result,$current){
-						if (preg_match("/^[0-9]+$/u",$current["__row_uid"]["value"]))
-							if ($result<intval($current["__row_uid"]["value"])) $result=intval($current["__row_uid"]["value"]);
-						return $result;
-					},-1);
-					foreach ($value as $rel=>$rows)
-						foreach ($rows as $row)
-						{
-							$uid++;
-							$arg_destination[$key]["value"][]=(function($rel,$uid,$row,$fields,&$continue){
-								$res=["__row_rel"=>["value"=>$rel],"__row_uid"=>["value"=>strval($uid)]];
-								foreach ($fields as $field)
-									if (array_key_exists($field["id"],$row))
-										switch ($field["type"])
-										{
-											case "lookup":
-												$res[$field["id"]]=["lookup"=>true,"value"=>($row[$field["id"]]["value"]=="")?null:floatval($row[$field["id"]]["value"])];
-												$continue=true;
-												break;
-											case "number":
-												$res[$field["id"]]=["value"=>($row[$field["id"]]["value"]=="")?null:floatval($row[$field["id"]]["value"])];
-												break;
-											default:
-												$res[$field["id"]]=["value"=>$row[$field["id"]]["value"]];
-												break;
-										}
-								return $res;
-							})($rel,$uid,$row,$arg_fields[$key]["fields"],$continue);
-						}
-				}
-			return $continue;
-		}
 		$continue=false;
-		[$arg_destination,$arg_tables]=$this->assign($arg_destination,$arg_source,$arg_fields,[]);
-		$continue=overwrite($arg_destination,$arg_fields,$arg_tables);
-		while ($continue)
-		{
-			[$arg_destination,$arg_tables]=$this->assign($arg_destination,$arg_destination,$arg_fields,[]);
-			$continue=overwrite($arg_destination,$arg_fields,$arg_tables);
-		}
-		foreach ($arg_fields as $key=>$value)
-			if ($arg_fields[$key]["type"]=="table")
-				if (array_key_exists($key,$arg_destination))
-					$arg_destination[$key]["value"]=array_values(array_filter($arg_destination[$key]["value"],function($row) use ($arg_destination){
-						$res=true;
-						if (preg_match("/^(field_[0-9]+_)([0-9]+)_field_[0-9]+_$/u",$row["__row_rel"]["value"],$matches))
+		foreach ($arg_tables as $key=>$value)
+			if (array_key_exists($key,$arg_destination))
+			{
+				$rels=array_keys($value);
+				$arg_destination[$key]["value"]=array_values(array_filter($arg_destination[$key]["value"],function($row) use ($rels){
+					return !in_array($row["__row_rel"]["value"],$rels);
+				}));
+				if (count($arg_destination[$key]["value"])!=0)
+					if (!(function($row,$fields){
+						$res=false;
+						foreach ($row as $key=>$value)
 						{
-							if (!array_key_exists($matches[1],$arg_destination)) $res=false;
-							else $res=in_array($matches[2],array_column(array_column($arg_destination[$matches[1]]["value"],"__row_uid"),"value"));
-						}
-						return $res;
-					}));
-		if (array_key_exists("__autonumber",$arg_fields))
-		{
-			$fixed=$arg_fields["__autonumber"]["fixed"];
-			$prefix=(function($destination,$fields){
-				$res="";
-				foreach ($fields["__autonumber"]["group"] as $group)
-					if (array_key_exists($group,$fields))
-						if (!is_null($destination[$group]["value"]))
-							switch ($fields[$group]["type"])
+							switch ($key)
 							{
-								case "id":
-								case "number":
-									$res.=strval($destination[$group]["value"]);
+								case "__row_rel":
+									if ($value["value"]!="") $res=true;
+									break;
+								case "__row_uid":
 									break;
 								default:
-									$res.=$destination[$group]["value"];
+									if ($value["value"]!=null)
+									{
+										if ($fields[$key]["type"]=="radio")
+										{
+											if ($value["value"]!=current($fields[$key]["options"])["option"]["value"]) $res=true;
+										}
+										else
+										{
+											switch (gettype($value["value"]))
+											{
+												case "array":
+													if (count($value["value"])!=0) $res=true;
+													break;
+												case "double":
+												case "integer":
+													if (strval($value["value"])!="") $res=true;
+													break;
+												case "string":
+													if ($value["value"]!="") $res=true;
+													break;
+											}
+										}
+									}
 									break;
 							}
-				return $res;
-			})($arg_destination,$arg_fields);
-			if (!preg_match("/^{$prefix}[0-9]{{$fixed}}$/u",$arg_destination["__autonumber"]["value"]))
-			{
-				$query="__autonumber like \"^{$prefix}[0-9]{{$fixed}}$\"";
-				if (array_key_exists("__id",$arg_source))
-					if (preg_match("/^[0-9]+$/u",$arg_source["__id"]["value"]))
-						$query.=" and __id != {$arg_source["__id"]["value"]}";
-				$filters=array_values($this->filter($arg_records,$arg_fields,$query,""));
-				if (count($filters)!=0)
-				{
-					$params=[];
-					$params[]=array_column(array_column($filters,"__autonumber"),"value");
-					$params[]=SORT_DESC;
-					$params[]=&$filters;
-					call_user_func_array('array_multisort',$params);
-					$increment=intval(($prefix)?preg_replace("/^{$prefix}/u","",$filters[0]["__autonumber"]["value"]):$filters[0]["__autonumber"]["value"]);
-					$increment++;
-					$arg_destination["__autonumber"]=["value"=>$prefix.sprintf("%0".$fixed."d",$increment)];
-				}
-				else $arg_destination["__autonumber"]=["value"=>$prefix.sprintf("%0".$fixed."d",1)];
+						}
+						return $res;
+					})(end($arg_destination[$key]["value"]),$arg_fields[$key]["fields"])) array_pop($arg_destination[$key]["value"]);
+				$uid=array_reduce($arg_destination[$key]["value"],function($result,$current){
+					if (preg_match("/^[0-9]+$/u",$current["__row_uid"]["value"]))
+						if ($result<intval($current["__row_uid"]["value"])) $result=intval($current["__row_uid"]["value"]);
+					return $result;
+				},-1);
+				foreach ($value as $rel=>$rows)
+					foreach ($rows as $row)
+					{
+						$uid++;
+						[$destination,$table]=$this->build_assign([],["__row_rel"=>["value"=>$rel],"__row_uid"=>["value"=>strval($uid)]],$arg_fields[$key]["fields"],[],$key);
+						$arg_destination[$key]["value"][]=(function($destination,$source,$fields,&$continue){
+							foreach ($fields as $field)
+								if (array_key_exists($field["id"],$source))
+									switch ($field["type"])
+									{
+										case "lookup":
+											$destination[$field["id"]]=["lookup"=>true,"value"=>($source[$field["id"]]["value"]=="")?null:floatval($source[$field["id"]]["value"])];
+											$continue=true;
+											break;
+										case "number":
+											$destination[$field["id"]]=["value"=>($source[$field["id"]]["value"]=="")?null:floatval($source[$field["id"]]["value"])];
+											break;
+										default:
+											$destination[$field["id"]]=["value"=>$source[$field["id"]]["value"]];
+											break;
+									}
+							return $destination;
+						})($destination,$row,$arg_fields[$key]["fields"],$continue);
+					}
 			}
-		}
-		else $arg_destination["__autonumber"]=["value"=>""];
-		return $arg_destination;
+		return $continue;
 	}
 	/* deduplications */
 	public function deduplications($arg_file)
