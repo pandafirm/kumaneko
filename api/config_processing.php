@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config_processing.php"
-* Version: 1.1.4
+* Version: 1.1.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -39,6 +39,8 @@ function shave($arg_record,$arg_fields)
 				case "__id":
 				case "__modifier":
 				case "__modifiedtime":
+				case "__row_rel":
+				case "__row_uid":
 					break;
 				default:
 					unset($arg_record[$key]);
