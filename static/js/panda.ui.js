@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.1.4
+* Version: 1.1.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1555,6 +1555,11 @@ class panda_record{
 			res['__createdtime']={value:''};
 			res['__modifier']={value:[]};
 			res['__modifiedtime']={value:''};
+		}
+		else
+		{
+			res['__row_rel']={value:''};
+			res['__row_uid']={value:''};
 		}
 		return res;
 	}
@@ -3545,73 +3550,78 @@ class panda_user_interface{
 														})(),false).then(() => {
 															if (fieldinfo.table.length!=0)
 															{
-																((container,scope) => {
-																	pd.record.set(container,app,((record,uid) => {
-																		((records) => {
-																			fieldinfo.table.each((table,index) => {
-																				if ((table.id.internal in records.internal) && (table.id.external in records.external))
-																				{
-																					((rows) => {
-																						if (rows.internal.value.length>0)
-																							if (!((row) => {
-																								var res=false;
-																								for (var key in row)
-																								{
-																									switch (key)
+																pd.event.call(fieldinfo.app,'pd.fields.call',{fields:{}})
+																.then((param) => {
+																	((container,scope,fields) => {
+																		pd.record.set(container,app,((record,uid) => {
+																			((records) => {
+																				if (!records.external) records.external={};
+																				if (!records.internal) records.internal={};
+																				fieldinfo.table.each((table,index) => {
+																					if ((table.id.internal in records.internal) && (table.id.external in records.external))
+																					{
+																						((rows) => {
+																							if (rows.internal.value.length>0)
+																								if (!((row) => {
+																									var res=false;
+																									for (var key in row)
 																									{
-																										case '__row_rel':
-																											if (row[key].value) res=true;
-																											break;
-																										case '__row_uid':
-																											break;
-																										default:
-																											((value) => {
-																												if (value!=null)
-																												{
-																													if (fieldinfos[key].type=='radio')
+																										switch (key)
+																										{
+																											case '__row_rel':
+																												if (row[key].value) res=true;
+																												break;
+																											case '__row_uid':
+																												break;
+																											default:
+																												((value) => {
+																													if (value!=null)
 																													{
-																														if (value!=fieldinfos[key].options.first().option.value) res=true;
+																														if (fieldinfos[key].type=='radio')
+																														{
+																															if (value!=fieldinfos[key].options.first().option.value) res=true;
+																														}
+																														else
+																														{
+																															if (value.length!=0) res=true;
+																														}
 																													}
-																													else
-																													{
-																														if (value.length!=0) res=true;
-																													}
-																												}
-																											})(row[key].value);
-																											break;
+																												})(row[key].value);
+																												break;
+																										}
+																										if (res) break;
 																									}
-																									if (res) break;
-																								}
-																								return res;
-																							})(rows.internal.value.last())) rows.internal.value.pop();
-																						rows.internal.value=rows.internal.value.filter((item) => {
-																							return item['__row_rel'].value!=fieldinfo.tableid+uid+'_'+fieldinfo.id;
-																						});
-																						((rel,uid) => {
-																							rows.external.value.each((row,index) => {
-																								uid++;
-																								rows.internal.value.push(table.fields.reduce((result,current) => {
-																									if ((current.external in row) && (current.internal in fieldinfos))
-																									{
-																										if (fieldinfos[current.internal].type!='lookup') result[current.internal]={value:row[current.external].value};
-																										else result[current.internal]={lookup:true,value:row[current.external].value};
-																									}
-																									return result;
-																								},{'__row_rel':{value:rel},'__row_uid':{value:uid}}));
+																									return res;
+																								})(rows.internal.value.last())) rows.internal.value.pop();
+																							rows.internal.value=rows.internal.value.filter((item) => {
+																								return item['__row_rel'].value!=fieldinfo.tableid+uid+'_'+fieldinfo.id;
 																							});
-																						})(
-																							fieldinfo.tableid+uid+'_'+fieldinfo.id,
-																							container.elm('[field-id="'+CSS.escape(table.id.internal)+'"]').tr.reduce((result,current) => {
-																								return (result<parseInt(current.attr('row-uid')))?parseInt(current.attr('row-uid')):result;
-																							},-1)
-																						);
-																					})({external:records.external[table.id.external],internal:records.internal[table.id.internal]});
-																				}
-																			});
-																		})({external:resp.record,internal:record});
-																		return record;
-																	})(pd.record.get(container,app,true).record,(scope.hasAttribute('row-uid'))?scope.attr('row-uid'):''),false).then(() => resolve());
-																})(field.closest('[form-id=form_'+app.id+']'),field.closest('.pd-scope'));
+																							((rel,uid) => {
+																								rows.external.value.each((row,index) => {
+																									uid++;
+																									rows.internal.value.push(table.fields.reduce((result,current) => {
+																										if ((current.external in row) && (current.internal in fieldinfos))
+																										{
+																											if (fieldinfos[current.internal].type!='lookup') result[current.internal]={value:row[current.external].value};
+																											else result[current.internal]={lookup:true,value:row[current.external].value};
+																										}
+																										return result;
+																									},{'__row_rel':{value:rel},'__row_uid':{value:uid}}));
+																								});
+																							})(
+																								fieldinfo.tableid+uid+'_'+fieldinfo.id,
+																								container.elm('[field-id="'+CSS.escape(table.id.internal)+'"]').tr.reduce((result,current) => {
+																									return (result<parseInt(current.attr('row-uid')))?parseInt(current.attr('row-uid')):result;
+																								},-1)
+																							);
+																						})({external:records.external[table.id.external],internal:records.internal[table.id.internal]});
+																					}
+																				});
+																			})({external:pd.filter.scan({fields:fields},resp.record,fieldinfo.query),internal:record});
+																			return record;
+																		})(pd.record.get(container,app,true).record,(scope.hasAttribute('row-uid'))?scope.attr('row-uid'):''),false).then(() => resolve());
+																	})(field.closest('[form-id=form_'+app.id+']'),field.closest('.pd-scope'),param.fields);
+																});
 															}
 															else resolve();
 														});

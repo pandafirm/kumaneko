@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.1.4
+* Version: 1.1.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -4986,10 +4986,18 @@ pd.modules={
 															delete res.nocaption;
 															break;
 														case 'checkbox':
-														case 'dropdown':
 														case 'radio':
 															res=pd.extend({
 																options:[
+																	{option:{value:'option1'}},
+																	{option:{value:'option2'}}
+																]
+															},res);
+															break;
+														case 'dropdown':
+															res=pd.extend({
+																options:[
+																	{option:{value:''}},
 																	{option:{value:'option1'}},
 																	{option:{value:'option2'}}
 																]
