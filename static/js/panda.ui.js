@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.1.5
+* Version: 1.1.6
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -4897,7 +4897,7 @@ class panda_user_interface{
 														viewid:viewid
 													})
 													.then((param) => {
-														res.delrow(row);
+														if (!param.error) res.delrow(row);
 													});
 											});
 										});

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.1.5
+* Version: 1.1.6
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -556,7 +556,7 @@ class panda_kumaneko{
 										if (sessionStorage.getItem(this.project.key+'_notifier')) sessionStorage.removeItem(this.project.key+'_notifier');
 										else
 										{
-											if (resp.id in this.apps) this.apps[resp.id].notify();
+											if (resp.id in this.apps) this.apps[resp.id].notify(true);
 										}
 										switch (resp.id)
 										{
@@ -2870,12 +2870,8 @@ pd.modules={
 						pd.request(pd.ui.baseuri()+'/records.php','DELETE',{},{app:this.app.id,truncate:true})
 						.then((resp) => {
 							this.notify().then(() => {
-								if (this.record.ui.tab.active) this.record.clear();
-								else
-								{
-									for (var key in this.view.ui)
-										if (this.view.ui[key].tab.active) this.view.load(key).catch(() => {});
-								}
+								this.record.clear();
+								for (var key in this.view.ui) this.view.load(key,null,null,true).catch(() => {});
 								pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 								resolve({});
 							});
@@ -3325,7 +3321,7 @@ pd.modules={
 															this.record.ui.tab.close.click();
 															pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 														});
-													});
+													}).catch(() => {});
 											});
 										});
 									}
@@ -3697,6 +3693,8 @@ pd.modules={
 						if (e.recordid==this.record.id) this.record.clear();
 						pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 					});
+				}).catch(() => {
+					e.error=true;
 				});
 			});
 			pd.event.on(this.app.id,'pd.edit.call',(e) => {
@@ -3751,10 +3749,15 @@ pd.modules={
 			else action(unsaved);
 		}
 		/* reload notification */
-		notify(){
+		notify(reload){
 			return new Promise((resolve,reject) => {
 				for (var key in this.view.ui)
-					if (this.view.ui[key].body.elms('[unsaved=unsaved]').length==0) this.view.ui[key].loaded=false;
+					if (this.view.ui[key].body.elms('[unsaved=unsaved]').length==0)
+					{
+						this.view.ui[key].loaded=false;
+						if (reload)
+							if (this.view.ui[key].tab.active) this.view.load(key).catch(() => {});
+					}
 				pd.event.call('0','pd.queue.linkage',{app:this.app.id});
 				resolve({});
 			});
