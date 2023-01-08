@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "records.php"
-* Version: 1.1.5
+* Version: 1.1.6
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -63,6 +63,7 @@ class clsRequest extends clsBase
 		{
 			$this->response["id"]=$this->driver->insertid();
 			$this->response["autonumbers"]=$this->driver->autonumbers();
+			if (isset($this->body["notify"])?$this->body["notify"]:false) $this->notify($this->body["app"],$this->driver->record("project","1"));
 			header("HTTP/1.1 200 OK");
 			header('Content-Type: application/json; charset=utf-8');
 			echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
@@ -79,6 +80,7 @@ class clsRequest extends clsBase
 		if ($this->driver->update($this->body["app"],$this->body["records"],$this->operator))
 		{
 			$this->response["autonumbers"]=$this->driver->autonumbers();
+			if (isset($this->body["notify"])?$this->body["notify"]:false) $this->notify($this->body["app"],$this->driver->record("project","1"));
 			header("HTTP/1.1 200 OK");
 			header('Content-Type: application/json; charset=utf-8');
 			echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
@@ -95,6 +97,7 @@ class clsRequest extends clsBase
 		{
 			if ($this->driver->delete($this->body["app"],$this->body["id"]))
 			{
+				if (isset($this->body["notify"])?$this->body["notify"]:false) $this->notify($this->body["app"],$this->driver->record("project","1"));
 				header("HTTP/1.1 200 OK");
 				header('Content-Type: application/json; charset=utf-8');
 				echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
@@ -106,6 +109,7 @@ class clsRequest extends clsBase
 		{
 			if ($this->driver->deletes($this->body["app"],mb_convert_encoding($this->body["query"],'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),$this->operator))
 			{
+				if (isset($this->body["notify"])?$this->body["notify"]:false) $this->notify($this->body["app"],$this->driver->record("project","1"));
 				header("HTTP/1.1 200 OK");
 				header('Content-Type: application/json; charset=utf-8');
 				echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
@@ -117,6 +121,7 @@ class clsRequest extends clsBase
 		{
 			if ($this->driver->truncate($this->body["app"]))
 			{
+				if (isset($this->body["notify"])?$this->body["notify"]:false) $this->notify($this->body["app"],$this->driver->record("project","1"));
 				header("HTTP/1.1 200 OK");
 				header('Content-Type: application/json; charset=utf-8');
 				echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
@@ -125,6 +130,18 @@ class clsRequest extends clsBase
 			else $this->callrequesterror(500,$this->driver->queryerror());
 		}
 		$this->callrequesterror(400);
+	}
+	public function notify($arg_app,$arg_project)
+	{
+		(function($php,$payload){
+			$subject=preg_replace(
+				"/".basename(dirname(__FILE__))."\/.*$/u",
+				'',
+				(((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']!=="off"))?"https://":"http://").$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI']
+			);
+			if (substr(php_uname(),0,7)=="Windows") pclose(popen("start /B {$php} notify_processing.php ".$payload." ".$subject,"r"));
+			else exec("nohup {$php} notify_processing.php ".$payload." ".$subject." > /dev/null &");
+		})(($arg_project["cli_path"]["value"]=="")?"php":$arg_project["cli_path"]["value"],"{\\\"source\\\":\\\"app\\\",\\\"id\\\":\\\"".$arg_app."\\\"}");
 	}
 }
 $cls_request=new clsRequest();
