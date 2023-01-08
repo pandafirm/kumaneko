@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "sheet.php"
-* Version: 1.1.5
+* Version: 1.1.6
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
