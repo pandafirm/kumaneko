@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 1.1.5
+* Version: 1.1.6
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -414,6 +414,7 @@ class clsDriver
 		$file=$this->dir."{$arg_file}.json";
 		try
 		{
+			$this->lock($arg_file);
 			if ($arg_id=="")
 			{
 				$this->resulterror="You should specified ID for Delete";
@@ -454,12 +455,17 @@ class clsDriver
 			$this->resulterror=$e->getMessage();
 			return false;
 		}
+		finally
+		{
+			$this->unlock($arg_file);
+		}
 	}
 	public function deletes($arg_file,$arg_query="",$arg_operator="")
 	{
 		$file=$this->dir."{$arg_file}.json";
 		try
 		{
+			$this->lock($arg_file);
 			if ($arg_query=="")
 			{
 				$this->resulterror="You should specified Key for Delete or use Trucate Function";
@@ -492,12 +498,17 @@ class clsDriver
 			$this->resulterror=$e->getMessage();
 			return false;
 		}
+		finally
+		{
+			$this->unlock($arg_file);
+		}
 	}
 	public function truncate($arg_file)
 	{
 		$file=$this->dir."{$arg_file}.json";
 		try
 		{
+			$this->lock($arg_file);
 			if (file_exists($file))
 			{
 				file_put_contents($file,json_encode([]));
@@ -513,6 +524,10 @@ class clsDriver
 		{
 			$this->resulterror=$e->getMessage();
 			return false;
+		}
+		finally
+		{
+			$this->unlock($arg_file);
 		}
 	}
 	/* fields */
@@ -1048,6 +1063,7 @@ class clsDriver
 		$source=[];
 		try
 		{
+			$this->lock($arg_file);
 			$this->operator=$arg_operator;
 			$this->resultid=0;
 			$this->resultnumbers=[];
@@ -1108,10 +1124,43 @@ class clsDriver
 			$this->resulterror=$e->getMessage();
 			return false;
 		}
+		finally
+		{
+			$this->unlock($arg_file);
+		}
 	}
 	public function insertid()
 	{
 		return $this->resultid;
+	}
+	/* lock */
+	public function lock($arg_file)
+	{
+		$file="./record_processing_{$arg_file}.txt";
+		$limit=60;
+		$start=time();
+		@set_time_limit($limit);
+		while (file_exists($file))
+		{
+			usleep(500);
+			if (file_exists($file))
+				if (time()>filectime($file)+$limit)
+				{
+					$this->unlock($arg_file);
+					break;
+				}
+			if (time()>$start+$limit-1) throw new Exception("Timed out because someone is manipulating records for this app");
+		}
+		file_put_contents($file,"");
+		@set_time_limit($limit);
+	}
+	public function unlock($arg_file)
+	{
+		if ($this->resulterror!="Timed out because someone is manipulating records for this app")
+		{
+			$file="./record_processing_{$arg_file}.txt";
+			if (file_exists($file)) unlink($file);
+		}
 	}
 	/* query */
 	public function query($arg_lhs,$arg_operator,$arg_rhs)
@@ -1271,6 +1320,7 @@ class clsDriver
 		$file=$this->dir."{$arg_file}.json";
 		try
 		{
+			$this->lock($arg_file);
 			$this->operator=$arg_operator;
 			$this->resultid=0;
 			$this->resultnumbers=[];
@@ -1353,6 +1403,10 @@ class clsDriver
 		{
 			$this->resulterror=$e->getMessage();
 			return false;
+		}
+		finally
+		{
+			$this->unlock($arg_file);
 		}
 	}
 	/* filter functions */
