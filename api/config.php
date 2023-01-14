@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.1.6
+* Version: 1.1.7
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -93,6 +93,14 @@ class clsRequest extends clsBase
 								}
 								return $item;
 							},$value->actions);
+							$value->linkages=array_map(function($item) use (&$update){
+								if (!property_exists($item,"bulk"))
+								{
+									$item->bulk=["enable"=>false,"caption"=>"","message"=>""];
+									$update=true;
+								}
+								return $item;
+							},$value->linkages);
 						}
 						if (!property_exists($this->response["file"]->apps->system->project->fields,"cli_path"))
 						{
