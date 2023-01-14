@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.1.6
+* Version: 1.1.7
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -21,6 +21,7 @@ class panda_event{
 				this.eventhandlers[key][type].push(handler);
 			}
 		});
+		return this;
 	}
 	/* clear event handler */
 	off(key,events,handler){
@@ -32,6 +33,7 @@ class panda_event{
 						this.eventhandlers[key][type]=this.eventhandlers[key][type].filter((item) => item!==handler);
 			}
 		});
+		return this;
 	}
 	/* call event */
 	call(key,type,param){

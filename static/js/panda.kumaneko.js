@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.1.6
+* Version: 1.1.7
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1313,6 +1313,70 @@ pd.modules={
 									res.header.firstChild
 								);
 								if (!['customize','edit'].includes(view.type))
+								{
+									var finish=(records) => {
+										if (records.length!=0)
+										{
+											pd.event.call(this.app.id,'pd.view.submit',{
+												container:res.body.elm('.pd-view'),
+												records:{
+													post:[],
+													put:records
+												},
+												viewid:viewid
+											})
+											.then((param) => {
+												if (!param.error)
+												{
+													this.actions.saving(param.records.put)
+													.then((confirmed) => {
+														if (confirmed) pd.loadstart();
+														var reload=param.records.put.some((item) => item['__id'].value==this.record.id);
+														pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:this.app.id,records:param.records.put},true)
+														.then((resp) => {
+															pd.event.call(this.app.id,'pd.view.submit.success',{
+																container:res.body.elm('.pd-view'),
+																records:param.records,
+																viewid:viewid
+															})
+															.then((param) => {
+																if (!param.error)
+																{
+																	pd.loadend();
+																	pd.progressend();
+																	pd.alert('Done!',() => {
+																		this.notify().then(() => {
+																			this.view.load(viewid).then(() => {
+																				if (reload) this.record.load(this.record.id,true);
+																			}).catch(() => {});
+																			pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
+																		});
+																	});
+																}
+																else
+																{
+																	pd.loadend();
+																	pd.progressend();
+																}
+															});
+														})
+														.catch((error) => {
+															pd.loadend();
+															pd.progressend();
+															pd.alert(error.message);
+														});
+													})
+													.catch(() => pd.progressend());
+												}
+												else pd.progressend();
+											});
+										}
+										else
+										{
+											pd.progressend();
+											pd.alert('Done!');
+										}
+									};
 									((actions) => {
 										actions.each((action,index) => {
 											((button) => {
@@ -1321,91 +1385,36 @@ pd.modules={
 													res.header.elm('.pd-kumaneko-app-header-space').append(button.html(action.caption).on('click',(e) => {
 														pd.confirm(action.message,() => {
 															pd.loadstart();
-															this.record.bulk({
-																app:this.app.id,
+															pd.event.call(this.app.id,'pd.view.query.add',{
 																query:res.query,
-																sort:res.sort,
-																offset:0,
-																limit:500
-															},[],true,(records) => {
-																var setup=(index,callback) => {
-																	this.actions.button(action,records[index],'view').then((param) => {
-																		if ('record' in param) records[index]=this.actions.value(param.record,'backend');
-																		else records[index]=null;
-																		index++;
-																		pd.progressupdate();
-																		if (index<records.length) setup(index,callback);
-																		else callback(records.filter((item) => item));
-																	}).catch(() => pd.progressend());
-																};
-																if (records.length!=0)
-																{
-																	pd.progressstart(records.length);
-																	setup(0,(records) => {
-																		if (records.length!=0)
-																		{
-																			pd.event.call(this.app.id,'pd.view.submit',{
-																				container:res.body.elm('.pd-view'),
-																				records:{
-																					post:[],
-																					put:records
-																				},
-																				viewid:viewid
-																			})
-																			.then((param) => {
-																				if (!param.error)
-																				{
-																					this.actions.saving(param.records.put)
-																					.then((confirmed) => {
-																						if (confirmed) pd.loadstart();
-																						var reload=param.records.put.some((item) => item['__id'].value==this.record.id);
-																						pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:this.app.id,records:param.records.put},true)
-																						.then((resp) => {
-																							pd.event.call(this.app.id,'pd.view.submit.success',{
-																								container:res.body.elm('.pd-view'),
-																								records:param.records,
-																								viewid:viewid
-																							})
-																							.then((param) => {
-																								if (!param.error)
-																								{
-																									pd.loadend();
-																									pd.progressend();
-																									pd.alert('Done!',() => {
-																										this.notify().then(() => {
-																											this.view.load(viewid).then(() => {
-																												if (reload) this.record.load(this.record.id,true);
-																											}).catch(() => {});
-																											pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
-																										});
-																									});
-																								}
-																								else
-																								{
-																									pd.loadend();
-																									pd.progressend();
-																								}
-																							});
-																						})
-																						.catch((error) => {
-																							pd.loadend();
-																							pd.progressend();
-																							pd.alert(error.message);
-																						});
-																					})
-																					.catch(() => pd.progressend());
-																				}
-																				else pd.progressend();
-																			});
-																		}
-																		else
-																		{
-																			pd.progressend();
-																			pd.alert('Done!');
-																		}
-																	});
-																}
-																else pd.loadend();
+																viewid:viewid
+															})
+															.then((param) => {
+																var overwrite=(!param.error)?param.query:res.query;
+																this.record.bulk({
+																	app:this.app.id,
+																	query:overwrite,
+																	sort:res.sort,
+																	offset:0,
+																	limit:500
+																},[],true,(records) => {
+																	var setup=(index) => {
+																		this.actions.button(action,records[index],'view').then((param) => {
+																			if ('record' in param) records[index]=this.actions.value(param.record,'backend');
+																			else records[index]=null;
+																			index++;
+																			pd.progressupdate();
+																			if (index<records.length) setup(index);
+																			else finish(records.filter((item) => item));
+																		}).catch(() => pd.progressend());
+																	};
+																	if (records.length!=0)
+																	{
+																		pd.progressstart(records.length);
+																		setup(0);
+																	}
+																	else pd.loadend();
+																});
 															});
 														});
 													}));
@@ -1421,6 +1430,55 @@ pd.modules={
 											})(pd.create('button').addclass('pd-button pd-kumaneko-button'));
 										});
 									})(this.app.actions.filter((item) => item.trigger=='button'));
+									((linkages) => {
+										linkages.each((linkage,index) => {
+											((button) => {
+												res.header.elm('.pd-kumaneko-app-header-space').append(button.html(linkage.bulk.caption).on('click',(e) => {
+													pd.confirm(linkage.bulk.message,() => {
+														pd.loadstart();
+														pd.event.call(this.app.id,'pd.view.query.add',{
+															query:res.query,
+															viewid:viewid
+														})
+														.then((param) => {
+															var overwrite=(!param.error)?param.query:res.query;
+															this.record.bulk({
+																app:this.app.id,
+																query:overwrite,
+																sort:res.sort,
+																offset:0,
+																limit:500
+															},[],true,(records) => {
+																var setup=(index) => {
+																	this.linkage.load(linkage.id,records[index],(record) => {
+																		index++;
+																		pd.progressupdate();
+																		if (index<records.length) setup(index);
+																		else finish(records);
+																	});
+																};
+																if (records.length!=0)
+																{
+																	pd.progressstart(records.length);
+																	setup(0);
+																}
+																else pd.loadend();
+															});
+														});
+													});
+												}));
+												pd.event.on(this.app.id,'pd.view.load',(e) => {
+													if (e.viewid==viewid)
+													{
+														if (e.total!=0) button.css({display:'inline-block'});
+														else button.hide();
+													}
+													return e;
+												});
+											})(pd.create('button').addclass('pd-button pd-kumaneko-button'));
+										});
+									})(this.app.linkages.filter((item) => item.bulk.enable));
+								}
 								break;
 						}
 						if (view.type!='edit')
@@ -1455,7 +1513,7 @@ pd.modules={
 											}).catch(() => pd.loadend());
 										});
 									}));
-									pd.event.on(this.app.id,['pd.create.load','pd.edit.load'],(e) => {
+									pd.event.on(this.app.id,['pd.create.load.complete','pd.edit.load.complete'],(e) => {
 										if (!e.viewid)
 											((record) => {
 												if (pd.filter.scan(this.app,record,action.filter)) button.css({display:'inline-block'});
@@ -2525,9 +2583,9 @@ pd.modules={
 				}
 			};
 			this.linkage={
-				load:(ids,record) => {
+				load:(ids,record,callback) => {
 					ids=((Array.isArray(ids))?pd.extend([],ids):ids.split(',').map((item) => item.trim())).filter((item) => item);
-					((linkages) => {
+					((linkages,backend) => {
 						pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 						.then((resp) => {
 							var config=resp.file;
@@ -2556,9 +2614,47 @@ pd.modules={
 												})(linkage.contents.elm('.pd-view').elm('thead'))),
 												linkageid:linkage.id
 											};
+											var deploy=(fields,origin) => {
+												var tables=Array.from(new Set(fields.map((item) => item.internal.tableid))).reduce((result,current) => {
+													origin[current].value=[];
+													result[current]={
+														fields:fields.filter((item) => item.internal.tableid==current),
+														row:pd.record.create({fields:config.apps.user[this.app.id].fields[current].fields})
+													};
+													return result;
+												},{});
+												keep.records.each((record,index) => {
+													for (var key in tables)
+														origin[key].value.push(((row) => {
+															tables[key].fields.each((field,index) => {
+																switch (field.internal.type)
+																{
+																	case 'lookup':
+																		row[field.internal.id]=((value) => {
+																			return {
+																				lookup:true,
+																				search:(!('search' in value)?'':value.search),
+																				value:value.value
+																			};
+																		})(record[field.external]);
+																		break;
+																	default:
+																		row[field.internal.id].value=record[field.external].value;
+																		break;
+																}
+															});
+															return row;
+														})(pd.extend({},tables[key].row)));
+												});
+												return this.actions.value(origin,(backend)?'backend':'record');
+											};
 											var finish=() => {
 												index++;
 												if (index<linkages.length) build(index);
+												else
+												{
+													if (backend) callback(record);
+												}
 											};
 											var setup=(index,callback) => {
 												((record) => {
@@ -2575,126 +2671,111 @@ pd.modules={
 																if (key in keep.aggregates) keep.aggregates[key].push((cells[key].value)?parseFloat(cells[key].value):0);
 															}
 														keep.records.push(cells);
-														pd.record.set(linkage.contents.elm('.pd-view').addrow().elm('[form-id=form_'+linkage.app.id+']'),linkage.app,cells);
+														if (!backend) pd.record.set(linkage.contents.elm('.pd-view').addrow().elm('[form-id=form_'+linkage.app.id+']'),linkage.app,cells);
 													});
 													index++;
 													if (index<records.length) setup(index,callback);
 													else callback();
-												})(pd.kumaneko.app.action(linkage.app.id,records[index],'view'));
+												})(records[index]);
 											};
 											records=records.shape((item) => {
-												var res=pd.filter.scan(config.apps.user[linkage.app.id],item,param.query);
+												var res=pd.filter.scan(config.apps.user[linkage.app.id],pd.kumaneko.app.action(linkage.app.id,item,'view'),param.query);
 												return (res)?res:PD_THROW;
 											});
 											if (records.length!=0)
 											{
-												linkage.contents.elm('.pd-view').clearrows();
-												setup(0,() => {
-													linkage.aggregate.each((aggregate,index) => {
-														keep.aggregates[aggregate]=((aggregate) => {
-															return {
-																avg:((aggregate.length!=0)?aggregate.reduce((a,b) => a+b)/aggregate.length:0),
-																min:((aggregate.length!=0)?aggregate.reduce((a,b) => Math.min(a,b)):0),
-																max:((aggregate.length!=0)?aggregate.reduce((a,b) => Math.max(a,b)):0),
-																sum:((aggregate.length!=0)?aggregate.reduce((a,b) => a+b):0)
-															};
-														})(keep.aggregates[aggregate]);
-														((fieldinfo) => {
-															pd.event.on(linkage.app.id,'pd.view.guide.call',(e) => {
-																if (e.id==aggregate)
-																{
-																	((aggregate) => {
-																		var res=[];
-																		var setup=(key) => {
-																			var res=aggregate[key];
-																			if (fieldinfo.demiliter) res=Number(res).comma(fieldinfo.decimals);
-																			else res=(fieldinfo.decimals)?Number(res).toFixed(parseInt(fieldinfo.decimals)):res;
-																			if (fieldinfo.unit)
-																			{
-																				if (fieldinfo.unitposition=='prefix') return fieldinfo.unit+res;
-																				else return res+fieldinfo.unit;
-																			}
-																			else return res;
-																		};
-																		linkage.contents.elm('.pd-kumaneko-linkage-guide-label').html(
-																			(() => {
-																				var res=[];
-																				res.push(fieldinfo.caption+'&nbsp;');
-																				res.push('Sum&nbsp;'+setup('sum'));
-																				res.push('Avg&nbsp;'+setup('avg'));
-																				res.push('Min&nbsp;'+setup('min'));
-																				res.push('Max&nbsp;'+setup('max'));
-																				return res.join(' ');
-																			})()
-																		);
-																		linkage.contents.css({paddingBottom:linkage.contents.elm('.pd-kumaneko-linkage-guide').show().outerheight(false).toString()+'px'});
-																	})(keep.aggregates[aggregate])
-																}
-															});
-														})(linkage.app.fields[aggregate])
+												if (backend)
+												{
+													setup(0,() => {
+														if (keep.records.length!=0)
+															((fieldinfos) => {
+																((fields) => {
+																	if (fields.length!=0) record=deploy(fields,record);
+																})(linkage.display.shape((item) => (item.internal in fieldinfos)?{external:item.external,internal:fieldinfos[item.internal]}:PD_THROW));
+															})(pd.ui.field.parallelize(config.apps.user[this.app.id].fields));
+														finish();
 													});
-													if (keep.records.length!=0)
-														((fieldinfos) => {
-															((fields) => {
-																linkage.contents.elm('.pd-view').elm('th').empty();
-																if (fields.length!=0)
-																	linkage.contents.elm('.pd-view').elm('th')
-																	.append(
-																		pd.create('button').addclass('pd-icon pd-icon-copy').on('click',(e) => {
-																			pd.confirm(pd.constants.common.message.confirm.copy[pd.lang],() => {
-																				((origin) => {
-																					var tables=Array.from(new Set(fields.map((item) => item.internal.tableid))).reduce((result,current) => {
-																						origin[current].value=[];
-																						result[current]={
-																							fields:fields.filter((item) => item.internal.tableid==current),
-																							row:pd.record.create({fields:config.apps.user[this.app.id].fields[current].fields})
-																						};
-																						return result;
-																					},{});
-																					keep.records.each((record,index) => {
-																						for (var key in tables)
-																							origin[key].value.push(((row) => {
-																								tables[key].fields.each((field,index) => {
-																									switch (field.internal.type)
-																									{
-																										case 'lookup':
-																											row[field.internal.id]=((value) => {
-																												return {
-																													lookup:true,
-																													search:(!('search' in value)?'':value.search),
-																													value:value.value
-																												};
-																											})(record[field.external]);
-																											break;
-																										default:
-																											row[field.internal.id].value=record[field.external].value;
-																											break;
-																									}
-																								});
-																								return row;
-																							})(pd.extend({},tables[key].row)));
-																					});
-																					pd.record.set(this.record.ui.body,config.apps.user[this.app.id],this.actions.value(origin));
+												}
+												else
+												{
+													linkage.contents.elm('.pd-view').clearrows();
+													setup(0,() => {
+														linkage.aggregate.each((aggregate,index) => {
+															keep.aggregates[aggregate]=((aggregate) => {
+																return {
+																	avg:((aggregate.length!=0)?aggregate.reduce((a,b) => a+b)/aggregate.length:0),
+																	min:((aggregate.length!=0)?aggregate.reduce((a,b) => Math.min(a,b)):0),
+																	max:((aggregate.length!=0)?aggregate.reduce((a,b) => Math.max(a,b)):0),
+																	sum:((aggregate.length!=0)?aggregate.reduce((a,b) => a+b):0)
+																};
+															})(keep.aggregates[aggregate]);
+															((fieldinfo,cell) => {
+																pd.event.off(linkage.app.id,'pd.view.guide.call',cell.handler).on(linkage.app.id,'pd.view.guide.call',(() => {
+																	cell.handler=(e) => {
+																		if (e.id==aggregate)
+																		{
+																			((aggregate) => {
+																				var res=[];
+																				var setup=(key) => {
+																					var res=aggregate[key];
+																					if (fieldinfo.demiliter) res=Number(res).comma(fieldinfo.decimals);
+																					else res=(fieldinfo.decimals)?Number(res).toFixed(parseInt(fieldinfo.decimals)):res;
+																					if (fieldinfo.unit)
+																					{
+																						if (fieldinfo.unitposition=='prefix') return fieldinfo.unit+res;
+																						else return res+fieldinfo.unit;
+																					}
+																					else return res;
+																				};
+																				linkage.contents.elm('.pd-kumaneko-linkage-guide-label').html(
+																					(() => {
+																						var res=[];
+																						res.push(fieldinfo.caption+'&nbsp;');
+																						res.push('Sum&nbsp;'+setup('sum'));
+																						res.push('Avg&nbsp;'+setup('avg'));
+																						res.push('Min&nbsp;'+setup('min'));
+																						res.push('Max&nbsp;'+setup('max'));
+																						return res.join(' ');
+																					})()
+																				);
+																				linkage.contents.css({paddingBottom:linkage.contents.elm('.pd-kumaneko-linkage-guide').show().outerheight(false).toString()+'px'});
+																			})(keep.aggregates[aggregate])
+																		}
+																	};
+																	return cell.handler;
+																})());
+															})(linkage.app.fields[aggregate],linkage.contents.elm('.pd-view').elm('thead').elm('[column-id="'+CSS.escape(aggregate)+'"]'));
+														});
+														if (keep.records.length!=0)
+															((fieldinfos) => {
+																((fields) => {
+																	linkage.contents.elm('.pd-view').elm('th').empty();
+																	if (fields.length!=0)
+																		linkage.contents.elm('.pd-view').elm('th')
+																		.append(
+																			pd.create('button').addclass('pd-icon pd-icon-copy').on('click',(e) => {
+																				pd.confirm(pd.constants.common.message.confirm.copy[pd.lang],() => {
+																					pd.record.set(this.record.ui.body,config.apps.user[this.app.id],deploy(fields,pd.record.get(this.record.ui.body,this.app,true).record));
 																					((event) => {
 																						this.record.ui.body.attr('unsaved','unsaved').dispatchEvent(event);
 																					})(new Event('change'));
-																				})(pd.record.get(this.record.ui.body,this.app,true).record);
-																			});
-																		})
-																	)
-															})(linkage.display.shape((item) => (item.internal in fieldinfos)?{external:item.external,internal:fieldinfos[item.internal]}:PD_THROW));
-														})(pd.ui.field.parallelize(config.apps.user[this.app.id].fields));
-													pd.event.call(this.app.id,'pd.linkage.load.complete',keep);
-													((contents,active) => {
-														contents.elm('.pd-view').css({display:'table'});
-														if (active) contents.show();
-													})(linkage.contents,linkage.tab.active);
-													finish();
-												});
+																				});
+																			})
+																		)
+																})(linkage.display.shape((item) => (item.internal in fieldinfos)?{external:item.external,internal:fieldinfos[item.internal]}:PD_THROW));
+															})(pd.ui.field.parallelize(config.apps.user[this.app.id].fields));
+														pd.event.call(this.app.id,'pd.linkage.load.complete',keep);
+														((contents,active) => {
+															contents.elm('.pd-view').css({display:'table'});
+															if (active) contents.show();
+														})(linkage.contents,linkage.tab.active);
+														finish();
+													});
+												}
 											}
 											else
 											{
-												linkage.contents.elm('.pd-view').hide();
+												if (!backend) linkage.contents.elm('.pd-view').hide();
 												finish();
 											}
 										});
@@ -2713,9 +2794,13 @@ pd.modules={
 								})(linkages[index]);
 							};
 							if (linkages.length!=0) build(0);
+							else
+							{
+								if (backend) callback(record);
+							}
 						})
 						.catch((error) => pd.alert(error.message));
-					})((ids.length!=0)?Object.keys(this.record.ui.linkage).shape((item) => (ids.includes(item))?this.record.ui.linkage[item]:PD_THROW):Object.values(this.record.ui.linkage));
+					})((ids.length!=0)?Object.keys(this.record.ui.linkage).shape((item) => (ids.includes(item))?this.record.ui.linkage[item]:PD_THROW):Object.values(this.record.ui.linkage),(typeof callback!=='undefined'));
 				}
 			};
 			this.record={
@@ -3488,59 +3573,66 @@ pd.modules={
 												.on('click',(e) => {
 													option.hide();
 													this.confirm(() => {
-														this.record.bulk({
-															app:this.app.id,
+														pd.event.call(this.app.id,'pd.view.query.add',{
 															query:view.query,
-															sort:view.sort,
-															offset:0,
-															limit:500
-														},[],false,(records) => {
-															((fields) => {
-																pd.downloadtext(records.reduce((result,current) => {
-																	return result.concat([[current['__id'].value].concat(fields.shape((item) => {
+															viewid:viewid
+														})
+														.then((param) => {
+															var overwrite=(!param.error)?param.query:view.query;
+															this.record.bulk({
+																app:this.app.id,
+																query:overwrite,
+																sort:view.sort,
+																offset:0,
+																limit:500
+															},[],false,(records) => {
+																((fields) => {
+																	pd.downloadtext(records.reduce((result,current) => {
+																		return result.concat([[current['__id'].value].concat(fields.shape((item) => {
+																			var res='';
+																			switch (this.app.fields[item].type)
+																			{
+																				case 'checkbox':
+																				case 'creator':
+																				case 'department':
+																				case 'group':
+																				case 'modifier':
+																				case 'user':
+																					res='"'+current[item].value.join(':')+'"';
+																					break;
+																				case 'file':
+																				case 'id':
+																				case 'spacer':
+																					res=PD_THROW;
+																					break;
+																				case 'lookup':
+																				case 'number':
+																					res=current[item].value;
+																					break;
+																				default:
+																					res='"'+current[item].value.replace(/"/g,'""')+'"';
+																					break;
+																			}
+																			return res;
+																		})).join(',')]);
+																	},[['"Record ID"'].concat(fields.shape((item) => {
 																		var res='';
 																		switch (this.app.fields[item].type)
 																		{
-																			case 'checkbox':
-																			case 'creator':
-																			case 'department':
-																			case 'group':
-																			case 'modifier':
-																			case 'user':
-																				res='"'+current[item].value.join(':')+'"';
-																				break;
 																			case 'file':
 																			case 'id':
 																			case 'spacer':
 																				res=PD_THROW;
 																				break;
-																			case 'lookup':
-																			case 'number':
-																				res=current[item].value;
-																				break;
 																			default:
-																				res='"'+current[item].value.replace(/"/g,'""')+'"';
+																				res='"'+this.app.fields[item].caption+'"';
 																				break;
 																		}
 																		return res;
-																	})).join(',')]);
-																},[['"Record ID"'].concat(fields.shape((item) => {
-																	var res='';
-																	switch (this.app.fields[item].type)
-																	{
-																		case 'file':
-																		case 'id':
-																		case 'spacer':
-																			res=PD_THROW;
-																			break;
-																		default:
-																			res='"'+this.app.fields[item].caption+'"';
-																			break;
-																	}
-																	return res;
-																}).join(','))]).join('\n'),this.app.name+'.csv');
-															})((view.fields.length!=0)?view.fields:Object.keys(this.app.fields));
-														},() => reject({}));
+																	}).join(','))]).join('\n'),this.app.name+'.csv');
+																})((view.fields.length!=0)?view.fields:Object.keys(this.app.fields));
+															},() => reject({}));
+														});
 													},viewid);
 												})
 											)
@@ -5447,7 +5539,12 @@ pd.modules={
 													query:'',
 													sort:'',
 													criteria:[],
-													display:[]
+													display:[],
+													bulk:{
+														enable:false,
+														caption:'',
+														message:''
+													}
 												},this.app.fields,this.app.layout,(linkage) => {
 													menu.contents.elm('.pd-kumaneko-drag-vertical').append(menu.lib.create(linkage));
 													menu.lib.remodel();
@@ -5852,7 +5949,7 @@ pd.modules={
 				return new Promise((resolve,reject) => {
 					var res={
 						error:false,
-						app:this.app
+						app:pd.extend({},this.app)
 					};
 					pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
 					.then((resp) => {
@@ -6097,7 +6194,7 @@ pd.modules={
 												res.push('-&nbsp;'+linkage.name);
 												return;
 											}
-											if (linkage.display.some((item) => !(item.external in fields.external)))
+											if (linkage.display.some((item) => (!(item.external in fields.external))?true:((!(item.internal in fields.internal))?false:(!fields.internal[item.internal].tableid))))
 											{
 												res.push('-&nbsp;'+linkage.name);
 												return;
@@ -10572,6 +10669,32 @@ pd.modules={
 							required:false,
 							nocaption:false,
 							options:[]
+						},
+						enable:{
+							id:'enable',
+							type:'checkbox',
+							caption:'',
+							required:false,
+							nocaption:true,
+							options:[
+								{option:{value:'enable'}}
+							]
+						},
+						caption:{
+							id:'caption',
+							type:'text',
+							caption:pd.constants.linkage.caption.bulk.caption[pd.lang],
+							required:false,
+							nocaption:false,
+							placeholder:pd.constants.linkage.prompt.bulk.caption[pd.lang]
+						},
+						message:{
+							id:'message',
+							type:'text',
+							caption:pd.constants.linkage.caption.bulk.message[pd.lang],
+							required:false,
+							nocaption:false,
+							placeholder:pd.constants.linkage.prompt.bulk.message[pd.lang]
 						}
 					}
 				};
@@ -10865,6 +10988,24 @@ pd.modules={
 							pd.create('div').addclass('pd-kumaneko-section')
 							.append(pd.create('span').addclass('pd-table-caption').html(pd.constants.linkage.caption.display[pd.lang]))
 							.append(this.tables.display)
+						)
+						.append(
+							((res) => {
+								res.elm('.pd-field-value')
+								.append(pd.ui.field.activate(((res) => {
+									res.elm('input').closest('label').elm('span').html(pd.constants.linkage.caption.bulk.enable[pd.lang]);
+									return res;
+								})(pd.ui.field.create(this.app.fields.enable)).css({width:'100%'}),this.app))
+								.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.caption).css({width:'100%'}),this.app))
+								.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.message).css({width:'100%'}),this.app))
+								return res;
+							})(pd.ui.field.create({
+								id:'bulk',
+								type:'spacer',
+								caption:pd.constants.linkage.caption.bulk[pd.lang],
+								required:false,
+								nocaption:false
+							}).css({width:'100%'}))
 						);
 						return contents;
 					})(pd.create('div').addclass('pd-scope').attr('form-id','form_'+this.app.id))
@@ -10944,9 +11085,44 @@ pd.modules={
 												}
 												if (!res.error)
 												{
-													res.linkage.app=record.app.value;
-													res.linkage.criteria=criteria;
-													res.linkage.display=display;
+													if (record.enable.value.length!=0)
+													{
+														(() => {
+															if (display.filter((item) => item.internal).length==0)
+															{
+																res.error=true;
+																pd.alert(pd.constants.linkage.message.invalid.bulk[pd.lang],() => {
+																	resolve(res);
+																});
+																return;
+															}
+															if (!record.caption.value)
+															{
+																res.error=true;
+																pd.alert(pd.constants.linkage.message.invalid.bulk.caption[pd.lang],() => {
+																	resolve(res);
+																});
+																return;
+															}
+															if (!record.message.value)
+															{
+																res.error=true;
+																pd.alert(pd.constants.linkage.message.invalid.bulk.message[pd.lang],() => {
+																	resolve(res);
+																});
+																return;
+															}
+														})();
+													}
+													if (!res.error)
+													{
+														res.linkage.app=record.app.value;
+														res.linkage.criteria=criteria;
+														res.linkage.display=display;
+														res.linkage.bulk.enable=(record.enable.value.length!=0);
+														res.linkage.bulk.caption=record.caption.value;
+														res.linkage.bulk.message=record.message.value;
+													}
 												}
 											}
 										}
@@ -10982,7 +11158,10 @@ pd.modules={
 					});
 					pd.record.set(this.contents,this.app,(() => {
 						var res={
-							name:{value:this.keep.linkage.name}
+							name:{value:this.keep.linkage.name},
+							enable:{value:(this.keep.linkage.bulk.enable)?[this.app.fields.enable.options.first().option.value]:[]},
+							caption:{value:this.keep.linkage.bulk.caption},
+							message:{value:this.keep.linkage.bulk.message}
 						};
 						((elements) => {
 							elements.app.empty().assignoption((() => {
@@ -16037,6 +16216,22 @@ pd.constants=pd.extend({
 				en:'Datasource App',
 				ja:'リンク元アプリ'
 			},
+			bulk:{
+				en:'Bulk Copy',
+				ja:'一括コピー',
+				enable:{
+					en:'Make it possible to copy the retrieved results also on the list view',
+					ja:'一覧形式ビュー上でもテーブル内フィールドへのコピーを可能にする'
+				},
+				caption:{
+					en:'Button Text',
+					ja:'ボタンラベル'
+				},
+				message:{
+					en:'Confirm Message',
+					ja:'確認メッセージ'
+				}
+			},
 			criteria:{
 				en:'Fetch Criteria',
 				ja:'リンクするレコードの関連付け'
@@ -16068,6 +16263,18 @@ pd.constants=pd.extend({
 					en:'Please specify an app from [Datasource App] dropdown',
 					ja:'リンク元アプリを指定して下さい'
 				},
+				bulk:{
+					en:'If you want to allow bulk copy, you must specify the destination field',
+					ja:'一括コピーを可能にする場合は、コピー先フィールドを指定する必要があります',
+					caption:{
+						en:'Please enter the button text',
+						ja:'ボタンラベルを入力して下さい'
+					},
+					message:{
+						en:'Please enter the confirm message',
+						ja:'確認メッセージを入力して下さい'
+					}
+				},
 				criteria:{
 					en:'Please specify one or more criteria',
 					ja:'リンクするレコードの関連付けを指定して下さい'
@@ -16087,6 +16294,16 @@ pd.constants=pd.extend({
 			}
 		},
 		prompt:{
+			bulk:{
+				caption:{
+					en:'Enter the text to be displayed on the button',
+					ja:'ボタンに表示するテキストを入力'
+				},
+				message:{
+					en:'Enter the message to be displayed in the confirmation dialog before executing bulk copy',
+					ja:'一括コピー実行前の確認ダイアログに表示するメッセージを入力'
+				}
+			},
 			name:{
 				en:'Enter the linkage view name',
 				ja:'リンクビュー名を入力'
