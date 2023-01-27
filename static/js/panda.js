@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.1.7
+* Version: 1.2.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -2668,7 +2668,7 @@ class panda_map{
 					/* load api */
 					pd.elm('head').append(
 						pd.create('script')
-						.attr('src','https://maps.googleapis.com/maps/api/js?libraries=geometry&key='+apikey)
+						.attr('src','https://maps.googleapis.com/maps/api/js?libraries=geometry&key='+apikey+'&callback=pd.map.init')
 						.attr('type','text/javascript')
 						.on('load',(e) => {
 							this.loaded=true;

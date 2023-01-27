@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.1.7
+* Version: 1.2.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -796,6 +796,9 @@ class panda_kumaneko{
 											case 'timeseries':
 												panel.timeseries=pd.ui.chart.create(panel.config.view.type);
 												break;
+											case 'kanban':
+												panel.kanban=pd.ui.kanban.create();
+												break;
 											case 'map':
 												panel.map=new panda_map();
 												break;
@@ -1024,6 +1027,12 @@ pd.modules={
 													case 'list':
 														if (res.body.elm('.pd-view')) res.body.elm('.pd-view').elm('thead').css({top:res.header.innerheight().toString()+'px'});
 														break;
+													case 'kanban':
+														if (res.body.elm('.pd-parallel'))
+															res.body.elm('.pd-parallel').elms('.pd-parallel-head').each((element,index) => {
+																element.css({top:res.header.innerheight().toString()+'px'});
+															});
+														break;
 												}
 											})(this.app.views.filter((item) => item.id==viewid).first());
 									}
@@ -1054,6 +1063,7 @@ pd.modules={
 							crosstab:null,
 							gantt:null,
 							timeseries:null,
+							kanban:null,
 							map:null,
 							monitor:null,
 							prev:null,
@@ -1236,6 +1246,63 @@ pd.modules={
 									res.header.firstChild
 								);
 								res.timeseries=pd.ui.chart.create(view.type);
+								break;
+							case 'kanban':
+								if (view.fields.task.date)
+								{
+									res.header.insertBefore(
+										pd.create('div').addclass('pd-kumaneko-app-header-filter')
+										.append(
+											pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
+												pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
+													this.view.load(viewid,query,sort).catch(() => {});
+												})
+											})
+										)
+										.append((() => {
+											res.prev=pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-left').on('click',(e) => {
+												res.monitor.html(new Date(res.monitor.text()).calc('-1 day').format('Y-m-d'));
+												this.view.load(viewid).catch(() => {});
+											});
+											return res.prev;
+										})())
+										.append((() => {
+											res.next=pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-right').on('click',(e) => {
+												res.monitor.html(new Date(res.monitor.text()).calc('1 day').format('Y-m-d'));
+												this.view.load(viewid).catch(() => {});
+											});
+											return res.next;
+										})())
+										.append((() => {
+											res.monitor=pd.create('span').addclass('pd-kumaneko-app-header-filter-monitor').html(new Date().format('Y-m-d'));
+											return res.monitor;
+										})())
+										.append(
+											pd.create('button').addclass('pd-icon pd-icon-date').on('click',(e) => {
+												pd.pickupdate(res.monitor.text(),(date) => {
+													res.monitor.html(new Date(date).format('Y-m-d'));
+													this.view.load(viewid).catch(() => {});
+												});
+											})
+										),
+										res.header.firstChild
+									);
+								}
+								else
+								{
+									res.header.insertBefore(
+										pd.create('div').addclass('pd-kumaneko-app-header-filter')
+										.append(
+											pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
+												pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
+													this.view.load(viewid,query,sort).catch(() => {});
+												})
+											})
+										),
+										res.header.firstChild
+									);
+								}
+								res.kanban=pd.ui.kanban.create();
 								break;
 							case 'map':
 								res.header.insertBefore(
@@ -3054,7 +3121,18 @@ pd.modules={
 							view[view.type].show(records,view);
 							break;
 						case 'gantt':
-							view.gantt.show(records,view,(task,record) => {
+						case 'kanban':
+							((handler) => {
+								switch (view.type)
+								{
+									case 'gantt':
+										view.gantt.show(records,view,handler);
+										break;
+									case 'kanban':
+										view.kanban.show(records,handler);
+										break;
+								}
+							})((task,record) => {
 								if (view.fields.task.title in app.fields)
 									((fieldinfo) => {
 										fieldinfo.nocaption=true;
@@ -3217,6 +3295,59 @@ pd.modules={
 											pd.alert(error.message);
 											reject({});
 										});
+										break;
+									case 'kanban':
+										if (!deactivate) pd.loadstart();
+										this.record.bulk({
+											app:this.app.id,
+											query:((date,query) => {
+												var res=(query)?['('+query+')']:[];
+												if (date)
+												{
+													switch (this.app.fields[view.fields.task.date].type)
+													{
+														case 'createdtime':
+														case 'datetime':
+														case 'modifiedtime':
+															res.push(view.fields.task.date+' >= "'+[date,'00:00:00'].join(' ').parseDateTime().format('ISO')+'"');
+															res.push(view.fields.task.date+' <= "'+[date,'23:59:00'].join(' ').parseDateTime().format('ISO')+'"');
+															break;
+														case 'date':
+															res.push(view.fields.task.date+' = "'+date+'"');
+															break;
+													}
+												}
+												return res.join(' and ');
+											})((view.fields.task.date)?view.monitor.text():null,overwrite),
+											sort:(typeof sort==='string')?sort:view.sort,
+											offset:0,
+											limit:500
+										},[],true,(records) => {
+											if (!deactivate) pd.loadend();
+											pd.event.call(this.app.id,'pd.view.load',{
+												container:view.kanban,
+												records:view.fields.groups.reduce((result,current) => {
+													result.push({
+														caption:current.caption,
+														width:view.fields.task.width,
+														records:records.filter((item) => pd.filter.scan(this.app,item,current.query))
+													});
+													return result;
+												},[]),
+												total:records.length,
+												viewid:viewid
+											})
+											.then((param) => {
+												if (!param.error)
+												{
+													this.view.build(this.app,view,param.records);
+													if (typeof query==='string') view.query=query;
+													if (typeof sort==='string') view.sort=sort;
+													finish(param);
+												}
+												else reject({});
+											});
+										},() => reject({}));
 										break;
 									case 'map':
 										if (!deactivate) pd.loadstart();
@@ -3491,6 +3622,9 @@ pd.modules={
 							case 'timeseries':
 								if (view.chart.type!='table') view.body.addclass('pd-fixed').closest('.pd-contents').addclass('pd-fixed');
 								view.body.append(view.timeseries);
+								break;
+							case 'kanban':
+								view.body.addclass('pd-stretch').append(view.kanban).closest('.pd-contents').addclass('pd-fixed');
 								break;
 							case 'map':
 								((element) => {
@@ -4044,6 +4178,10 @@ pd.modules={
 																case 'timeseries':
 																	res.push({id:view.fields.column.field,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	if (view.fields.values.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
+																	break;
+																case 'kanban':
+																	res.push({id:view.fields.task.title,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
+																	if (view.fields.task.date) res.push({id:view.fields.task.date,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	break;
 																case 'map':
 																	res.push({id:view.fields.lat,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
@@ -5404,7 +5542,8 @@ pd.modules={
 													{option:{value:'calendar'}},
 													{option:{value:'crosstab'}},
 													{option:{value:'gantt'}},
-													{option:{value:'timeseries'}}
+													{option:{value:'timeseries'}},
+													{option:{value:'kanban'}}
 												];
 												if (map) res.push({option:{value:'map'}});
 												res.push({option:{value:'customize'}});
@@ -5490,6 +5629,16 @@ pd.modules={
 																	},
 																	rows:[],
 																	values:[]
+																};
+																break;
+															case 'kanban':
+																res.fields={
+																	groups:[],
+																	task:{
+																		title:'',
+																		date:'',
+																		width:200
+																	}
 																};
 																break;
 															case 'map':
@@ -11283,13 +11432,15 @@ pd.modules={
 								switch (this.keep.view.type)
 								{
 									case 'crosstab':
-										this.menus.crosstab.lib.load();
-										break;
 									case 'timeseries':
-										this.menus.timeseries.lib.load();
+										this.menus[this.keep.view.type].lib.load();
+										break;
+									case 'gantt':
+									case 'kanban':
+										this.menus[this.keep.view.type].lib.load();
+										this.keep.view.sort=sort;
 										break;
 									default:
-										if (this.keep.view.type=='gantt') this.menus.gantt.lib.load();
 										this.keep.view.sort=sort;
 										break;
 								}
@@ -11657,6 +11808,109 @@ pd.modules={
 									})();
 									return res;
 								})(pd.record.get(this.menus.timeseries.contents,this.menus.timeseries.app,true).record);
+							}
+						}
+					},
+					kanban:{
+						id:'kanban',
+						app:{},
+						contents:null,
+						preview:null,
+						table:null,
+						lib:{
+							load:(view) => {
+								view=pd.extend({},(view instanceof Object)?view:this.menus.kanban.lib.remodel());
+								if (this.keep.app)
+									if (view.fields.task.title && view.fields.groups.length!=0)
+									{
+										pd.request(
+											pd.ui.baseuri()+'/records.php',
+											'GET',
+											{},
+											{
+												app:this.keep.app,
+												query:((date,query) => {
+													var res=(query)?['('+query+')']:[];
+													if (date)
+													{
+														switch (this.keep.fields[view.fields.task.date].type)
+														{
+															case 'createdtime':
+															case 'datetime':
+															case 'modifiedtime':
+																res.push(view.fields.task.date+' >= "'+[date,'00:00:00'].join(' ').parseDateTime().format('ISO')+'"');
+																res.push(view.fields.task.date+' <= "'+[date,'23:59:00'].join(' ').parseDateTime().format('ISO')+'"');
+																break;
+															case 'date':
+																res.push(view.fields.task.date+' = "'+date+'"');
+																break;
+														}
+													}
+													return res.join(' and ');
+												})((view.fields.task.date)?new Date().format('Y-m-d'):null,this.keep.view.query),
+												sort:this.keep.view.sort,
+												offset:0,
+												limit:10
+											}
+										)
+										.then((resp) => {
+											this.menus.kanban.preview.show(view.fields.groups.reduce((result,current) => {
+												result.push({
+													caption:current.caption,
+													width:view.fields.task.width,
+													records:resp.records.filter((item) => pd.filter.scan({fields:this.keep.fields},item,current.query))
+												});
+												return result;
+											},[]),(task,record) => {
+												((fieldinfo) => {
+													fieldinfo.nocaption=true;
+													((app) => {
+														task.addclass('pd-scope').append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-picker pd-readonly').css({width:'100%'}),app));
+														pd.record.set(task,app,pd.kumaneko.app.action(app.id,record,'view'));
+													})({
+														id:this.keep.app,
+														fields:(() => {
+															var res={};
+															res[fieldinfo.id]=fieldinfo;
+															return res;
+														})()
+													});
+												})(pd.extend({},this.keep.fields[view.fields.task.title]));
+											});
+										})
+										.catch((error) => {
+											pd.alert(error.message);
+										});
+									}
+							},
+							remodel:() => {
+								var res={
+									fields:{
+										groups:[],
+										task:{
+											title:'',
+											date:'',
+											width:200
+										}
+									}
+								};
+								return ((record) => {
+									res.fields.task.title=record.tasktitle.value;
+									res.fields.task.date=record.taskdate.value;
+									res.fields.task.width=record.taskwidth.value;
+									res.fields.groups=(() => {
+										var res=[];
+										this.menus.kanban.table.tr.each((element,index) => {
+											if (element.elm('[field-id=groupcaption]').elm('input').val())
+												res.push({
+													caption:element.elm('[field-id=groupcaption]').elm('input').val(),
+													query:element.elm('[field-id=groupquery]').filter.query
+												});
+										});
+										return res;
+									})();
+									return res;
+								})(pd.record.get(this.menus.kanban.contents,this.menus.kanban.app,true).record);
 							}
 						}
 					},
@@ -12462,7 +12716,7 @@ pd.modules={
 											pd.alert(pd.constants.view.message.invalid.gantt.width[pd.lang]);
 											e.record.columnwidth.value=64;
 										}
-										this.menus.gantt.lib.load();
+										else this.menus.gantt.lib.load();
 									}
 									else e.record.columnwidth.value=64;
 									return e;
@@ -12750,6 +13004,169 @@ pd.modules={
 									return e;
 								});
 								break;
+							case 'kanban':
+								menu.app={
+									id:'viewbuilder_'+menu.id,
+									fields:{
+										tasktitle:{
+											id:'tasktitle',
+											type:'dropdown',
+											caption:pd.constants.view.caption.kanban.title[pd.lang],
+											required:true,
+											nocaption:false,
+											options:[]
+										},
+										taskdate:{
+											id:'taskdate',
+											type:'dropdown',
+											caption:pd.constants.view.caption.kanban.date[pd.lang],
+											required:false,
+											nocaption:false,
+											options:[]
+										},
+										taskwidth:{
+											id:'taskwidth',
+											type:'number',
+											caption:pd.constants.view.caption.kanban.width[pd.lang],
+											required:true,
+											nocaption:false,
+											demiliter:false,
+											decimals:'0',
+											unit:'px',
+											unitposition:'suffix'
+										}
+									}
+								};
+								menu.preview=pd.ui.kanban.create();
+								menu.table=pd.ui.table.create({
+									id:'groups',
+									type:'table',
+									caption:'',
+									nocaption:true,
+									fields:{
+										groupcaption:{
+											id:'groupcaption',
+											type:'text',
+											caption:'',
+											required:false,
+											nocaption:true,
+											placeholder:pd.constants.view.prompt.kanban.caption[pd.lang],
+											format:'text'
+										},
+										groupquery:{
+											id:'groupquery',
+											type:'spacer',
+											caption:'',
+											required:false,
+											nocaption:true
+										}
+									}
+								}).addclass('pd-table-rows').spread((row,index) => {
+									/* event */
+									row.elm('.pd-table-row-add').on('click',(e) => {
+										menu.table.insertrow(row);
+									});
+									row.elm('.pd-table-row-del').on('click',(e) => {
+										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+											menu.table.delrow(row);
+										});
+									});
+									/* modify elements */
+									((cells) => {
+										cells.caption.elm('input').on('change',(e) => menu.lib.load());
+										((cell) => {
+											cell.filter={
+												monitor:pd.create('span').addclass('pd-kumaneko-filter-monitor').html('0&nbsp;Filters'),
+												query:'',
+												show:() => {
+													pd.filter.build({fields:this.keep.fields},cell.filter.query,null,(query,sort) => {
+														cell.filter.monitor.html(query.split(' and ').filter((item) => item).length.toString()+'&nbsp;Filters');
+														cell.filter.query=query;
+														menu.lib.load();
+													})
+												}
+											};
+											return cell.elm('.pd-field-value');
+										})(cells.query)
+										.append(pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => cells.query.filter.show()))
+										.append(cells.query.filter.monitor);
+									})({
+										caption:row.elm('[field-id=groupcaption]'),
+										query:row.elm('[field-id=groupquery]')
+									});
+								},(table,index) => {
+									if (table.tr.length==0) table.addrow();
+									menu.lib.load();
+								},false);
+								menu.contents
+								.append(
+									pd.create('nav').addclass('pd-kumaneko-nav pd-kumaneko-nav-extension')
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-main')
+										.append(
+											((container) => {
+												container
+												.append(pd.create('span').addclass('pd-table-caption').html(pd.constants.view.caption.kanban.group[pd.lang]))
+												.append(menu.table);
+												return container;
+											})(pd.create('div').addclass('pd-kumaneko-section'))
+										)
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-main pd-kumaneko-border-left pd-kumaneko-inset-left')
+										.append(
+											((res) => {
+												res.elm('select').on('change',(e) => menu.lib.load());
+												return res;
+											})(pd.ui.field.create(menu.app.fields.tasktitle))
+										)
+										.append(
+											((res) => {
+												res.elm('select').on('change',(e) => menu.lib.load());
+												return res;
+											})(pd.ui.field.create(menu.app.fields.taskdate))
+										)
+										.append(pd.ui.field.activate(pd.ui.field.create(menu.app.fields.taskwidth),menu.app))
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-footer pd-kumaneko-border-top pd-kumaneko-inset-top')
+										.append(
+											pd.create('button').addclass('pd-icon pd-icon-filter pd-kumaneko-nav-icon').on('click',(e) => {
+												this.keep.filter.show();
+												e.stopPropagation();
+												e.preventDefault();
+											})
+										)
+										.append(pd.create('span').addclass('pd-kumaneko-filter-monitor'))
+									)
+								)
+								.append(
+									((element) => {
+										element.append(
+											pd.create('div').addclass('pd-container')
+											.append(
+												pd.create('div').addclass('pd-contents pd-stretch pd-kumaneko-'+menu.id)
+												.append(menu.preview)
+											)
+										);
+										return element;
+									})(pd.create('div').addclass('pd-kumaneko-block pd-kumaneko-border-left pd-kumaneko-inset-left'))
+								);
+								/* event */
+								pd.event.on(menu.app.id,'pd.change.taskwidth',(e) => {
+									if (pd.isnumeric(e.record.taskwidth.value))
+									{
+										if (parseInt(e.record.taskwidth.value)<200 || isNaN(e.record.taskwidth.value))
+										{
+											pd.alert(pd.constants.view.message.invalid.kanban.width[pd.lang]);
+											e.record.taskwidth.value=200;
+										}
+										else this.menus.kanban.lib.load();
+									}
+									else e.record.taskwidth.value=200;
+									return e;
+								});
+								break;
 							case 'map':
 								menu.app={
 									id:'viewbuilder_'+menu.id,
@@ -13003,6 +13420,21 @@ pd.modules={
 								}
 								return res.error;
 							})(pd.record.get(this.menus.timeseries.contents,this.menus.timeseries.app),res.view);
+							break;
+						case 'kanban':
+							res.error=((res,view) => {
+								if (!res.error)
+								{
+									var config=this.menus.kanban.lib.remodel();
+									if (config.fields.groups.length==0)
+									{
+										res.error=true;
+										pd.alert(pd.constants.view.message.invalid.kanban.group[pd.lang]);
+									}
+									else view.fields=config.fields;
+								}
+								return res.error;
+							})(pd.record.get(this.menus.kanban.contents,this.menus.kanban.app),res.view);
 							break;
 						case 'map':
 							res.error=((res,view) => {
@@ -13272,7 +13704,10 @@ pd.modules={
 											if (values.field in fields)
 											{
 												row.elm('[field-id=valuefield]').elm('select').val(values.field);
-												row.elm('[field-id=valuequery]').filter.query=values.query;
+												((element,query) => {
+													element.filter.monitor.html(query.split(' and ').filter((item) => item).length.toString()+'&nbsp;Filters');
+													element.filter.query=query;
+												})(row.elm('[field-id=valuequery]'),values.query);
 											}
 										});
 									})(elements.values.table.addrow());
@@ -13303,6 +13738,64 @@ pd.modules={
 								this.menus.timeseries.preview.hide();
 								this.menus.timeseries.preview.chart.hide();
 							}
+							break;
+						case 'kanban':
+							pd.record.set(this.menus.kanban.contents,this.menus.kanban.app,((elements) => {
+								elements.task.title.empty().append(pd.create('option'));
+								elements.task.date.empty().append(pd.create('option'));
+								for (var key in this.keep.fields)
+								{
+									switch (this.keep.fields[key].type)
+									{
+										case 'box':
+										case 'spacer':
+										case 'table':
+											break;
+										case 'createdtime':
+										case 'date':
+										case 'datetime':
+										case 'modifiedtime':
+											elements.task.date.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											break;
+										default:
+											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											break;
+									}
+								}
+								elements.task.title.val(this.keep.view.fields.task.title);
+								elements.task.date.val(this.keep.view.fields.task.date);
+								elements.task.width.val(this.keep.view.fields.task.width);
+								elements.groups.table.clearrows();
+								this.keep.view.fields.groups.each((values,index) => {
+									((row) => {
+										row.elm('[field-id=groupcaption]').elm('input').val(values.caption);
+										((element,query) => {
+											element.filter.monitor.html(query.split(' and ').filter((item) => item).length.toString()+'&nbsp;Filters');
+											element.filter.query=query;
+										})(row.elm('[field-id=groupquery]'),values.query);
+									})(elements.groups.table.addrow());
+								});
+								if (elements.groups.table.tr.length==0) elements.groups.table.addrow();
+								return {};
+							})({
+								task:{
+									title:this.menus.kanban.contents.elm('[field-id=tasktitle]').elm('select'),
+									date:this.menus.kanban.contents.elm('[field-id=taskdate]').elm('select'),
+									width:this.menus.kanban.contents.elm('[field-id=taskwidth]').elm('input')
+								},
+								groups:{
+									table:this.menus.kanban.table
+								}
+							}));
+							for (var key in this.menus)
+							{
+								if (key==this.keep.view.type) this.menus[key].contents.show();
+								else this.menus[key].contents.hide();
+							}
+							this.keep.filter.monitor=this.menus.kanban.contents.elms('.pd-kumaneko-filter-monitor').last();
+							if (this.keep.view.fields.task.title) this.menus.kanban.lib.load(this.keep.view);
+							else this.menus.kanban.preview.hide();
 							break;
 						case 'map':
 							pd.record.set(this.menus.map.contents,this.menus.map.app,(() => {
@@ -13515,6 +14008,9 @@ pd.modules={
 								case 'timeseries':
 									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({timeseries:panel.timeseries},view),records:e.records});
 									break;
+								case 'kanban':
+									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({kanban:panel.kanban},view),records:e.records});
+									break;
 								case 'map':
 									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({map:panel.map},view),records:e.records,option:{center:true}});
 									break;
@@ -13551,6 +14047,9 @@ pd.modules={
 												case 'timeseries':
 													if (panel.config.view.chart.type!='table') panel.body.addclass('pd-fixed');
 													panel.body.append(panel.timeseries);
+													break;
+												case 'kanban':
+													panel.body.append(panel.kanban);
 													break;
 												case 'map':
 													((element) => {
@@ -15694,6 +16193,10 @@ pd.constants=pd.extend({
 						en:'timeseries',
 						ja:'時系列集計'
 					},
+					kanban:{
+						en:'kanban',
+						ja:'カンバン'
+					},
 					map:{
 						en:'map',
 						ja:'地図'
@@ -15724,6 +16227,10 @@ pd.constants=pd.extend({
 						en:'Time series calculation view',
 						ja:'時系列集計'
 					},
+					kanban:{
+						en:'Kanban view',
+						ja:'カンバン'
+					},
 					map:{
 						en:'Map view',
 						ja:'地図'
@@ -15753,6 +16260,10 @@ pd.constants=pd.extend({
 					timeseries:{
 						en:'Time series calculation view',
 						ja:'時系列集計形式'
+					},
+					kanban:{
+						en:'Kanban view',
+						ja:'カンバン形式'
 					},
 					map:{
 						en:'Map view',
@@ -16464,6 +16975,24 @@ pd.constants=pd.extend({
 					ja:'列幅'
 				}
 			},
+			kanban:{
+				date:{
+					en:'Date Field',
+					ja:'日付フィールド'
+				},
+				group:{
+					en:'Groups',
+					ja:'グループ'
+				},
+				title:{
+					en:'Title Field',
+					ja:'タイトルフィールド'
+				},
+				width:{
+					en:'Column Width',
+					ja:'列幅'
+				}
+			},
 			list:{
 				readonly:{
 					en:'Read-only',
@@ -16527,6 +17056,16 @@ pd.constants=pd.extend({
 						ja:'列幅は64px以上にする必要があります'
 					}
 				},
+				kanban:{
+					group:{
+						en:'Please specify one or more groups',
+						ja:'グループを指定して下さい'
+					},
+					width:{
+						en:'Column width must be at least 200px',
+						ja:'列幅は200px以上にする必要があります'
+					}
+				},
 				list:{
 					field:{
 						en:'Please place one or more fields',
@@ -16562,6 +17101,12 @@ pd.constants=pd.extend({
 				title:{
 					en:'here show a tilte field value',
 					ja:'ここにタイトルフィールドの値が表示されます'
+				}
+			},
+			kanban:{
+				caption:{
+					en:'Name',
+					ja:'グループ名を入力'
 				}
 			},
 			map:{

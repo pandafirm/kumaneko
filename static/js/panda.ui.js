@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.1.7
+* Version: 1.2.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -4242,7 +4242,7 @@ class panda_user_interface{
 															((height) => {
 																if (height>0)
 																{
-																	task.css({marginTop:(parseFloat(task.css('margin-top'))+height).toString()+'px'});
+																	task.css({marginTop:((parseFloat(task.css('margin-top')) || 0)+height).toString()+'px'});
 																	pos.row++;
 																	set(task);
 																}
@@ -4308,7 +4308,7 @@ class panda_user_interface{
 													pos.row=matrix.length;
 												}
 											};
-											pd.children(cell).each((task,index) => set(task));
+											pd.children(cell).each((task,index) => set(task.css({marginTop:null})));
 										})({column:index,row:0});
 									});
 								})(row.elms('.pd-matrix-row-cell-task'),[]);
@@ -4390,6 +4390,34 @@ class panda_user_interface{
 					};
 					return table;
 				})(pd.create('table').addclass('pd-matrix'));
+			}
+		};
+		this.kanban={
+			create:() => {
+				return ((container) => {
+					container.show=(groups,callback) => {
+						container.css({display:'flex'}).empty();
+						groups.each((group,index) => {
+							container.append(((res) => {
+								res
+								.append(pd.create('div').addclass('pd-parallel-head').html(group.caption))
+								.append(
+									((res) => {
+										group.records.each((record,index) => {
+											((task) => {
+												res.append(task);
+												callback(task,record);
+											})(pd.create('div').addclass('pd-parallel-body-task'));
+										});
+										return res;
+									})(pd.create('div').addclass('pd-parallel-body'))
+								);
+								return res;
+							})(pd.create('div').addclass('pd-parallel-column').css({'width':group.width.toString()+'px'})));
+						});
+					};
+					return container;
+				})(pd.create('div').addclass('pd-parallel'));
 			}
 		};
 		this.panel={

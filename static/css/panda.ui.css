@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.ui.css"
-* Version: 1.1.7
+* Version: 1.2.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -404,6 +404,33 @@
 .pd-panel .pd-panel-contents.pd-fixed{
 	height:100% !important;
 	width:100% !important;
+}
+.pd-parallel{
+	display:flex;
+}
+.pd-parallel .pd-parallel-column{
+	padding:0 0.25em;
+}
+.pd-parallel .pd-parallel-column .pd-parallel-body{
+	padding:0.25em 0;
+	z-index:1;
+}
+.pd-parallel .pd-parallel-column .pd-parallel-body .pd-parallel-body-task .pd-field .pd-field-value{
+	cursor:pointer;
+}
+.pd-parallel .pd-parallel-column .pd-parallel-body .pd-parallel-body-task .pd-field .pd-field-value .pd-guide{
+	border-radius:0.25em;
+	pointer-events:none;
+}
+.pd-parallel .pd-parallel-column .pd-parallel-head{
+	padding:0.25em;
+	position:sticky;
+	text-align:center;
+	z-index:2;
+}
+.pd-stretch{
+	display:flex;
+	min-height:100%;
 }
 .pd-table{
 	border-collapse:collapse;
