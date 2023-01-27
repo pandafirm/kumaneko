@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 1.1.7
+* Version: 1.2.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1048,7 +1048,7 @@ class clsDriver
 		}
 		catch (ParseError $e)
 		{
-			throw new Exception("Your query is incorrect: ".$arg_query);
+			throw new Exception("Either Your query is incorrect or unregistered fields are used: ".$arg_query);
 		}
 		finally
 		{
