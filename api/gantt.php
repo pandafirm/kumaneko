@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "gantt.php"
-* Version: 1.1.7
+* Version: 1.2.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -126,6 +126,7 @@ class clsRequest extends clsBase
 			0,
 			$this->operator
 		);
+		if (!is_array($this->records)) $this->callrequesterror(500,$this->driver->queryerror());
 		$this->response["fields"]=[];
 		$this->response["records"]=[];
 		$this->response["rows"]=$this->body["rows"];
