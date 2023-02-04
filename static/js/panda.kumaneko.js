@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.2.0
+* Version: 1.2.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -63,6 +63,57 @@ class panda_kumaneko{
 			},
 			set:(app,container,record) => {
 				if (app in this.apps) pd.record.set(container,this.apps[app].app,this.app.action(app,record,(container.closest('pd-view'))?'view':'record'));
+			}
+		};
+		this.tab={
+			activate:(tab) => {
+				tab.container.scrollIntoView();
+			},
+			setup:(parent,tab) => {
+				return parent
+				.append(
+					((guide) => {
+						var observer={
+							mutation:null,
+							resize:null
+						};
+						var adjust=(coord=0) => {
+							if (tab.scrollWidth>tab.clientWidth)
+							{
+								if (tab.scrollLeft+coord>0) guide.prev.removeattr('disabled');
+								else guide.prev.attr('disabled','disabled');
+								if (tab.scrollLeft+coord<tab.scrollWidth-tab.clientWidth) guide.next.removeattr('disabled');
+								else guide.next.attr('disabled','disabled');
+								guide.container.removeclass('pd-hidden');
+							}
+							else guide.container.addclass('pd-hidden');
+						};
+						observer.mutation=new MutationObserver(() => adjust());
+						observer.mutation.disconnect();
+						observer.mutation.observe(tab,{childList:true});
+						observer.resize=new ResizeObserver(() => adjust());
+						observer.resize.disconnect();
+						observer.resize.observe(tab);
+						return guide.container
+						.append(guide.prev.on('click',(e) => {
+							((coord) => {
+								adjust(coord);
+								tab.scrollBy({left:coord});
+							})(Math.floor(tab.clientWidth/-2));
+						}))
+						.append(guide.next.on('click',(e) => {
+							((coord) => {
+								adjust(coord);
+								tab.scrollBy({left:coord});
+							})(Math.ceil(tab.clientWidth/2));
+						}));
+					})({
+						container:pd.create('div').addclass('pd-hidden pd-kumaneko-tab-guide pd-kumaneko-border-left pd-kumaneko-inset-left'),
+						prev:pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-left'),
+						next:pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-right')
+					})
+				)
+				.append(tab);
 			}
 		};
 		this.users={
@@ -258,8 +309,7 @@ class panda_kumaneko{
 							)
 						)
 						.append(
-							pd.create('div').addclass('pd-kumaneko-block')
-							.append(pd.create('section').addclass('pd-kumaneko-tab pd-kumaneko-border-left').attr('id','pd-kumaneko-space-tab'))
+							this.tab.setup(pd.create('div').addclass('pd-kumaneko-block'),pd.create('section').addclass('pd-kumaneko-tab pd-kumaneko-border-left').attr('id','pd-kumaneko-space-tab'))
 							.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-left pd-kumaneko-inset-left').attr('id','pd-kumaneko-space-contents'))
 						)
 					);
@@ -1488,7 +1538,7 @@ pd.modules={
 													pd.event.on(this.app.id,'pd.view.load',(e) => {
 														if (e.viewid==viewid)
 														{
-															if (e.total!=0) button.css({display:'inline-block'});
+															if (e.total!=0) button.show('inline-block');
 															else button.hide();
 														}
 														return e;
@@ -1537,7 +1587,7 @@ pd.modules={
 												pd.event.on(this.app.id,'pd.view.load',(e) => {
 													if (e.viewid==viewid)
 													{
-														if (e.total!=0) button.css({display:'inline-block'});
+														if (e.total!=0) button.show('inline-block');
 														else button.hide();
 													}
 													return e;
@@ -1583,7 +1633,7 @@ pd.modules={
 									pd.event.on(this.app.id,['pd.create.load.complete','pd.edit.load.complete'],(e) => {
 										if (!e.viewid)
 											((record) => {
-												if (pd.filter.scan(this.app,record,action.filter)) button.css({display:'inline-block'});
+												if (pd.filter.scan(this.app,record,action.filter)) button.show('inline-block');
 												else button.hide();
 											})(e.record);
 										return e;
@@ -1631,8 +1681,7 @@ pd.modules={
 								res.contents
 								.append(splitter.on('mousedown,touchstart',(e) => resize(e)))
 								.append(
-									pd.create('div').addclass('pd-kumaneko-splitter-block')
-									.append(pd.create('section').addclass('pd-kumaneko-tab'))
+									pd.kumaneko.tab.setup(pd.create('div').addclass('pd-kumaneko-splitter-block'),pd.create('section').addclass('pd-kumaneko-tab'))
 									.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-top pd-kumaneko-inset-top'))
 								);
 								pd.event.on(this.app.id,'pd.app.activate',(e) => {
@@ -1705,6 +1754,7 @@ pd.modules={
 																res.linkage[key].tab.deactivate();
 															}
 														}
+														pd.kumaneko.tab.activate(tab);
 														e.stopPropagation();
 														e.preventDefault();
 													});
@@ -2833,7 +2883,7 @@ pd.modules={
 															})(pd.ui.field.parallelize(config.apps.user[this.app.id].fields));
 														pd.event.call(this.app.id,'pd.linkage.load.complete',keep);
 														((contents,active) => {
-															contents.elm('.pd-view').css({display:'table'});
+															contents.elm('.pd-view').show('table');
 															if (active) contents.show();
 														})(linkage.contents,linkage.tab.active);
 														finish();
@@ -3044,6 +3094,7 @@ pd.modules={
 					}
 					((tab) => {
 						if (!tab.container.parentNode) this.area.tab.append(tab.container);
+						pd.kumaneko.tab.activate(tab);
 						return tab;
 					})(this.record.ui.tab).activate();
 					this.view.hide();
@@ -3441,6 +3492,7 @@ pd.modules={
 								this.view.ui[key].contents.show();
 								((tab) => {
 									if (!tab.container.parentNode) this.area.tab.append(tab.container);
+									pd.kumaneko.tab.activate(tab);
 									return tab;
 								})(this.view.ui[key].tab).activate();
 							}
@@ -4449,6 +4501,21 @@ pd.modules={
 															case 'dropdown':
 																element.elm('select').empty().assignoption(fieldinfo.options,'option','option')
 																break;
+															case 'number':
+																((field) => {
+																	if (fieldinfo.unit)
+																	{
+																		((unit) => {
+																			if (fieldinfo.unitposition=='prefix') field.insertBefore(unit,field.elm('input'));
+																			else field.insertBefore(unit,field.elm('input').nextElementSibling);
+																		})((field.elm('.pd-unit'))?field.elm('.pd-unit').html(fieldinfo.unit):pd.create('span').addclass('pd-unit').html(fieldinfo.unit))
+																	}
+																	else
+																	{
+																		if (field.elm('.pd-unit')) field.removeChild(field.elm('.pd-unit'));
+																	}
+																})(element.elm('.pd-field-value'));
+																break;
 															case 'radio':
 																element.elm('.pd-field-value').empty();
 																fieldinfo.options.each((option,index) => {
@@ -4535,6 +4602,16 @@ pd.modules={
 											case 'modifiedtime':
 												res.elm('.pd-guide').html(pd.constants.common.prompt.autofill[pd.lang]);
 												break;
+											case 'number':
+												pd.ui.field.activate(res,{
+													id:'appbuilder_'+this.menus.form.id,
+													fields:(() => {
+														var res={};
+														res[fieldinfo.id]=fieldinfo;
+														return res;
+													})()
+												});
+												break;
 										}
 										res.css({width:(fieldinfo.id in this.app.styles)?this.app.styles[fieldinfo.id].width:'235px'});
 										break;
@@ -4597,8 +4674,16 @@ pd.modules={
 														fields:(() => {
 															var res=[];
 															element.elms('[field-type=field]').each((element,index) => {
-																if (['id','autonumber','creator','createdtime','modifier','modifiedtime'].includes(element.fieldinfo.type))
-																	this.menus.form.nav[element.fieldinfo.id].attr('disabled','disabled');
+																switch (element.fieldinfo.type)
+																{
+																	case 'number':
+																		element.elm('.pd-field-value').dispatchEvent(new Event('show'));
+																		break;
+																	default:
+																		if (['id','autonumber','creator','createdtime','modifier','modifiedtime'].includes(element.fieldinfo.type))
+																			this.menus.form.nav[element.fieldinfo.id].attr('disabled','disabled');
+																		break;
+																}
 																res.push(element.fieldinfo.id);
 																this.app.fields[element.fieldinfo.id]=element.fieldinfo;
 																this.app.styles[element.fieldinfo.id]={width:element.css('width')};
@@ -4615,6 +4700,12 @@ pd.modules={
 															type:'table'
 														});
 														element.elms('[field-type=field]').each((element,index) => {
+															switch (element.fieldinfo.type)
+															{
+																case 'number':
+																	element.elm('.pd-field-value').dispatchEvent(new Event('show'));
+																	break;
+															}
 															table.fields[element.fieldinfo.id]=element.fieldinfo;
 															this.app.styles[element.fieldinfo.id]={width:element.css('width')};
 														});
@@ -7798,7 +7889,7 @@ pd.modules={
 						/* event */
 						pd.event.on(this.app.id,'pd.change.record',(e) => {
 							if (e.record.record.value.length!=0) this.keep.sections.disabled.table.hide();
-							else this.keep.sections.disabled.table.css({display:'table'});
+							else this.keep.sections.disabled.table.show('table');
 							return e;
 						});
 						return contents;
@@ -8650,7 +8741,7 @@ pd.modules={
 											this.keep.action.disabled.fields=[{field:''}];
 											this.keep.sections.disabled.table.hide();
 										}
-										else this.keep.sections.disabled.table.css({display:'table'});
+										else this.keep.sections.disabled.table.show('table');
 										return record;
 									})((this.keep.action.disabled.record)?[this.app.fields.record.options.first().option.value]:[])};
 									res['style']={value:((styles) => {
@@ -11536,6 +11627,16 @@ pd.modules={
 											case 'modifiedtime':
 												res.elm('.pd-guide').html(pd.constants.common.prompt.autofill[pd.lang]);
 												break;
+											case 'number':
+												pd.ui.field.activate(res,{
+													id:'viewbuilder_'+this.menus.list.id,
+													fields:(() => {
+														var res={};
+														res[fieldinfo.id]=fieldinfo;
+														return res;
+													})()
+												});
+												break;
 										}
 										break;
 								}
@@ -11553,6 +11654,12 @@ pd.modules={
 								pd.children(this.menus.list.contents.elm('.pd-box')).each((element,index) => {
 									if (!element.hasclass('pd-kumaneko-drag-guide'))
 									{
+										switch (element.fieldinfo.type)
+										{
+											case 'number':
+												element.elm('.pd-field-value').dispatchEvent(new Event('show'));
+												break;
+										}
 										this.keep.nav[element.fieldinfo.id].attr('disabled','disabled');
 										this.keep.view.fields.push(element.fieldinfo.id);
 									}

@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.2.0
+* Version: 1.2.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -272,6 +272,7 @@ svg *{
 	margin-bottom:-2px;
 	overflow:hidden;
 	padding:0.25em 0.25em 2px 0.25em;
+	scroll-behavior:smooth;
 	white-space:nowrap;
 	z-index:2;
 }
@@ -307,6 +308,27 @@ svg *{
 .pd-kumaneko-main .pd-kumaneko-tab+.pd-kumaneko-block{
 	height:calc(100% - 1.75em);
 	z-index:1;
+}
+.pd-kumaneko-main .pd-kumaneko-tab-guide{
+	position:absolute;
+	right:0;
+	top:0;
+	z-index:3;
+}
+.pd-kumaneko-main .pd-kumaneko-tab-guide .pd-icon.pd-icon-arrow{
+	height:calc(2em - 2px);
+	width:calc(2em - 2px);
+}
+.pd-kumaneko-main .pd-kumaneko-tab-guide:not(.pd-hidden)+.pd-kumaneko-tab{
+	width:calc(100% - 4em + 2px);
+}
+_::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab{
+	overflow-x:auto;
+	overflow-y:hidden;
+	width:100% !important;
+}
+_::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab-guide{
+	display:none;
 }
 /* Application definition */
 .pd-kumaneko-main .pd-kumaneko-app-body{

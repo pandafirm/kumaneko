@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.2.0
+* Version: 1.2.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -631,11 +631,8 @@ class panda{
 	timezone(){
 		return ((offset) => {
 			var res='';
-			if (Number.isInteger(offset))
-			{
-				if (offset==0) res='UTC';
-				else res='Etc/GMT'+((offset>0)?'+':'')+offset.toString();
-			}
+			if (offset==0) res='UTC';
+			else res='Etc/GMT'+((offset>0)?'+':'-')+Math.floor(Math.abs(offset)).toString();
 			return res;
 		})(new Date().getTimezoneOffset()/60);
 	}
@@ -878,7 +875,7 @@ class panda_dialog{
 				this.close.attr('src','data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAFN++nkAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA9pJREFUeNpiYKAUMMIY/VMmvgdSAjB+YU4+WI4JSbFAQXYeA5KG/+gKGCZMncSArAhDAUyRm7MriCmI4gZkY0GSQDd8IMoXAAFEHf//RxL/ALRbkAldAuo1AQxvgSRA3kL3syDIn8gS6HaCjHqPHN54AUAAUceraMENdwISwAh6RmyaQJ7btXc3ik4kMbgh6CkAbBtMIyjoYEkGybD3OJMPephjS3M4/YyezNEAONqpEtoAATREEa5Egh5oWAMKW2j/x2UTeoJnwqYxMyUdRROMj24wzkQC04BuEDJgRrK1AUg5gNhnzp1lMDUyYbCxtGb4+/cvw/Q5M+EaPLw8GXdu23EAr80kA5CfQPjHjx9gjM4m2s8wpyI7mXZRhaTgA5bcxDh40jZAAI3mZmLToQMsF0DBAWBEHqC6xUCL1gOpABLM3QB0SCDZFpNhIdEOYMRjKUrhCSqJ2NnZGX7+/Ik1h+KRJ67QRYrD/biKRGQLCDkIChzR0wALDoUOhMol5BofvW2Ew7wDxBR8B/BVAiALQT4EWQiiQXx8lQI28wZXHA9oqh7QfEzLkmvkAYAAGkWjYNC1QAqQilNQkTiBZhZDG/31BJQ1Ah3RQBWLcXS5CQGCoyFMBCw1IMNScE8cqpc8i4HgPAXp5zxZFkPrY5ShAlERUZwGgeTQhxDQzSBoMTReMYYWosMjsVoOEgPJYQECULOI9vF6dIGlK5djtRzZUpgaQmbhsxijsff6zWsMy9EtBakhtuFIUv8a3XIiLCU7VWO1HHk0DMQm1VKyLAYFL3Q8FT4Ehy+1U8Vi9DjFleAosfgAIUtBwYstwRHbOcBlcSC2PIwtIaFbToxZOC2GFvAfsOVlbAkJ2XIsIy8fyOkf/6ekssc33EMocRlSYK/hoKyPB28LhFZtrlEw/AFAgPas6AZBIIZeiAM5gNG4gTH+KyM4gSPoBuq/MW5gNA7AJrCBXrEm98HJtQVE6Av9BO6l7bV91UehUHRfhQismlAxQfpcmi/St6chPZq3FJq1mjC2Bhvj35tzkGFPs2sFYRQ59taGDURkYi225JPGCWPIXhsiWkR8ygn5SBC66Y/IGvxviueo18Nlc4SrcMHm6XQ5kwQKmKwXs3m+ufqgZH8XPLOQCVuyK8xX0oFDiHPfQ0BeH+og/JR4qoiAkGjQ4M8diSFfttQU8BG6Pe5mMhqLibqcQ0rXgPBBVm2Fw8MG2SUO5uqBQqKk80WmZ6B4mNXmhYQ0GMiPQk9nemkJPZxf/1WXJV+OEz0ea+NRZS/NLVE1YE2dono3POh4qAJAxyQehUKh+Cu8AL45fzrg+n0KAAAAAElFTkSuQmCC');
 				break;
 		}
-		this.cover.css({display:'flex'});
+		this.cover.show('flex');
 		return this;
 	}
 	/* hide */
@@ -3659,9 +3656,9 @@ HTMLElement.prototype.removeclass=function(className){
 	this.classList.remove(className);
 	return this;
 }
-HTMLElement.prototype.show=function(){
+HTMLElement.prototype.show=function(type='block'){
 	var event=new Event('show');
-	this.css({display:'block'});
+	this.css({display:type});
 	this.elms('*').each((element,index) => {
 		if (typeof element.visible==='function')
 			if (element.visible()) element.dispatchEvent(event);
@@ -4084,7 +4081,15 @@ String.prototype.parseCSV=function(separator=','){
 }
 String.prototype.parseDateTime=function(){
 	var format=this;
-	if (isNaN(Date.parse(format))) format=format.replace(/-/g,'\/').replace(/T/g,' ').replace(/Z/g,'');
+	if (isNaN(Date.parse(format)))
+	{
+		if (format.match(/T/g))
+		{
+			format=format.replace(/\//g,'-');
+			if (!format.match(/(\+[0-9]{2}:?[0-9]{2}|Z$)/g)) format+='Z';
+		}
+		else format=format.replace(/-/g,'\/');
+	}
 	return new Date(format);
 }
 /*

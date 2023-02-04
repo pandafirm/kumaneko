@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.ui.css"
-* Version: 1.2.0
+* Version: 1.2.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -164,6 +164,17 @@
 	background-size:1.5em 1.5em;
 	height:1.5em;
 	width:1.5em;
+}
+.pd-field .pd-field-value .pd-unit{
+	display:inline-block;
+	line-height:1.5em;
+	max-width:75%;
+	overflow:hidden;
+	padding:1px 0.25em;
+	text-overflow:ellipsis;
+	user-select:none;
+	white-space:nowrap;
+	width:max-content;
 }
 .pd-field .pd-field-value.pd-force-backcolor{
 	border-radius:0.25em;

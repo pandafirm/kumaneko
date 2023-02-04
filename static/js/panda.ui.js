@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.2.0
+* Version: 1.2.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -2410,7 +2410,7 @@ class panda_unifiedpicker extends panda_dialog{
 										if (key==menu.id)
 										{
 											this.menus[key].tab.css({backgroundColor:'rgba(66,165,245,0.5)',color:'rgba(255,255,255,1)'});
-											this.menus[key].table.css({display:'table'});
+											this.menus[key].table.show('table');
 										}
 										else
 										{
@@ -3640,6 +3640,15 @@ class panda_user_interface{
 									});
 								};
 								break;
+							case 'number':
+								((handler) => {
+									field.on('show',(e) => handler());
+									handler();
+								})(() => {
+									if (field.elm('.pd-unit')) field.elm('input').css({width:'calc(100% - '+field.elm('.pd-unit').outerwidth(true)+'px)'});
+									else field.elm('input').css({width:null});
+								});
+								break;
 							case 'postalcode':
 								((handler) => {
 									field.elm('.pd-search').on('click',(e) => {
@@ -3850,6 +3859,11 @@ class panda_user_interface{
 											return res.attr('data-type',((fieldinfo.demiliter)?'number':'nondemiliternumber'));
 										})(pd.create('input').attr('type','text'))
 									);
+									if (fieldinfo.unit)
+										((unit) => {
+											if (fieldinfo.unitposition=='prefix') field.insertBefore(unit,field.elm('input'));
+											else field.insertBefore(unit,field.elm('input').nextElementSibling);
+										})(pd.create('span').addclass('pd-unit').html(fieldinfo.unit))
 									break;
 								case 'postalcode':
 									field
