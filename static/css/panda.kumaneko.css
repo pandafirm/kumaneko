@@ -309,26 +309,26 @@ svg *{
 	height:calc(100% - 1.75em);
 	z-index:1;
 }
-.pd-kumaneko-main .pd-kumaneko-tab-guide{
+.pd-kumaneko-main .pd-kumaneko-tab-scroller{
 	position:absolute;
 	right:0;
 	top:0;
 	z-index:3;
 }
-.pd-kumaneko-main .pd-kumaneko-tab-guide .pd-icon.pd-icon-arrow{
+.pd-kumaneko-main .pd-kumaneko-tab-scroller .pd-icon.pd-icon-arrow{
 	height:calc(2em - 2px);
 	width:calc(2em - 2px);
 }
-.pd-kumaneko-main .pd-kumaneko-tab-guide:not(.pd-hidden)+.pd-kumaneko-tab{
+.pd-kumaneko-main .pd-kumaneko-tab-scroller:not(.pd-hidden)+.pd-kumaneko-tab{
 	width:calc(100% - 4em + 2px);
 }
 _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab{
 	overflow-x:auto;
 	overflow-y:hidden;
-	width:100% !important;
 }
-_::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab-guide{
-	display:none;
+_::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::-webkit-scrollbar{
+	height:0;
+	width:0;
 }
 /* Application definition */
 .pd-kumaneko-main .pd-kumaneko-app-body{

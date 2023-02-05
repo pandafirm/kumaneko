@@ -69,51 +69,49 @@ class panda_kumaneko{
 			activate:(tab) => {
 				tab.container.scrollIntoView();
 			},
-			setup:(parent,tab) => {
-				return parent
-				.append(
-					((guide) => {
+			setup:(target) => {
+				((container,scroller) => {
+					((buttons) => {
 						var observer={
 							mutation:null,
 							resize:null
 						};
 						var adjust=(coord=0) => {
-							if (tab.scrollWidth>tab.clientWidth)
+							if (container.scrollWidth>container.clientWidth)
 							{
-								if (tab.scrollLeft+coord>0) guide.prev.removeattr('disabled');
-								else guide.prev.attr('disabled','disabled');
-								if (tab.scrollLeft+coord<tab.scrollWidth-tab.clientWidth) guide.next.removeattr('disabled');
-								else guide.next.attr('disabled','disabled');
-								guide.container.removeclass('pd-hidden');
+								if (container.scrollLeft+coord>0) buttons.prev.removeattr('disabled');
+								else buttons.prev.attr('disabled','disabled');
+								if (container.scrollLeft+coord<container.scrollWidth-container.clientWidth) buttons.next.removeattr('disabled');
+								else buttons.next.attr('disabled','disabled');
+								scroller.removeclass('pd-hidden');
 							}
-							else guide.container.addclass('pd-hidden');
+							else scroller.addclass('pd-hidden');
 						};
 						observer.mutation=new MutationObserver(() => adjust());
 						observer.mutation.disconnect();
-						observer.mutation.observe(tab,{childList:true});
+						observer.mutation.observe(container,{childList:true});
 						observer.resize=new ResizeObserver(() => adjust());
 						observer.resize.disconnect();
-						observer.resize.observe(tab);
-						return guide.container
-						.append(guide.prev.on('click',(e) => {
+						observer.resize.observe(container);
+						scroller
+						.append(buttons.prev.on('click',(e) => {
 							((coord) => {
 								adjust(coord);
-								tab.scrollBy({left:coord});
-							})(Math.floor(tab.clientWidth/-2));
+								container.scrollBy({left:coord});
+							})(Math.floor(container.clientWidth/-2));
 						}))
-						.append(guide.next.on('click',(e) => {
+						.append(buttons.next.on('click',(e) => {
 							((coord) => {
 								adjust(coord);
-								tab.scrollBy({left:coord});
-							})(Math.ceil(tab.clientWidth/2));
+								container.scrollBy({left:coord});
+							})(Math.ceil(container.clientWidth/2));
 						}));
 					})({
-						container:pd.create('div').addclass('pd-hidden pd-kumaneko-tab-guide pd-kumaneko-border-left pd-kumaneko-inset-left'),
 						prev:pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-left'),
 						next:pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-right')
-					})
-				)
-				.append(tab);
+					});
+				})(target.elm('.pd-kumaneko-tab'),target.elm('.pd-kumaneko-tab-scroller'));
+				return target;
 			}
 		};
 		this.users={
@@ -309,8 +307,12 @@ class panda_kumaneko{
 							)
 						)
 						.append(
-							this.tab.setup(pd.create('div').addclass('pd-kumaneko-block'),pd.create('section').addclass('pd-kumaneko-tab pd-kumaneko-border-left').attr('id','pd-kumaneko-space-tab'))
-							.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-left pd-kumaneko-inset-left').attr('id','pd-kumaneko-space-contents'))
+							this.tab.setup(
+								pd.create('div').addclass('pd-kumaneko-block')
+								.append(pd.create('div').addclass('pd-hidden pd-kumaneko-tab-scroller pd-kumaneko-border-left pd-kumaneko-inset-left'))
+								.append(pd.create('section').addclass('pd-kumaneko-tab pd-kumaneko-border-left').attr('id','pd-kumaneko-space-tab'))
+								.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-left pd-kumaneko-inset-left').attr('id','pd-kumaneko-space-contents'))
+							)
 						)
 					);
 					/* build appbuilder */
@@ -1681,8 +1683,12 @@ pd.modules={
 								res.contents
 								.append(splitter.on('mousedown,touchstart',(e) => resize(e)))
 								.append(
-									pd.kumaneko.tab.setup(pd.create('div').addclass('pd-kumaneko-splitter-block'),pd.create('section').addclass('pd-kumaneko-tab'))
-									.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-top pd-kumaneko-inset-top'))
+									pd.kumaneko.tab.setup(
+										pd.create('div').addclass('pd-kumaneko-splitter-block')
+										.append(pd.create('div').addclass('pd-hidden pd-kumaneko-tab-scroller pd-kumaneko-border-left pd-kumaneko-inset-left'))
+										.append(pd.create('section').addclass('pd-kumaneko-tab'))
+										.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-top pd-kumaneko-inset-top'))
+									)
 								);
 								pd.event.on(this.app.id,'pd.app.activate',(e) => {
 									if (!('viewid' in e))
@@ -5208,9 +5214,12 @@ pd.modules={
 				)
 				.append(pd.create('button').addclass('pd-button pd-cancel pd-kumaneko-button pd-kumaneko-appbuilder-button').html(pd.constants.app.caption.button.discard[pd.lang]).on('click',(e) => this.hide()))
 				.append(
-					pd.create('main').addclass('pd-kumaneko-main')
-					.append(pd.create('section').addclass('pd-kumaneko-tab').attr('id','pd-kumaneko-appbuilder-space-tab'))
-					.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-top').attr('id','pd-kumaneko-appbuilder-space-contents'))
+					pd.kumaneko.tab.setup(
+						pd.create('main').addclass('pd-kumaneko-main')
+						.append(pd.create('div').addclass('pd-hidden pd-kumaneko-tab-scroller pd-kumaneko-border-left pd-kumaneko-inset-left'))
+						.append(pd.create('section').addclass('pd-kumaneko-tab').attr('id','pd-kumaneko-appbuilder-space-tab'))
+						.append(pd.create('section').addclass('pd-kumaneko-block pd-kumaneko-border-top').attr('id','pd-kumaneko-appbuilder-space-contents'))
+					)
 				);
 				for (var key in this.menus)
 					((menu) => {
@@ -5230,6 +5239,7 @@ pd.modules={
 									this.menus[key].tab.deactivate();
 								}
 							}
+							pd.kumaneko.tab.activate(menu.tab);
 							e.stopPropagation();
 							e.preventDefault();
 						});
