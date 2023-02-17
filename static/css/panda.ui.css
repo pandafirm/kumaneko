@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.ui.css"
-* Version: 1.2.1
+* Version: 1.2.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -191,6 +191,12 @@
 .pd-field .pd-field-value:is(.pd-address,.pd-lookup) input{
 	width:calc(100% - 3em) !important;
 }
+.pd-field .pd-field-value:is(.pd-address,.pd-lookup).pd-deny input{
+	width:calc(100% - 1.5em) !important;
+}
+.pd-field .pd-field-value:is(.pd-address,.pd-lookup).pd-deny .pd-open{
+	display:none !important;
+}
 .pd-field .pd-field-value:is(.pd-color,.pd-postalcode) input{
 	width:calc(100% - 1.5em) !important;
 }
@@ -253,7 +259,7 @@
 .pd-field:is(.pd-disabled,.pd-readonly).pd-picker .pd-field-value.pd-file .pd-guide .pd-fileguide .pd-fileguide-label{
 	pointer-events:none;
 }
-.pd-field:is(.pd-disabled,.pd-readonly):not(.pd-picker) .pd-field-value:is(.pd-address,.pd-lookup) .pd-guide{
+.pd-field:is(.pd-disabled,.pd-readonly):not(.pd-picker) .pd-field-value:is(.pd-address,.pd-lookup):not(.pd-deny) .pd-guide{
 	width:calc(100% - 1.5em);
 }
 .pd-filterbuilder{
@@ -504,7 +510,7 @@
 .pd-uneditable .pd-field .pd-field-value.pd-dropdown:after{
 	display:none;
 }
-.pd-uneditable .pd-field .pd-field-value:is(.pd-address,.pd-lookup) .pd-guide{
+.pd-uneditable .pd-field .pd-field-value:is(.pd-address,.pd-lookup):not(.pd-deny) .pd-guide{
 	width:calc(100% - 1.5em);
 }
 .pd-view{

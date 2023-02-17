@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.2.1
+* Version: 1.2.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -827,42 +827,45 @@ class panda_kumaneko{
 									this.apps[app.id]=new pd.modules.app(app,contents,tab,null,(key=='project'));
 								})(this.config.apps.system[key]);
 							/* build dashboard */
-							this.dashboard=new pd.modules.dashboard(this.config.dashboard.frames.map((item) => {
-								item.panels=item.panels.map((panel) => {
-									((app) => {
-										panel.config={
-											app:app,
-											view:app.views.filter((item) => item.id==panel.view).first()
-										}
-										switch (panel.config.view.type)
-										{
-											case 'calendar':
-												panel.calendar=new panda_calendar(true);
-												break;
-											case 'crosstab':
-												panel.crosstab=pd.ui.chart.create(panel.config.view.type);
-												break;
-											case 'gantt':
-												panel.gantt=pd.ui.gantt.create();
-												break;
-											case 'timeseries':
-												panel.timeseries=pd.ui.chart.create(panel.config.view.type);
-												break;
-											case 'kanban':
-												panel.kanban=pd.ui.kanban.create();
-												break;
-											case 'map':
-												panel.map=new panda_map();
-												break;
-											default:
-												pd.event.on(app.id,'pd.edit.call',(e) => pd.event.call(panel.app,'pd.edit.call',e));
-												break;
-										}
-									})(pd.extend({id:'dashboard_'+panel.app},this.config.apps.user[panel.app]));
-									return panel;
-								});
-								return item;
-							}),contents,tab);
+							this.dashboard=new pd.modules.dashboard(this.config.dashboard.frames.reduce((result,current) => {
+								current.panels=current.panels.reduce((result,current) => {
+									if (this.permit(this.config.apps.user[current.app].permissions)!='denied')
+										result.push(((app) => {
+											current.config={
+												app:app,
+												view:app.views.filter((item) => item.id==current.view).first()
+											}
+											switch (current.config.view.type)
+											{
+												case 'calendar':
+													current.calendar=new panda_calendar(true);
+													break;
+												case 'crosstab':
+													current.crosstab=pd.ui.chart.create(current.config.view.type);
+													break;
+												case 'gantt':
+													current.gantt=pd.ui.gantt.create();
+													break;
+												case 'timeseries':
+													current.timeseries=pd.ui.chart.create(current.config.view.type);
+													break;
+												case 'kanban':
+													current.kanban=pd.ui.kanban.create();
+													break;
+												case 'map':
+													current.map=new panda_map();
+													break;
+												default:
+													pd.event.on(app.id,'pd.edit.call',(e) => pd.event.call(current.app,'pd.edit.call',e));
+													break;
+											}
+											return current;
+										})(pd.extend({id:'dashboard_'+current.app},this.config.apps.user[current.app])));
+									return result;
+								},[]);
+								if (current.panels.length!=0) result.push(current);
+								return result;
+							},[]),contents,tab);
 							this.config.dashboard.frames.map((item) => item.panels).flat().each((panel,index) => this.apps[panel.app].view.load(panel.view,null,null,true).catch(() => {}));
 						})(pd.elm('#pd-kumaneko-space-contents'),pd.elm('#pd-kumaneko-space-tab'),pd.elm('#pd-kumaneko-space-nav'));
 					});
@@ -1100,6 +1103,127 @@ pd.modules={
 				if (typeof viewid!=='undefined')
 				{
 					((view) => {
+						res.lib={
+							conditions:{
+								create:(view) => {
+									var fields=(() => {
+										var res=[];
+										switch (view.type)
+										{
+											case 'calendar':
+											case 'gantt':
+											case 'kanban':
+											case 'map':
+												((title) => {
+													if (title in this.app.fields)
+														((fieldinfo) => {
+															switch (fieldinfo.type)
+															{
+																case 'address':
+																case 'autonumber':
+																case 'file':
+																case 'lookup':
+																case 'postalcode':
+																case 'text':
+																case 'textarea':
+																	res.push(fieldinfo.id);
+																	break;
+															}
+														})(pd.extend({},this.app.fields[title]));
+												})(('task' in view.fields)?view.fields.task.title:view.fields.title);
+												break;
+											case 'edit':
+											case 'list':
+												((fieldinfos) => {
+													for (var key in fieldinfos)
+														((fieldinfo) => {
+															switch (fieldinfo.type)
+															{
+																case 'address':
+																case 'autonumber':
+																case 'file':
+																case 'lookup':
+																case 'postalcode':
+																case 'text':
+																case 'textarea':
+																	res.push(fieldinfo.id);
+																	break;
+															}
+														})(fieldinfos[key]);
+												})(pd.ui.field.parallelize(
+													((view.fields.length!=0)?view.fields:Object.keys(this.app.fields)).reduce((result,current) => {
+														if (current in this.app.fields) result[current]=this.app.fields[current];
+														return result;
+													},{})
+												));
+												break;
+										}
+										return res;
+									})();
+									return ((container) => {
+										container
+										.append(
+											pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
+												this.confirm(() => {
+													pd.filter.build(this.app,view.query,view.sort,(query,sort) => {
+														view.offset=0;
+														this.view.load(viewid,query,sort).catch(() => {});
+													});
+												},viewid);
+											})
+										);
+										if (fields.length!=0)
+										{
+											container
+											.append(
+												pd.create('input').addclass('pd-hidden pd-search').attr('type','text').attr('data-type','text')
+												.on('focus',(e) => e.currentTarget.previousValue=e.currentTarget.val())
+												.on('change',(e) => {
+													((element) => {
+														this.confirm((reload,cancel) => {
+															if (!cancel)
+															{
+																view.offset=0;
+																this.view.load(viewid).catch(() => {});
+															}
+															else element.val(element.previousValue);
+														},viewid,true);
+													})(e.currentTarget);
+												})
+											)
+											.append(
+												pd.create('button').addclass('pd-icon pd-icon-search').on('click',(e) => {
+													((element) => {
+														if (element.hasclass('pd-icon-del'))
+														{
+															if (element.parentNode.elm('.pd-search').val())
+															{
+																this.confirm(() => {
+																	element.removeclass('pd-icon-del').addclass('pd-icon-search').parentNode.elm('.pd-search').addclass('pd-hidden').val('');
+																	view.offset=0;
+																	this.view.load(viewid).catch(() => {});
+																},viewid);
+															}
+															else element.removeclass('pd-icon-del').addclass('pd-icon-search').parentNode.elm('.pd-search').addclass('pd-hidden');
+														}
+														else element.removeclass('pd-icon-search').addclass('pd-icon-del').parentNode.elm('.pd-search').removeclass('pd-hidden').focus();
+													})(e.currentTarget);
+												})
+											);
+											pd.event.on(this.app.id,'pd.view.query.add',(e) => {
+												if (e.viewid==viewid)
+													e.query=container.elm('.pd-search').val().replace(/[　 ]+/g,' ').split(' ').reduce((result,current) => {
+														if (current) result.push('('+fields.map((item) => item+' like "'+current+'"').join(' or ')+')');
+														return result;
+													},(e.query)?[e.query]:[]).join(' and ');
+												return e;
+											});
+										}
+										return container;
+									})(pd.create('div').addclass('pd-kumaneko-app-header-filter-conditions'));
+								}
+							}
+						};
 						res.tab=new pd.modules.tab(this.app.name+'&nbsp;-&nbsp;'+view.name);
 						param={viewid:viewid};
 						Object.assign(res,{
@@ -1126,13 +1250,7 @@ pd.modules={
 							case 'calendar':
 								res.header.insertBefore(
 									pd.create('div').addclass('pd-kumaneko-app-header-filter')
-									.append(
-										pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
-											pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
-												this.view.load(viewid,query,sort).catch(() => {});
-											})
-										})
-									)
+									.append(res.lib.conditions.create(res))
 									.append((() => {
 										res.prev=pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-left').on('click',(e) => {
 											res.monitor.html(new Date(res.monitor.text()+'-01').calc('-1 month').format('Y-m'));
@@ -1166,13 +1284,7 @@ pd.modules={
 							case 'crosstab':
 								res.header.insertBefore(
 									pd.create('div').addclass('pd-kumaneko-app-header-filter')
-									.append(
-										pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
-											pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
-												this.view.load(viewid,query,sort).catch(() => {});
-											})
-										})
-									),
+									.append(res.lib.conditions.create(res)),
 									res.header.firstChild
 								);
 								res.crosstab=pd.ui.chart.create(view.type);
@@ -1180,13 +1292,7 @@ pd.modules={
 							case 'gantt':
 								res.header.insertBefore(
 									pd.create('div').addclass('pd-kumaneko-app-header-filter')
-									.append(
-										pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
-											pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
-												this.view.load(viewid,query,sort).catch(() => {});
-											})
-										})
-									)
+									.append(res.lib.conditions.create(res))
 									.append((() => {
 										res.monitor=pd.create('span').addclass('pd-kumaneko-app-header-filter-monitor').html((() => {
 											var res='';
@@ -1274,13 +1380,7 @@ pd.modules={
 							case 'timeseries':
 								res.header.insertBefore(
 									pd.create('div').addclass('pd-kumaneko-app-header-filter')
-									.append(
-										pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
-											pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
-												this.view.load(viewid,query,sort).catch(() => {});
-											})
-										})
-									)
+									.append(res.lib.conditions.create(res))
 									.append((() => {
 										var date=new Date();
 										if (date.getDate()>28) date=date.calc('-'+(date.getDate()-28).toString()+' day');
@@ -1304,13 +1404,7 @@ pd.modules={
 								{
 									res.header.insertBefore(
 										pd.create('div').addclass('pd-kumaneko-app-header-filter')
-										.append(
-											pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
-												pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
-													this.view.load(viewid,query,sort).catch(() => {});
-												})
-											})
-										)
+										.append(res.lib.conditions.create(res))
 										.append((() => {
 											res.prev=pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-left').on('click',(e) => {
 												res.monitor.html(new Date(res.monitor.text()).calc('-1 day').format('Y-m-d'));
@@ -1344,13 +1438,7 @@ pd.modules={
 								{
 									res.header.insertBefore(
 										pd.create('div').addclass('pd-kumaneko-app-header-filter')
-										.append(
-											pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
-												pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
-													this.view.load(viewid,query,sort).catch(() => {});
-												})
-											})
-										),
+										.append(res.lib.conditions.create(res)),
 										res.header.firstChild
 									);
 								}
@@ -1359,13 +1447,7 @@ pd.modules={
 							case 'map':
 								res.header.insertBefore(
 									pd.create('div').addclass('pd-kumaneko-app-header-filter')
-									.append(
-										pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
-											pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
-												this.view.load(viewid,query,sort).catch(() => {});
-											})
-										})
-									),
+									.append(res.lib.conditions.create(res)),
 									res.header.firstChild
 								);
 								res.map=new panda_map();
@@ -1391,16 +1473,7 @@ pd.modules={
 										});
 										return res.next;
 									})())
-									.append(
-										pd.create('button').addclass('pd-icon pd-icon-filter').on('click',(e) => {
-											this.confirm(() => {
-												pd.filter.build(this.app,res.query,res.sort,(query,sort) => {
-													res.offset=0;
-													this.view.load(viewid,query,sort).catch(() => {});
-												});
-											},viewid);
-										})
-									)
+									.append(res.lib.conditions.create(res))
 									.append((() => {
 										res.monitor=pd.create('span').addclass('pd-kumaneko-app-header-filter-monitor');
 										return res.monitor;
@@ -3990,6 +4063,10 @@ pd.modules={
 			});
 			pd.event.on(this.app.id,'pd.fields.call',(e) => {
 				e.fields=this.app.fields;
+				return e;
+			});
+			pd.event.on(this.app.id,'pd.permit.call',(e) => {
+				e.permit=(pd.kumaneko.permit(this.app.permissions)!='denied');
 				return e;
 			});
 			pd.event.on(this.app.id,'pd.preview.call',(e) => {

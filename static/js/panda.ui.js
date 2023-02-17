@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.2.1
+* Version: 1.2.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3353,16 +3353,20 @@ class panda_user_interface{
 								break;
 							case 'lookup':
 								((handler) => {
-									field.elm('.pd-open').on('click',(e) => {
-										if (field.elm('.pd-lookup-value').val()) pd.event.call(fieldinfo.app,'pd.edit.call',{recordid:field.elm('.pd-lookup-value').val()});
-										else pd.event.call(fieldinfo.app,'pd.create.call',{activate:true});
-									});
-									field.elm('.pd-search').on('click',(e) => {
-										handler(field.elm('.pd-lookup-search').val(),pd.extend({},fieldinfo));
-									});
-									field.elm('input').on('change',(e) => {
-										if (e.currentTarget.val()) handler(e.currentTarget.val(),pd.extend({},fieldinfo));
-										else field.lookup('').then(() => call('pd.change.'+fieldinfo.id));
+									pd.event.call(fieldinfo.app,'pd.permit.call',{permit:true})
+									.then((param) => {
+										field.elm('.pd-open').on('click',(e) => {
+											if (field.elm('.pd-lookup-value').val()) pd.event.call(fieldinfo.app,'pd.edit.call',{recordid:field.elm('.pd-lookup-value').val()});
+											else pd.event.call(fieldinfo.app,'pd.create.call',{activate:true});
+										});
+										field.elm('.pd-search').on('click',(e) => {
+											handler(field.elm('.pd-lookup-search').val(),pd.extend({},fieldinfo));
+										});
+										field.elm('input').on('change',(e) => {
+											if (e.currentTarget.val()) handler(e.currentTarget.val(),pd.extend({},fieldinfo));
+											else field.lookup('').then(() => call('pd.change.'+fieldinfo.id));
+										});
+										if (!param.permit) field.addclass('pd-deny');
 									});
 								})((search,fieldinfo) => {
 									pd.event.call(fieldinfo.app,'pd.fields.call',{fields:{}})
