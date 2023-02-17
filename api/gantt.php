@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "gantt.php"
-* Version: 1.2.1
+* Version: 1.2.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -109,7 +109,7 @@ class clsRequest extends clsBase
 					$res[]="(".$task["end"]." >= \"".$end["start"]."\" and ".$task["end"]." <= \"".$end["end"]."\")";
 					$res[]="(".$task["start"]." < \"".$start["start"]."\" and ".$task["end"]." > \"".$end["end"]."\")";
 				}
-				return implode(" or ",$res);
+				return (count($res)!=0)?"(".implode(" or ",$res).")":"";
 			})(
 				$this->body["column"],
 				$this->body["task"],
