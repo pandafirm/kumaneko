@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "gantt.php"
-* Version: 1.2.2
+* Version: 1.2.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -170,7 +170,7 @@ class clsRequest extends clsBase
 					$this->response["fields"][]=[
 						"id"=>$key,
 						"caption"=>($column["period"]=="month")?$start->format('m'):$start->format('d'),
-						"subcaption"=>($column["period"]=="month")?((intval($start->format("m"))==1 || $i==0)?$start->format("Y"):""):((intval($start->format("d"))==1 || $i==0)?$start->format("Y-m"):"")
+						"subcaption"=>($column["period"]=="month")?((intval($start->format("m"))==1 || $i==0)?$start->format("Y"):""):((intval($start->format("d"))==1 || $i==0)?$start->format("m"):"")
 					];
 					switch ($fields[$task["start"]]["type"])
 					{

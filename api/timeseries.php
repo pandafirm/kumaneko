@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "timeseries.php"
-* Version: 1.2.2
+* Version: 1.2.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -156,7 +156,8 @@ class clsRequest extends clsBase
 					$this->response["fields"][]=[
 						"id"=>strval($key),
 						"type"=>"text",
-						"caption"=>strval($key),
+						"caption"=>$query["caption"],
+						"subcaption"=>$query["subcaption"],
 						"required"=>false,
 						"nocaption"=>true,
 						"format"=>"text"
@@ -230,15 +231,19 @@ class clsRequest extends clsBase
 				case "month":
 					$start->modify("{$i} month");
 					$end->modify(strval($i+1)." month")->modify("-1 day");
-					$key=(intval($start->format("m"))==1)?$start->format("Y-m"):$start->format("m");
+					$key=(intval($start->format("m"))==1 || $i==0)?$start->format("Y-m"):$start->format("m");
+					$caption=$start->format("m");
+					$subcaption=(intval($start->format("m"))==1 || $i==0)?$start->format("Y"):"";
 					break;
 				case "day":
 					$start->modify("{$i} day");
 					$end->modify("{$i} day");
-					$key=(intval($start->format("d"))==1)?$start->format("m-d"):$start->format("d");
+					$key=(intval($start->format("d"))==1 || $i==0)?$start->format("m-d"):$start->format("d");
+					$caption=$start->format("d");
+					$subcaption=(intval($start->format("d"))==1 || $i==0)?$start->format("m"):"";
 					break;
 			}
-			$res[$key]=array("current"=>"","previous"=>"");
+			$res[$key]=array("caption"=>$caption,"subcaption"=>$subcaption,"current"=>"","previous"=>"");
 			switch ($this->fields[$arg_config["field"]]["type"])
 			{
 				case "date":
