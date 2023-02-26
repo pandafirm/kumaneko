@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.2.2
+* Version: 1.2.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -57,6 +57,7 @@ svg *{
 	padding:0 0.25em;
 	text-overflow:ellipsis;
 	user-select:none;
+	white-space:nowrap;
 	width:calc(100% - 2em);
 }
 /* Basic layout definition */
@@ -161,7 +162,7 @@ svg *{
 	padding:0 0 2.25em 0;
 }
 .pd-kumaneko-main .pd-kumaneko-drag-vertical .pd-row{
-	height:2em;
+	display:flex;
 	margin:0;
 	width:100%;
 }
@@ -177,15 +178,17 @@ svg *{
 	width:100%;
 }
 .pd-kumaneko-main .pd-kumaneko-drag-vertical .pd-kumaneko-drag-label{
-	display:inline-block;
+	flex:1 1 0%;
 	line-height:2em;
 	padding:0 0.25em;
 	pointer-events:none;
+	word-break:break-all;
 }
 .pd-kumaneko-main .pd-kumaneko-drag-vertical .pd-kumaneko-drag-label *{
 	display:inline-block;
 	line-height:2em;
 	pointer-events:none;
+	word-break:break-all;
 }
 /* Navigation definition */
 .pd-kumaneko-main .pd-kumaneko-nav{
@@ -196,11 +199,6 @@ svg *{
 .pd-kumaneko-main .pd-kumaneko-nav .pd-icon{
 	height:calc(2em - 4px);
 	width:calc(2em - 4px);
-}
-.pd-kumaneko-main .pd-kumaneko-nav .pd-icon:is(.pd-icon-del,.pd-icon-setting){
-	position:absolute;
-	right:0;
-	top:0;
 }
 .pd-kumaneko-main .pd-kumaneko-nav .pd-kumaneko-nav-main{
 	display:block;
@@ -213,7 +211,7 @@ svg *{
 	margin-bottom:1px;
 }
 .pd-kumaneko-main .pd-kumaneko-nav .pd-kumaneko-nav-main .pd-kumaneko-nav-button .pd-kumaneko-nav-button-item{
-	display:inline-block;
+	display:flex;
 	cursor:pointer;
 	width:100%;
 }
@@ -222,11 +220,10 @@ svg *{
 	opacity:0.25;
 }
 .pd-kumaneko-main .pd-kumaneko-nav .pd-kumaneko-nav-main .pd-kumaneko-nav-button .pd-kumaneko-nav-button-item .pd-kumaneko-nav-button-item-label{
-	display:inline-block;
-	overflow:hidden;
+	flex:1 1 0%;
 	padding:calc(0.25em - 2px) 0.25em;
-	text-overflow:ellipsis;
 	user-select:none;
+	word-break:break-all;
 }
 .pd-kumaneko-main .pd-kumaneko-nav .pd-kumaneko-nav-main .pd-kumaneko-nav-button .pd-kumaneko-nav-button-details .pd-kumaneko-nav-button-details-item{
 	cursor:pointer;
@@ -234,6 +231,7 @@ svg *{
 	padding-left:calc(2em - 4px);
 	user-select:none;
 	width:100%;
+	word-break:break-all;
 }
 .pd-kumaneko-main .pd-kumaneko-nav .pd-kumaneko-nav-main .pd-kumaneko-nav-button .pd-kumaneko-nav-button-details .pd-kumaneko-nav-button-details-item[disabled=disabled]{
     cursor:not-allowed;
@@ -598,13 +596,13 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	width:100%;
 	z-index:2;
 }
-.pd-view .pd-table tbody tr:last-of-type :is(td,th){
+:is(.pd-matrix .pd-matrix-bottom-cell,.pd-view .pd-table tbody tr:last-of-type :is(td,th)){
 	padding-bottom:0 !important;
 }
-.pd-view .pd-table tbody tr:last-of-type :is(td,th):before{
+:is(.pd-matrix .pd-matrix-bottom-cell,.pd-view .pd-table tbody tr:last-of-type :is(td,th)):before{
 	background-color:transparent !important;
 }
-.pd-view .pd-table tbody tr:last-of-type :is(td,th):after{
+:is(.pd-matrix .pd-matrix-bottom-cell,.pd-view .pd-table tbody tr:last-of-type :is(td,th)):after{
 	box-shadow:none !important;
 }
 /* Mapping Table definition */
@@ -733,22 +731,8 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	padding:0;
 	width:100%;
 }
-.pd-kumaneko-fieldbuilder .pd-field.pd-field-width .pd-field-value:after{
-	content:'px';
-	display:block;
-	position:absolute;
-	right:1px;
-	text-align:center;
-	top:0;
-	width:1.5em;
-	z-index:2;
-}
-.pd-kumaneko-fieldbuilder .pd-field.pd-field-width .pd-field-value input{
-	padding-right:1.5em !important;
-	z-index:1;
-}
 .pd-kumaneko-fieldbuilder .pd-row{
-	height:2em;
+	display:flex;
 	width:100%;
 }
 .pd-kumaneko-fieldbuilder .pd-row .pd-row-button{
@@ -758,12 +742,11 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	margin:0.075em 0;
 }
 .pd-kumaneko-fieldbuilder .pd-row .pd-row-label{
-	display:inline-block;
+	flex:1 1 0%;
 	line-height:2em;
-	overflow:hidden;
 	padding:0 0.25em;
-	text-overflow:ellipsis;
 	user-select:none;
+	word-break:break-all;
 }
 .pd-kumaneko-fieldbuilder .pd-table{
 	margin-bottom:0.25em;
@@ -882,6 +865,9 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	height:2.5em;
 	width:235px;
 }
+.pd-kumaneko-dashboardmanager .pd-kumaneko-nav .pd-kumaneko-nav-main{
+	height:100%;
+}
 /* Import Manager definition */
 .pd-kumaneko-importmanager .pd-table{
 	width:100%;
@@ -937,7 +923,7 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	--light-field-focus-color:rgba(66,165,245,0.75);
 	--light-tab-highlight-color:rgba(255,255,255,0.15);
 	--light-tab-shadow-color:rgba(120,144,156,1);
-	--light-task-color:rgba(168,203,219,0.5);
+	--light-task-color:rgba(204,222,230,1);
 }
 _:lang(x)::-moz-placeholder,:root{
 	--dark-main-highlight-color:rgba(255,255,255,0.5);
@@ -1269,6 +1255,10 @@ body.dark :is(.pd-matrix,.pd-table,.pd-view) :is(td,th):after{
 }
 body.dark :is(.pd-matrix,.pd-table,.pd-view) thead :is(td,th){
 	background-color:var(--dark-main-bg-color);
+}
+body.dark .pd-matrix :is(td,th):not(.pd-matrix-left-cell){
+	border-left:1px solid var(--dark-main-shadow-color);
+	box-shadow:inset 1px 0 1px -1px var(--dark-main-highlight-thin-color);
 }
 body.dark .pd-matrix .pd-matrix-row .pd-matrix-row-cell-task .pd-field .pd-field-value .pd-guide{
 	background-color:var(--dark-task-color);
@@ -1619,6 +1609,10 @@ body.light :is(.pd-matrix,.pd-table,.pd-view) :is(td,th):after{
 }
 body.light :is(.pd-matrix,.pd-table,.pd-view) thead :is(td,th){
 	background-color:var(--light-main-bg-color);
+}
+body.light .pd-matrix :is(td,th):not(.pd-matrix-left-cell){
+	border-left:1px solid var(--light-main-shadow-color);
+	box-shadow:inset 1px 0 1px -1px var(--light-main-highlight-thin-color);
 }
 body.light .pd-matrix .pd-matrix-row .pd-matrix-row-cell-task .pd-field .pd-field-value .pd-guide{
 	background-color:var(--light-task-color);

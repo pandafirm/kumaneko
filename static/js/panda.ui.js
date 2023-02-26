@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.2.2
+* Version: 1.2.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -655,10 +655,15 @@ class panda_filter extends panda_dialog{
 												break;
 											default:
 												((fieldinfo) => {
-													if (fieldinfo.type=='user')
+													switch (fieldinfo.type)
 													{
-														fieldinfo.loginuser=true;
-														fieldinfo.unify=true;
+														case 'number':
+															fieldinfo.unit='';
+															break;
+														case 'user':
+															fieldinfo.loginuser=true;
+															fieldinfo.unify=true;
+															break;
 													}
 													res=pd.ui.field.activate(pd.ui.field.create(fieldinfo),((app) => {
 														app.fields[fieldinfo.id]=fieldinfo;
@@ -2611,7 +2616,12 @@ class panda_user_interface{
 			create:(type) => {
 				return ((table,chart) => {
 					table
-					.append(pd.create('thead').append(pd.create('tr').addclass('pd-matrix-head')))
+					.append(
+						((head) => {
+							if (type=='timeseries') head.append(pd.create('tr').addclass('pd-matrix-head'));
+							return head;
+						})(pd.create('thead').append(pd.create('tr').addclass('pd-matrix-head')))
+					)
 					.append(pd.create('tbody').append(pd.create('tr').addclass('pd-matrix-row')))
 					.spread(null,null,false).show=(source,view) => {
 						switch (view.chart.type)
@@ -2619,14 +2629,17 @@ class panda_user_interface{
 							case 'table':
 								chart.hide();
 								((head,template,fields) => {
-									var set=(index,records,row,parsed) => {
+									var span=0;
+									var set=(index,records,row,parsed,last) => {
 										if (index<source.rows.length)
 										{
+											var span=Object.keys(records).length;
 											for (var key in records)
 											{
 												parsed[source.rows[index].field]={value:records[key].caption};
 												row=((res) => {
-													row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').attr('rowspan',res.span);
+													row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').addclass((key==last)?'pd-matrix-bottom-cell':'').attr('rowspan',res.span);
+													span+=res.span-1;
 													((id) => {
 														(res.span-1).each((index) => {
 															row=row.nextElementSibling;
@@ -2634,26 +2647,57 @@ class panda_user_interface{
 														});
 													})(source.rows[index].field);
 													return res.row;
-												})(set(index+1,records[key].rows,row,parsed));
+												})(set(index+1,records[key].rows,row,parsed,(key==last)?Object.keys(records[key].rows).last():''));
 												if (Object.keys(records).last()!=key) row=table.insertrow(row);
 											}
-											return {row:row,span:Object.keys(records).length};
+											return {row:row,span:span};
 										}
 										else
 										{
 											for (var key in records) parsed[key]={value:records[key]};
 											pd.record.set(row,{fields:fields},parsed);
+											if (last) row.elms('td').each((element,index) => element.addclass('pd-matrix-bottom-cell'));
 											return {row:row,span:1};
 										}
 									};
 									table.clearrows();
 									source.fields.each((field,index) => {
-										head.append(
-											pd.create('th').addclass('pd-matrix-head-cell')
-											.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
-										);
+										if (type=='timeseries')
+										{
+											if ('subcaption' in field)
+											{
+												span++;
+												if (field.subcaption)
+												{
+													head.first().elms('th').last().attr('colspan',span.toString());
+													head.first().append(
+														pd.create('th').addclass('pd-matrix-head-cell').css({textAlign:'left'})
+														.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.subcaption))
+													);
+													span=0;
+												}
+												head.last().append(
+													pd.create('th').addclass('pd-matrix-head-cell')
+													.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
+												);
+											}
+											else
+											{
+												head.first().append(
+													pd.create('th').addclass('pd-matrix-head-cell'+((index==0)?' pd-matrix-left-cell':'')).attr('rowspan','2')
+													.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
+												);
+											}
+										}
+										else
+										{
+											head.first().append(
+												pd.create('th').addclass('pd-matrix-head-cell'+((index==0)?' pd-matrix-left-cell':''))
+												.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
+											);
+										}
 										template.append(
-											pd.create('td').append(
+											pd.create('td').addclass((index==0)?'pd-matrix-left-cell':'').append(
 												((style) => {
 													return pd.ui.field.create(field).addclass('pd-readonly pd-matrix-row-cell'+((index<source.rows.length)?'':style));
 												})((type=='timeseries')?' pd-matrix-row-cell-numeric':'')
@@ -2661,8 +2705,13 @@ class panda_user_interface{
 										);
 										fields[field.id]=field;
 									});
-									if (!Array.isArray(source.records)) set(0,source.records,table.addrow(),{});
-								})(table.css({display:'table'}).elm('thead tr').empty(),table.template.empty(),{});
+									if (type=='timeseries')
+									{
+										span++;
+										head.first().elms('th').last().attr('colspan',span.toString());
+									}
+									if (!Array.isArray(source.records)) set(0,source.records,table.addrow(),{},Object.keys(source.records).last());
+								})(table.css({display:'table'}).elms('thead tr').map((item) => item.empty()),table.template.empty(),{});
 								break;
 							default:
 								if (pd.chart.loaded)
@@ -2725,6 +2774,10 @@ class panda_user_interface{
 														startup:true
 													},
 													backgroundColor:'transparent',
+													chartArea:{
+														height:chart.parentNode.innerheight()-parseFloat(chart.css('font-size'))*6.5,
+														top:parseFloat(chart.css('font-size'))
+													},
 													colors:[
 														'#4e79a7',
 														'#a0cbe8',
@@ -2797,7 +2850,7 @@ class panda_user_interface{
 										};
 										chart.off('show').on('show',(e) => build());
 										build();
-									})(source.fields.slice(source.rows.length).map((item) => ({id:item.id,caption:item.caption})));
+									})(source.fields.slice(source.rows.length).map((item) => ({id:item.id,caption:((type=='timeseries')?item.id:item.caption)})));
 								}
 								else pd.alert(pd.constants.common.message.invalid.chart[pd.lang]);
 								break;
@@ -4179,7 +4232,10 @@ class panda_user_interface{
 							);
 							for (var key in app.fields[layout.id].fields)
 								if (key in app.styles)
-									container.elm('[field-id="'+CSS.escape(layout.id)+'"]').template.elm('[field-id="'+CSS.escape(key)+'"]').css({width:app.styles[key].width});
+									((table,css) => {
+										table.elm('thead tr [sort-id="'+CSS.escape(key)+'"]').css(css);
+										table.template.elm('[field-id="'+CSS.escape(key)+'"]').css(css);
+									})(container.elm('[field-id="'+CSS.escape(layout.id)+'"]'),{maxWidth:app.styles[key].width,width:app.styles[key].width});
 							break;
 					}
 				});
@@ -4341,18 +4397,25 @@ class panda_user_interface{
 						})());
 					});
 					table
-					.append(pd.create('thead').append(pd.create('tr').addclass('pd-matrix-head')))
+					.append(
+						pd.create('thead')
+						.append(pd.create('tr').addclass('pd-matrix-head'))
+						.append(pd.create('tr').addclass('pd-matrix-head'))
+					)
 					.append(pd.create('tbody').append(pd.create('tr').addclass('pd-matrix-row')))
 					.spread(null,null,false).show=(source,view,callback) => {
 						((head,template,fields) => {
-							var set=(index,records,row,parsed) => {
+							var span=0;
+							var set=(index,records,row,parsed,last) => {
 								if (index<source.rows.length)
 								{
+									var span=Object.keys(records).length;
 									for (var key in records)
 									{
 										parsed[source.rows[index].field]={value:records[key].caption};
 										row=((res) => {
-											row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').attr('rowspan',res.span);
+											row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').addclass((key==last)?'pd-matrix-bottom-cell':'').attr('rowspan',res.span);
+											span+=res.span-1;
 											((id) => {
 												(res.span-1).each((index) => {
 													row=row.nextElementSibling;
@@ -4360,10 +4423,10 @@ class panda_user_interface{
 												});
 											})(source.rows[index].field);
 											return res.row;
-										})(set(index+1,records[key].rows,row,parsed));
+										})(set(index+1,records[key].rows,row,parsed,(key==last)?Object.keys(records[key].rows).last():''));
 										if (Object.keys(records).last()!=key) row=table.insertrow(row);
 									}
-									return {row:row,span:Object.keys(records).length};
+									return {row:row,span:span};
 								}
 								else
 								{
@@ -4372,39 +4435,62 @@ class panda_user_interface{
 											records.each((record,index) => {
 												((task) => {
 													task.taskspan=record.__taskspan.value;
-													cell.append(task.css({'width':(parseInt(view.fields.column.width)*record.__taskspan.value).toString()+'px'}));
+													cell.append(task.css({width:(parseInt(view.fields.column.width)*record.__taskspan.value).toString()+'px'}));
 													resizeObserver.observe(task);
 													callback(task,record);
 												})(pd.create('div'))
 											});
 										})(row.elm('.'+key),records[key]);
 									pd.record.set(row,{fields:fields},parsed);
+									if (last) row.elms('td').each((element,index) => element.addclass('pd-matrix-bottom-cell'));
 									return {row:row,span:1};
 								}
 							};
 							resizeObserver.disconnect();
 							table.clearrows();
 							source.fields.each((field,index) => {
-								head.append(
-									pd.create('th').addclass('pd-matrix-head-cell')
-									.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
-								);
+								if ('subcaption' in field)
+								{
+									span++;
+									if (field.subcaption)
+									{
+										head.first().elms('th').last().attr('colspan',span.toString());
+										head.first().append(
+											pd.create('th').addclass('pd-matrix-head-cell').css({textAlign:'left'})
+											.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.subcaption))
+										);
+										span=0;
+									}
+									head.last().append(
+										pd.create('th').addclass('pd-matrix-head-cell')
+										.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
+									);
+								}
+								else
+								{
+									head.first().append(
+										pd.create('th').addclass('pd-matrix-head-cell'+((index==0)?' pd-matrix-left-cell':'')).attr('rowspan','2')
+										.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
+									);
+								}
 								template.append(
 									((cell) => {
 										if (index<source.rows.length) cell.append(pd.ui.field.create(field).addclass('pd-readonly pd-matrix-row-cell'));
 										else
 										{
 											((width,order) => {
-												cell.addclass('pd-matrix-row-cell-task '+field.id).css({'max-width':width+'px','width':width+'px','z-index':order});
+												cell.addclass('pd-matrix-row-cell-task '+field.id).css({maxWidth:width+'px',width:width+'px','z-index':order});
 											})(view.fields.column.width.toString(),(source.fields.length-source.rows.length-index+1).toString());
 										}
 										return cell;
-									})(pd.create('td'))
+									})(pd.create('td').addclass((index==0)?'pd-matrix-left-cell':''))
 								);
 								fields[field.id]=field;
 							});
-							if (!Array.isArray(source.records)) set(0,source.records,table.addrow(),{});
-						})(table.css({display:'table'}).elm('thead tr').empty(),table.template.empty(),{});
+							span++;
+							head.first().elms('th').last().attr('colspan',span.toString());
+							if (!Array.isArray(source.records)) set(0,source.records,table.addrow(),{},Object.keys(source.records).last());
+						})(table.css({display:'table'}).elms('thead tr').map((item) => item.empty()),table.template.empty(),{});
 					};
 					return table;
 				})(pd.create('table').addclass('pd-matrix'));
@@ -4431,7 +4517,7 @@ class panda_user_interface{
 									})(pd.create('div').addclass('pd-parallel-body'))
 								);
 								return res;
-							})(pd.create('div').addclass('pd-parallel-column').css({'width':group.width.toString()+'px'})));
+							})(pd.create('div').addclass('pd-parallel-column').css({width:group.width.toString()+'px'})));
 						});
 					};
 					return container;
@@ -4755,8 +4841,8 @@ class panda_user_interface{
 									var adjust=false;
 									var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
 									var width=keep.width+pointer.pageX-keep.position;
-									keep.cell.css({'max-width':width.toString()+'px','width':width.toString()+'px'});
-									res.elms('[field-id="'+CSS.escape(id)+'"]').each((element,index) => element.css({'width':width.toString()+'px'}));
+									keep.cell.css({maxWidth:width.toString()+'px',width:width.toString()+'px'});
+									res.elms('[field-id="'+CSS.escape(id)+'"]').each((element,index) => element.css({width:width.toString()+'px'}));
 									res.elms('[field-id="'+CSS.escape(id)+'"]').each((element,index) => {
 										if (width<element.outerwidth(false))
 										{
@@ -4764,7 +4850,7 @@ class panda_user_interface{
 											adjust=true;
 										}
 									});
-									if (adjust) keep.cell.css({'max-width':width.toString()+'px','width':width.toString()+'px'});
+									if (adjust) keep.cell.css({maxWidth:width.toString()+'px',width:width.toString()+'px'});
 									e.stopPropagation();
 									e.preventDefault();
 								},

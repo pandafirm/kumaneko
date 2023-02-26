@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.2.2
+* Version: 1.2.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -190,7 +190,7 @@ class panda{
 						{
 							if (key in target)
 							{
-								if (source[key] instanceof Object) target[key]=copy(target[key],source[key]);
+								if ([source[key],target[key]].every((item) => (item instanceof Object && !(item instanceof Array)))) target[key]=copy(target[key],source[key]);
 							}
 							else
 							{
@@ -203,7 +203,7 @@ class panda{
 				else return source;
 			}
 			return target;
-		}
+		};
 		return copy(target,source);
 	}
 	/* send file request */

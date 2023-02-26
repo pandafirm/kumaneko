@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.ui.css"
-* Version: 1.2.2
+* Version: 1.2.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -105,6 +105,7 @@
 	overflow:hidden;
 	text-overflow:ellipsis;
 	user-select:none;
+	white-space:nowrap;
 	width:100%;
 }
 .pd-field .pd-field-value{
@@ -123,9 +124,7 @@
 .pd-field .pd-field-value :is(input[type=checkbox],input[type=radio])+span{
 	cursor:pointer;
 	display:inline-block;
-	overflow:hidden;
 	padding:0 0.25em 0 1.5em;
-	text-overflow:ellipsis;
 	user-select:none;
 }
 .pd-field .pd-field-value :is(input[type=checkbox],input[type=radio])+span:after{
@@ -366,11 +365,10 @@
 }
 .pd-matrix .pd-matrix-head .pd-matrix-head-cell{
 	padding:0.25em 0;
+	vertical-align:middle;
 }
 .pd-matrix .pd-matrix-head .pd-matrix-head-cell .pd-matrix-head-caption{
 	display:inline-block;
-	overflow:hidden;
-	text-overflow:ellipsis;
 	padding:0 0.5em;
 	user-select:none;
 	width:100%;
@@ -464,9 +462,10 @@
 .pd-table thead th span{
 	display:inline-block;
 	overflow:hidden;
-	text-overflow:ellipsis;
 	padding:0 0.25em;
+	text-overflow:ellipsis;
 	user-select:none;
+	white-space:nowrap;
 	width:100%;
 }
 .pd-table .pd-table-button{
@@ -573,9 +572,10 @@
 .pd-view .pd-view-head .pd-view-head-cell .pd-view-head-caption{
 	display:inline-block;
 	overflow:hidden;
-	text-overflow:ellipsis;
 	padding:0.25em 0.5em;
+	text-overflow:ellipsis;
 	user-select:none;
+	white-space:nowrap;
 	width:100%;
 	z-index:1;
 }

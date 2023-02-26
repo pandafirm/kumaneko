@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.2.2
+* Version: 1.2.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -581,6 +581,10 @@ class panda_kumaneko{
 						}
 						return e;
 					});
+					pd.event.on('0','pd.queue.dashboard',(e) => {
+						if (e.app+'_'+e.view in this.dashboard.panels) this.apps[e.app].view.load(e.view,null,null,true).catch(() => {});
+						return e;
+					});
 					pd.event.on('0','pd.queue.linkage',(e) => {
 						for (var key in this.config.apps.user)
 							if (this.bootups.includes(key))
@@ -866,7 +870,7 @@ class panda_kumaneko{
 								if (current.panels.length!=0) result.push(current);
 								return result;
 							},[]),contents,tab);
-							this.config.dashboard.frames.map((item) => item.panels).flat().each((panel,index) => this.apps[panel.app].view.load(panel.view,null,null,true).catch(() => {}));
+							Object.values(this.dashboard.panels).each((panel) => pd.event.call('0','pd.queue.dashboard',{app:panel.app,view:panel.view}));
 						})(pd.elm('#pd-kumaneko-space-contents'),pd.elm('#pd-kumaneko-space-tab'),pd.elm('#pd-kumaneko-space-nav'));
 					});
 				})((() => {
@@ -4117,7 +4121,12 @@ pd.modules={
 					{
 						this.view.ui[key].loaded=false;
 						if (reload)
-							if (this.view.ui[key].tab.active) this.view.load(key).catch(() => {});
+							if (this.view.ui[key].tab.active)
+							{
+								this.view.load(key).catch(() => {});
+								continue;
+							}
+						pd.event.call('0','pd.queue.dashboard',{app:this.app.id,view:key});
 					}
 				pd.event.call('0','pd.queue.linkage',{app:this.app.id});
 				resolve({});
@@ -4832,7 +4841,7 @@ pd.modules={
 									res.view=view;
 									res.elm('.pd-kumaneko-drag-label').empty()
 									.append(pd.create('span').css({display:'inline-block',width:'5.5em'}).html(pd.constants.app.caption.view.abbreviation[view.type][pd.lang]))
-									.append(pd.create('span').html(view.name));
+									.append(pd.create('span').css({display:'inline-block',width:'calc(100% - 5.5em)'}).html(view.name));
 									return res;
 								};
 								/* setup properties */
@@ -5059,7 +5068,7 @@ pd.modules={
 									res.action=action;
 									res.elm('.pd-kumaneko-drag-label').empty()
 									.append(pd.create('span').css({display:'inline-block',width:'5em'}).html(pd.constants.app.caption.action.abbreviation[action.trigger][pd.lang]))
-									.append(pd.create('span').html(action.name));
+									.append(pd.create('span').css({display:'inline-block',width:'calc(100% - 5em)'}).html(action.name));
 									return res;
 								};
 								/* setup properties */
@@ -9570,7 +9579,9 @@ pd.modules={
 							required:true,
 							nocaption:false,
 							demiliter:false,
-							decimals:'0'
+							decimals:'0',
+							unit:'px',
+							unitposition:'suffix'
 						}
 					}
 				};
@@ -10524,7 +10535,7 @@ pd.modules={
 								break;
 						}
 						if (!['box','table'].includes(this.fieldinfo.type))
-							contents.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.width).addclass('pd-field-width').css({width:'100%'}),this.app));
+							contents.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.width).css({width:'100%'}),this.app));
 						return contents;
 					})(pd.create('div').addclass('pd-scope').attr('form-id','form_'+this.app.id))
 				);
@@ -14362,7 +14373,7 @@ pd.modules={
 											this.apps[duplicate.id]=duplicate;
 											this.lib.remodel();
 										});
-									})(pd.extend({id:resp.id.toString(),name:res.app.name+' Copy'},res.app));
+									})(pd.extend({id:resp.id.toString(),name:res.app.name+' Copy',permissions:{'owner':[pd.operator.__id.value.toString()]}},res.app));
 								})
 								.catch((error) => {
 									pd.alert(error.message);
