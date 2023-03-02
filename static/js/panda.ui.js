@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.2.3
+* Version: 1.2.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -2615,6 +2615,45 @@ class panda_user_interface{
 		this.chart={
 			create:(type) => {
 				return ((table,chart) => {
+					var handler={
+						mousemove:(e) => {
+							var element=((res) => {
+								if (!res.hasclass('pd-matrix-row-cell'))
+									res=(res.closest('.pd-matrix-row-cell'))?res.closest('.pd-matrix-row-cell'):null;
+								return res;
+							})(document.elementFromPoint(e.pageX,e.pageY));
+							if (element)
+							{
+								((rows) => {
+									if (element.cellIndex>rows-1)
+									{
+										element.elm('.pd-field-value').addclass('pd-activate');
+										[element.previousElementSibling,element.nextElementSibling].each((element,index) => {
+											if (element) element.elm('.pd-field-value').removeclass('pd-activate');
+										});
+										((element) => {
+											element.elm('.pd-matrix-head-caption').addclass('pd-activate');
+											[element.previousElementSibling,element.nextElementSibling].each((element,index) => {
+												if (element) element.elm('.pd-matrix-head-caption').removeclass('pd-activate');
+											});
+										})(table.elms('thead tr').last().elms('.pd-matrix-head-cell')[element.cellIndex]);
+										if (rows!=0)
+											((element) => {
+												element.elms('.pd-matrix-row-cell-head').last().elm('.pd-field-value').addclass('pd-activate');
+												[element.previousElementSibling,element.nextElementSibling].each((element,index) => {
+													if (element) element.elms('.pd-matrix-row-cell-head').last().elm('.pd-field-value').removeclass('pd-activate');
+												});
+											})(element.parentNode);
+									}
+									else table.elms('.pd-activate').each((element,index) => element.removeclass('pd-activate'));
+								})(element.parentNode.elms('.pd-matrix-row-cell-head').length);
+							}
+							else table.elms('.pd-activate').each((element,index) => element.removeclass('pd-activate'));
+						},
+						mouseleave:(e) => {
+							table.elms('.pd-activate').each((element,index) => element.removeclass('pd-activate'));
+						}
+					};
 					table
 					.append(
 						((head) => {
@@ -2630,7 +2669,7 @@ class panda_user_interface{
 								chart.hide();
 								((head,template,fields) => {
 									var span=0;
-									var set=(index,records,row,parsed,last) => {
+									var set=(index,records,row,parsed) => {
 										if (index<source.rows.length)
 										{
 											var span=Object.keys(records).length;
@@ -2638,7 +2677,7 @@ class panda_user_interface{
 											{
 												parsed[source.rows[index].field]={value:records[key].caption};
 												row=((res) => {
-													row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').addclass((key==last)?'pd-matrix-bottom-cell':'').attr('rowspan',res.span);
+													row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').attr('rowspan',res.span);
 													span+=res.span-1;
 													((id) => {
 														(res.span-1).each((index) => {
@@ -2647,7 +2686,7 @@ class panda_user_interface{
 														});
 													})(source.rows[index].field);
 													return res.row;
-												})(set(index+1,records[key].rows,row,parsed,(key==last)?Object.keys(records[key].rows).last():''));
+												})(set(index+1,records[key].rows,row,parsed));
 												if (Object.keys(records).last()!=key) row=table.insertrow(row);
 											}
 											return {row:row,span:span};
@@ -2656,7 +2695,6 @@ class panda_user_interface{
 										{
 											for (var key in records) parsed[key]={value:records[key]};
 											pd.record.set(row,{fields:fields},parsed);
-											if (last) row.elms('td').each((element,index) => element.addclass('pd-matrix-bottom-cell'));
 											return {row:row,span:1};
 										}
 									};
@@ -2684,24 +2722,29 @@ class panda_user_interface{
 											else
 											{
 												head.first().append(
-													pd.create('th').addclass('pd-matrix-head-cell'+((index==0)?' pd-matrix-left-cell':'')).attr('rowspan','2')
+													pd.create('th').addclass('pd-matrix-head-cell').attr('rowspan','2')
 													.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
+												);
+												head.last().append(
+													pd.create('th').addclass('pd-matrix-head-cell').hide()
+													.append(pd.create('span').addclass('pd-matrix-head-caption'))
 												);
 											}
 										}
 										else
 										{
-											head.first().append(
-												pd.create('th').addclass('pd-matrix-head-cell'+((index==0)?' pd-matrix-left-cell':''))
+											head.last().append(
+												pd.create('th').addclass('pd-matrix-head-cell')
 												.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
 											);
 										}
 										template.append(
-											pd.create('td').addclass((index==0)?'pd-matrix-left-cell':'').append(
-												((style) => {
-													return pd.ui.field.create(field).addclass('pd-readonly pd-matrix-row-cell'+((index<source.rows.length)?'':style));
-												})((type=='timeseries')?' pd-matrix-row-cell-numeric':'')
-											)
+											((cell) => {
+												if (type=='timeseries')
+													if (!cell.hasclass('pd-matrix-row-cell-head')) cell.addclass('pd-matrix-row-cell-numeric');
+												cell.append(pd.ui.field.create(field).addclass('pd-readonly'));
+												return cell;
+											})(pd.create('td').addclass('pd-matrix-row-cell'+((index<source.rows.length)?' pd-matrix-row-cell-head':'')))
 										);
 										fields[field.id]=field;
 									});
@@ -2710,7 +2753,13 @@ class panda_user_interface{
 										span++;
 										head.first().elms('th').last().attr('colspan',span.toString());
 									}
-									if (!Array.isArray(source.records)) set(0,source.records,table.addrow(),{},Object.keys(source.records).last());
+									if (!Array.isArray(source.records))
+									{
+										set(0,source.records,table.addrow(),{});
+										table.elm('tbody')
+										.off('mousemove',handler.mousemove).on('mousemove',handler.mousemove,true)
+										.off('mouseleave',handler.mouseleave).on('mouseleave',handler.mouseleave,true);
+									}
 								})(table.css({display:'table'}).elms('thead tr').map((item) => item.empty()),table.template.empty(),{});
 								break;
 							default:
@@ -2775,8 +2824,8 @@ class panda_user_interface{
 													},
 													backgroundColor:'transparent',
 													chartArea:{
-														height:chart.parentNode.innerheight()-parseFloat(chart.css('font-size'))*6.5,
-														top:parseFloat(chart.css('font-size'))
+														height:chart.parentNode.innerheight()-parseFloat(chart.css('font-size'))*7.5,
+														top:parseFloat(chart.css('font-size'))*1.5
 													},
 													colors:[
 														'#4e79a7',
@@ -2824,6 +2873,7 @@ class panda_user_interface{
 														gridlines:{
 															color:(pd.theme=='light')?'#b6b6b6':'#727272'
 														},
+														maxAlternation:1,
 														minorGridlines:{
 															color:(pd.theme=='light')?'#b6b6b6':'#727272'
 														},
@@ -4396,6 +4446,44 @@ class panda_user_interface{
 							return res;
 						})());
 					});
+					var handler={
+						mousemove:(e) => {
+							var element=((res) => {
+								if (!res.hasclass('pd-matrix-row-cell'))
+									res=(res.closest('.pd-matrix-row-cell'))?res.closest('.pd-matrix-row-cell'):null;
+								return res;
+							})(document.elementFromPoint(e.pageX,e.pageY));
+							var span=((res) => {
+								return (res.hasAttribute('taskspan'))?res.taskspan:((res.closest('[taskspan]'))?res.closest('[taskspan]').taskspan:1);
+							})(document.elementFromPoint(e.pageX,e.pageY));
+							if (element)
+							{
+								((rows) => {
+									if (element.cellIndex>rows-1)
+									{
+										((elements) => {
+											elements.each((element,index) => element.elm('.pd-matrix-head-caption').addclass('pd-activate'));
+											[elements.first().previousElementSibling,elements.last().nextElementSibling].each((element,index) => {
+												if (element) element.elm('.pd-matrix-head-caption').removeclass('pd-activate');
+											});
+										})(table.elms('thead tr').last().elms('.pd-matrix-head-cell').slice(element.cellIndex,element.cellIndex+span));
+										if (rows!=0)
+											((element) => {
+												element.elms('.pd-matrix-row-cell-head').last().elm('.pd-field-value').addclass('pd-activate');
+												[element.previousElementSibling,element.nextElementSibling].each((element,index) => {
+													if (element) element.elms('.pd-matrix-row-cell-head').last().elm('.pd-field-value').removeclass('pd-activate');
+												});
+											})(element.parentNode);
+									}
+									else table.elms('.pd-activate').each((element,index) => element.removeclass('pd-activate'));
+								})(element.parentNode.elms('.pd-matrix-row-cell-head').length);
+							}
+							else table.elms('.pd-activate').each((element,index) => element.removeclass('pd-activate'));
+						},
+						mouseleave:(e) => {
+							table.elms('.pd-activate').each((element,index) => element.removeclass('pd-activate'));
+						}
+					};
 					table
 					.append(
 						pd.create('thead')
@@ -4406,7 +4494,7 @@ class panda_user_interface{
 					.spread(null,null,false).show=(source,view,callback) => {
 						((head,template,fields) => {
 							var span=0;
-							var set=(index,records,row,parsed,last) => {
+							var set=(index,records,row,parsed) => {
 								if (index<source.rows.length)
 								{
 									var span=Object.keys(records).length;
@@ -4414,7 +4502,7 @@ class panda_user_interface{
 									{
 										parsed[source.rows[index].field]={value:records[key].caption};
 										row=((res) => {
-											row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').addclass((key==last)?'pd-matrix-bottom-cell':'').attr('rowspan',res.span);
+											row.elm('[field-id="'+CSS.escape(source.rows[index].field)+'"]').closest('td').attr('rowspan',res.span);
 											span+=res.span-1;
 											((id) => {
 												(res.span-1).each((index) => {
@@ -4423,7 +4511,7 @@ class panda_user_interface{
 												});
 											})(source.rows[index].field);
 											return res.row;
-										})(set(index+1,records[key].rows,row,parsed,(key==last)?Object.keys(records[key].rows).last():''));
+										})(set(index+1,records[key].rows,row,parsed));
 										if (Object.keys(records).last()!=key) row=table.insertrow(row);
 									}
 									return {row:row,span:span};
@@ -4434,15 +4522,14 @@ class panda_user_interface{
 										((cell,records) => {
 											records.each((record,index) => {
 												((task) => {
-													task.taskspan=record.__taskspan.value;
-													cell.append(task.css({width:(parseInt(view.fields.column.width)*record.__taskspan.value).toString()+'px'}));
+													task.taskspan=parseInt(task.attr('taskspan'));
+													cell.append(task.css({width:(parseInt(view.fields.column.width)*task.taskspan).toString()+'px'}));
 													resizeObserver.observe(task);
 													callback(task,record);
-												})(pd.create('div'))
+												})(pd.create('div').attr('taskspan',record.__taskspan.value))
 											});
 										})(row.elm('.'+key),records[key]);
 									pd.record.set(row,{fields:fields},parsed);
-									if (last) row.elms('td').each((element,index) => element.addclass('pd-matrix-bottom-cell'));
 									return {row:row,span:1};
 								}
 							};
@@ -4469,27 +4556,37 @@ class panda_user_interface{
 								else
 								{
 									head.first().append(
-										pd.create('th').addclass('pd-matrix-head-cell'+((index==0)?' pd-matrix-left-cell':'')).attr('rowspan','2')
+										pd.create('th').addclass('pd-matrix-head-cell').attr('rowspan','2')
 										.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.caption))
+									);
+									head.last().append(
+										pd.create('th').addclass('pd-matrix-head-cell').hide()
+										.append(pd.create('span').addclass('pd-matrix-head-caption'))
 									);
 								}
 								template.append(
 									((cell) => {
-										if (index<source.rows.length) cell.append(pd.ui.field.create(field).addclass('pd-readonly pd-matrix-row-cell'));
-										else
+										if (!cell.hasclass('pd-matrix-row-cell-head'))
 										{
 											((width,order) => {
 												cell.addclass('pd-matrix-row-cell-task '+field.id).css({maxWidth:width+'px',width:width+'px','z-index':order});
 											})(view.fields.column.width.toString(),(source.fields.length-source.rows.length-index+1).toString());
 										}
+										else cell.append(pd.ui.field.create(field).addclass('pd-readonly'));
 										return cell;
-									})(pd.create('td').addclass((index==0)?'pd-matrix-left-cell':''))
+									})(pd.create('td').addclass('pd-matrix-row-cell'+((index<source.rows.length)?' pd-matrix-row-cell-head':'')))
 								);
 								fields[field.id]=field;
 							});
 							span++;
 							head.first().elms('th').last().attr('colspan',span.toString());
-							if (!Array.isArray(source.records)) set(0,source.records,table.addrow(),{},Object.keys(source.records).last());
+							if (!Array.isArray(source.records))
+							{
+								set(0,source.records,table.addrow(),{});
+								table.elm('tbody')
+								.off('mousemove',handler.mousemove).on('mousemove',handler.mousemove,true)
+								.off('mouseleave',handler.mouseleave).on('mouseleave',handler.mouseleave,true);
+							}
 						})(table.css({display:'table'}).elms('thead tr').map((item) => item.empty()),table.template.empty(),{});
 					};
 					return table;

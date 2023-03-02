@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.ui.css"
-* Version: 1.2.3
+* Version: 1.2.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -364,25 +364,29 @@
 	font-weight:normal;
 }
 .pd-matrix .pd-matrix-head .pd-matrix-head-cell{
-	padding:0.25em 0;
+	padding:0.25em;
 	vertical-align:middle;
 }
 .pd-matrix .pd-matrix-head .pd-matrix-head-cell .pd-matrix-head-caption{
+	border-radius:0.25em;
 	display:inline-block;
-	padding:0 0.5em;
+	padding:0 0.25em;
 	user-select:none;
 	width:100%;
 }
-.pd-matrix .pd-matrix-row .pd-matrix-row-cell{
+.pd-matrix .pd-matrix-row .pd-matrix-row-cell .pd-field{
 	display:block !important;
 }
-.pd-matrix .pd-matrix-row .pd-matrix-row-cell-numeric{
+.pd-matrix .pd-matrix-row .pd-matrix-row-cell .pd-field .pd-field-value{
+	border-radius:0.25em;
+}
+.pd-matrix .pd-matrix-row .pd-matrix-row-cell.pd-matrix-row-cell-numeric .pd-field{
 	text-align:right !important;
 }
-.pd-matrix .pd-matrix-row .pd-matrix-row-cell-task .pd-field .pd-field-value{
+.pd-matrix .pd-matrix-row .pd-matrix-row-cell.pd-matrix-row-cell-task .pd-field .pd-field-value{
 	cursor:pointer;
 }
-.pd-matrix .pd-matrix-row .pd-matrix-row-cell-task .pd-field .pd-field-value .pd-guide{
+.pd-matrix .pd-matrix-row .pd-matrix-row-cell.pd-matrix-row-cell-task .pd-field .pd-field-value .pd-guide{
 	border-radius:0.25em;
 	pointer-events:none;
 }

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.2.3
+* Version: 1.2.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -6760,7 +6760,7 @@ pd.modules={
 			/* set configuration */
 			set(){
 				return new Promise((resolve,reject) => {
-					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.app.id.toString()).on('click',(e) => {
+					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.app.id.toString()).off('click').on('click',(e) => {
 						navigator.clipboard.writeText(this.app.id.toString()).then(() => {
 							pd.alert(pd.constants.common.message.clipboard[pd.lang]);
 						})
@@ -8556,7 +8556,7 @@ pd.modules={
 								});
 							return res;
 						};
-						this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.action.id.toString()).on('click',(e) => {
+						this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.action.id.toString()).off('click').on('click',(e) => {
 							navigator.clipboard.writeText(this.keep.action.id.toString()).then(() => {
 								pd.alert(pd.constants.common.message.clipboard[pd.lang]);
 							})
@@ -9025,7 +9025,11 @@ pd.modules={
 								if (element.alert) element.alert.hide();
 							});
 							/* setup handler */
-							if (this.handler) this.ok.off('click',this.handler);
+							if (this.handler)
+							{
+								this.ok.off('click',this.handler);
+								this.cancel.off('click');
+							}
 							this.handler=(e) => {
 								this.get().then((resp) => {
 									if (!resp.error)
@@ -9243,7 +9247,7 @@ pd.modules={
 			/* set configuration */
 			set(){
 				return new Promise((resolve,reject) => {
-					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.deduplication.id.toString()).on('click',(e) => {
+					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.deduplication.id.toString()).off('click').on('click',(e) => {
 						navigator.clipboard.writeText(this.keep.deduplication.id.toString()).then(() => {
 							pd.alert(pd.constants.common.message.clipboard[pd.lang]);
 						})
@@ -9303,7 +9307,11 @@ pd.modules={
 						if (element.alert) element.alert.hide();
 					});
 					/* setup handler */
-					if (this.handler) this.ok.off('click',this.handler);
+					if (this.handler)
+					{
+						this.ok.off('click',this.handler);
+						this.cancel.off('click');
+					}
 					this.handler=(e) => {
 						this.get().then((resp) => {
 							if (!resp.error)
@@ -9868,7 +9876,11 @@ pd.modules={
 									if (element.alert) element.alert.hide();
 								});
 								/* setup handler */
-								if (this.handler) this.ok.off('click',this.handler);
+								if (this.handler)
+								{
+									this.ok.off('click',this.handler);
+									this.cancel.off('click');
+								}
 								this.handler=(e) => {
 									this.get().then((resp) => {
 										if (!resp.error)
@@ -9987,7 +9999,7 @@ pd.modules={
 						.append(
 							((res) => {
 								res.elm('input').val(this.fieldinfo.id);
-								res.elm('.pd-guide').css({cursor:'pointer'}).html(this.fieldinfo.id).on('click',(e) => {
+								res.elm('.pd-guide').css({cursor:'pointer'}).html(this.fieldinfo.id).off('click').on('click',(e) => {
 									navigator.clipboard.writeText(this.fieldinfo.id).then(() => {
 										pd.alert(pd.constants.common.message.clipboard[pd.lang]);
 									})
@@ -10960,7 +10972,11 @@ pd.modules={
 							if (element.alert) element.alert.hide();
 						});
 						/* setup handler */
-						if (this.handler) this.ok.off('click',this.handler);
+						if (this.handler)
+						{
+							this.ok.off('click',this.handler);
+							this.cancel.off('click');
+						}
 						this.handler=(e) => {
 							this.get().then((error) => {
 								if (!error)
@@ -11489,7 +11505,7 @@ pd.modules={
 			/* set configuration */
 			set(){
 				return new Promise((resolve,reject) => {
-					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.linkage.id.toString()).on('click',(e) => {
+					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.linkage.id.toString()).off('click').on('click',(e) => {
 						navigator.clipboard.writeText(this.keep.linkage.id.toString()).then(() => {
 							pd.alert(pd.constants.common.message.clipboard[pd.lang]);
 						})
@@ -11574,7 +11590,11 @@ pd.modules={
 							if (element.alert) element.alert.hide();
 						});
 						/* setup handler */
-						if (this.handler) this.ok.off('click',this.handler);
+						if (this.handler)
+						{
+							this.ok.off('click',this.handler);
+							this.cancel.off('click');
+						}
 						this.handler=(e) => {
 							this.get().then((resp) => {
 								if (!resp.error)
@@ -13681,7 +13701,7 @@ pd.modules={
 			/* set configuration */
 			set(){
 				return new Promise((resolve,reject) => {
-					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.view.id.toString()).on('click',(e) => {
+					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.view.id.toString()).off('click').on('click',(e) => {
 						navigator.clipboard.writeText(this.keep.view.id.toString()).then(() => {
 							pd.alert(pd.constants.common.message.clipboard[pd.lang]);
 						})
@@ -14134,7 +14154,11 @@ pd.modules={
 						if (element.alert) element.alert.hide();
 					});
 					/* setup handler */
-					if (this.handler) this.ok.off('click',this.handler);
+					if (this.handler)
+					{
+						this.ok.off('click',this.handler);
+						this.cancel.off('click');
+					}
 					this.handler=(e) => {
 						this.get().then((resp) => {
 							if (!resp.error)
@@ -14535,7 +14559,11 @@ pd.modules={
 					this.apps=resp.file.apps.user;
 					this.sort=resp.file.apps.sort;
 					/* setup handler */
-					if (this.handler) this.ok.off('click',this.handler);
+					if (this.handler)
+					{
+						this.ok.off('click',this.handler);
+						this.cancel.off('click');
+					}
 					this.handler=(e) => {
 						this.get().then((resp) => {
 							((apps,sort) => {
@@ -14995,7 +15023,11 @@ pd.modules={
 						if (element.alert) element.alert.hide();
 					});
 					/* setup handler */
-					if (this.handler) this.ok.off('click',this.handler);
+					if (this.handler)
+					{
+						this.ok.off('click',this.handler);
+						this.cancel.off('click');
+					}
 					this.handler=(e) => {
 						this.get().then((resp) => {
 							((dashboard) => {
@@ -15386,7 +15418,11 @@ pd.modules={
 								/* setup properties */
 								this.keep.fields=resp.file.apps.user[this.keep.app].fields;
 								/* setup handler */
-								if (this.handler) this.ok.off('click',this.handler);
+								if (this.handler)
+								{
+									this.ok.off('click',this.handler);
+									this.cancel.off('click');
+								}
 								this.handler=(e) => {
 									pd.confirm(pd.constants.common.message.confirm.submit[pd.lang],() => {
 										pd.loadstart();

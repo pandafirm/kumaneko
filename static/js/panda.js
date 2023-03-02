@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.2.3
+* Version: 1.2.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3557,14 +3557,14 @@ HTMLElement.prototype.off=function(type,handler){
 	});
 	return this;
 }
-HTMLElement.prototype.on=function(type,handler){
+HTMLElement.prototype.on=function(type,handler,bubbling=false){
 	((Array.isArray(type))?type:type.split(',').map((item) => item.trim())).each((type,index) => {
 		if (type)
 		{
 			if (!(this in pd.eventhandlers)) pd.eventhandlers[this]={};
 			if (!(type in pd.eventhandlers[this])) pd.eventhandlers[this][type]=[];
 			pd.eventhandlers[this][type].push(handler);
-			this.addEventListener(type,handler);
+			this.addEventListener(type,handler,bubbling);
 		}
 	});
 	return this;
