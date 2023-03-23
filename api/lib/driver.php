@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 1.2.4
+* Version: 1.2.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1167,6 +1167,10 @@ class clsDriver
 	{
 		switch ($arg_rhs["type"])
 		{
+			case "canvas":
+			case "file":
+				$arg_rhs["value"]="\"\"";
+				break;
 			case "checkbox":
 			case "creator":
 			case "department":
@@ -1184,9 +1188,6 @@ class clsDriver
 			case "dropdown":
 			case "radio":
 				$arg_rhs["value"]="(\"".((!is_null($arg_rhs["value"])?$arg_rhs["value"]:""))."\")";
-				break;
-			case "file":
-				$arg_rhs["value"]="\"\"";
 				break;
 			case "id":
 			case "number":
