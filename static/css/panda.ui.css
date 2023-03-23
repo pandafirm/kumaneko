@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.ui.css"
-* Version: 1.2.4
+* Version: 1.2.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -206,26 +206,26 @@
 	white-space:normal;
 	word-break:break-all;
 }
-.pd-field .pd-field-value.pd-file .pd-guide .pd-fileguide .pd-fileguide-label{
+.pd-field .pd-field-value:is(.pd-canvas,.pd-file) .pd-guide :is(.pd-canvasguide,.pd-fileguide) :is(.pd-canvasguide-thumbnail,.pd-fileguide-label){
 	cursor:pointer;
 }
-.pd-field .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide{
+.pd-field .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide{
 	width:calc(100% - 1.5em);
 }
-.pd-field .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide){
+.pd-field .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-canvasguide,.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide){
 	display:block;
 	white-space:nowrap;
 }
-.pd-field .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-departmentguide-icon,.pd-fileguide-icon,.pd-groupguide-icon,.pd-userguide-icon){
+.pd-field .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-canvasguide,.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-canvasguide-icon,.pd-departmentguide-icon,.pd-fileguide-icon,.pd-groupguide-icon,.pd-userguide-icon){
 	background-size:1.5em 1.5em;
 	height:1.5em;
 	width:1.5em;
 }
-.pd-field .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-departmentguide-label,.pd-fileguide-label,.pd-groupguide-label,.pd-userguide-label){
+.pd-field .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-canvasguide,.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-canvasguide-thumbnail,.pd-departmentguide-label,.pd-fileguide-label,.pd-groupguide-label,.pd-userguide-label){
 	display:inline-block;
-	padding-left:0.25em;
+	margin-left:0.25em;
 	white-space:normal;
-	width:calc(100% - 1.5em);
+	width:calc(100% - 1.75em);
 }
 .pd-field .pd-field-value:is(.pd-id,.pd-number) *{
 	text-align:right;
@@ -236,14 +236,14 @@
 .pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value .pd-guide{
 	display:inline-block;
 }
-.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide{
+.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide{
 	width:100%;
 }
-.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-departmentguide-icon,.pd-fileguide-icon,.pd-groupguide-icon,.pd-userguide-icon){
+.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-canvasguide,.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-canvasguide-icon,.pd-departmentguide-icon,.pd-fileguide-icon,.pd-groupguide-icon,.pd-userguide-icon){
 	display:none;
 }
-.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-departmentguide-label,.pd-fileguide-label,.pd-groupguide-label,.pd-userguide-label){
-	padding-left:0;
+.pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-canvasguide,.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-canvasguide-thumbnail,.pd-departmentguide-label,.pd-fileguide-label,.pd-groupguide-label,.pd-userguide-label){
+	margin-left:0;
 	width:100%;
 }
 .pd-field:is(.pd-disabled,.pd-readonly) .pd-field-value:not(.pd-spacer) > :not(.pd-guide,.pd-icon.pd-open){
@@ -255,7 +255,7 @@
 .pd-field:is(.pd-disabled,.pd-readonly).pd-picker .pd-field-value > .pd-icon.pd-open{
 	display:none;
 }
-.pd-field:is(.pd-disabled,.pd-readonly).pd-picker .pd-field-value.pd-file .pd-guide .pd-fileguide .pd-fileguide-label{
+.pd-field:is(.pd-disabled,.pd-readonly).pd-picker .pd-field-value:is(.pd-canvas,.pd-file) .pd-guide :is(.pd-canvasguide,.pd-fileguide) :is(.pd-canvasguide-thumbnail,.pd-fileguide-label){
 	pointer-events:none;
 }
 .pd-field:is(.pd-disabled,.pd-readonly):not(.pd-picker) .pd-field-value:is(.pd-address,.pd-lookup):not(.pd-deny) .pd-guide{
@@ -390,6 +390,9 @@
 	border-radius:0.25em;
 	pointer-events:none;
 }
+.pd-matrix .pd-matrix-row .pd-matrix-row-cell.pd-matrix-row-cell-task .pd-field .pd-field-value.pd-canvas .pd-guide{
+	padding:0.25em;
+}
 .pd-panel{
 	display:inline-block;
 	padding:0.25em;
@@ -440,6 +443,9 @@
 .pd-parallel .pd-parallel-column .pd-parallel-body .pd-parallel-body-task .pd-field .pd-field-value .pd-guide{
 	border-radius:0.25em;
 	pointer-events:none;
+}
+.pd-parallel .pd-parallel-column .pd-parallel-body .pd-parallel-body-task .pd-field .pd-field-value.pd-canvas .pd-guide{
+	padding:0.25em;
 }
 .pd-parallel .pd-parallel-column .pd-parallel-head{
 	padding:0.25em;
@@ -497,14 +503,14 @@
 .pd-uneditable .pd-field .pd-field-value .pd-guide{
 	display:inline-block;
 }
-.pd-uneditable .pd-field .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide{
+.pd-uneditable .pd-field .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide{
 	width:100%;
 }
-.pd-uneditable .pd-field .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-departmentguide-icon,.pd-fileguide-icon,.pd-groupguide-icon,.pd-userguide-icon){
+.pd-uneditable .pd-field .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-canvasguide,.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-canvasguide-icon,.pd-departmentguide-icon,.pd-fileguide-icon,.pd-groupguide-icon,.pd-userguide-icon){
 	display:none;
 }
-.pd-uneditable .pd-field .pd-field-value:is(.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-departmentguide-label,.pd-fileguide-label,.pd-groupguide-label,.pd-userguide-label){
-	padding-left:0;
+.pd-uneditable .pd-field .pd-field-value:is(.pd-canvas,.pd-department,.pd-file,.pd-group,.pd-user) .pd-guide :is(.pd-canvasguide,.pd-departmentguide,.pd-fileguide,.pd-groupguide,.pd-userguide) :is(.pd-canvasguide-thumbnail,.pd-departmentguide-label,.pd-fileguide-label,.pd-groupguide-label,.pd-userguide-label){
+	margin-left:0;
 	width:100%;
 }
 .pd-uneditable .pd-field .pd-field-value:not(.pd-spacer) > :not(.pd-guide,.pd-icon.pd-open){

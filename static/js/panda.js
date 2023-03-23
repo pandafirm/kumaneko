@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.2.4
+* Version: 1.2.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -152,20 +152,15 @@ class panda{
 	}
 	/* download text file */
 	downloadtext(values,filename){
-		var blob=new Blob([new Uint8Array([0xEF,0xBB,0xBF]),values],{type:'text/plain'});
-		if (window.navigator.msSaveBlob) window.navigator.msSaveOrOpenBlob(blob,filename);
-		else
-		{
-			var url=window.URL || window.webkitURL;
-			var a=pd.create('a')
-			.attr('href',url.createObjectURL(blob))
-			.attr('target','_blank')
-			.attr('download',filename)
-			.css({display:'none'});
-			pd.elm('body').append(a);
-			a.click();
-			document.body.removeChild(a);
-		}
+		var url=window.URL || window.webkitURL;
+		var a=pd.create('a')
+		.attr('href',url.createObjectURL(new Blob([new Uint8Array([0xEF,0xBB,0xBF]),values],{type:'text/plain'})))
+		.attr('target','_blank')
+		.attr('download',filename)
+		.css({display:'none'});
+		pd.elm('body').append(a);
+		a.click();
+		document.body.removeChild(a);
 	}
 	/* get elements */
 	elm(selectors){

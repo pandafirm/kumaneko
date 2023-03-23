@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.2.4
+* Version: 1.2.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1954,6 +1954,10 @@ pd.modules={
 															if (fieldinfo)
 																switch (fieldinfo.type)
 																{
+																	case 'canvas':
+																	case 'spacer':
+																	case 'table':
+																		break;
 																	case 'checkbox':
 																		if (Array.isArray(value.value)) res=value.value.join(',');
 																		break;
@@ -1984,9 +1988,6 @@ pd.modules={
 																		break;
 																	case 'lookup':
 																		res=value.search;
-																		break;
-																	case 'spacer':
-																	case 'table':
 																		break;
 																	case 'group':
 																		res=value.value.shape((item) => {
@@ -2172,23 +2173,14 @@ pd.modules={
 																						}
 																						else
 																						{
-																							if (window.navigator.msSaveBlob) window.navigator.msSaveOrOpenBlob(((data) => {
-																								var datas=atob(data);
-																								var buffer=new Uint8Array(datas.length);
-																								datas.length.each((index) => buffer[index]=datas.charCodeAt(index));
-																								return new Blob([buffer.buffer],{type:'application/pdf'});
-																							})(resp.file),filename);
-																							else
-																							{
-																								var a=pd.create('a')
-																								.css({display:'none'})
-																								.attr('href',pd.ui.objecturl(resp.file,'application/pdf'))
-																								.attr('target','_blank')
-																								.attr('download',filename);
-																								pd.elm('body').append(a);
-																								a.click();
-																								document.body.removeChild(a);
-																							}
+																							var a=pd.create('a')
+																							.css({display:'none'})
+																							.attr('href',pd.ui.objecturl(resp.file,'application/pdf'))
+																							.attr('target','_blank')
+																							.attr('download',filename);
+																							pd.elm('body').append(a);
+																							a.click();
+																							document.body.removeChild(a);
 																							resolve();
 																						}
 																					});
@@ -3861,6 +3853,12 @@ pd.modules={
 																			var res='';
 																			switch (this.app.fields[item].type)
 																			{
+																				case 'canvas':
+																				case 'file':
+																				case 'id':
+																				case 'spacer':
+																					res=PD_THROW;
+																					break;
 																				case 'checkbox':
 																				case 'creator':
 																				case 'department':
@@ -3868,11 +3866,6 @@ pd.modules={
 																				case 'modifier':
 																				case 'user':
 																					res='"'+current[item].value.join(':')+'"';
-																					break;
-																				case 'file':
-																				case 'id':
-																				case 'spacer':
-																					res=PD_THROW;
 																					break;
 																				case 'lookup':
 																				case 'number':
@@ -3888,6 +3881,7 @@ pd.modules={
 																		var res='';
 																		switch (this.app.fields[item].type)
 																		{
+																			case 'canvas':
 																			case 'file':
 																			case 'id':
 																			case 'spacer':
@@ -5356,6 +5350,7 @@ pd.modules={
 												{type:'postalcode',icon:'postalcode'},
 												{type:'address',icon:'address'},
 												{type:'color',icon:'color'},
+												{type:'canvas',icon:'canvas'},
 												{type:'table',icon:'table'},
 												{type:'spacer',icon:'spacer'},
 												{type:'box',icon:'box'},
@@ -7817,6 +7812,7 @@ pd.modules={
 																((fieldinfo) => {
 																	switch (fieldinfo.type)
 																	{
+																		case 'canvas':
 																		case 'file':
 																			mappings.template.elm('[field-id=external]').elm('select')
 																			.append(
@@ -8630,7 +8626,7 @@ pd.modules={
 											}
 										})(fieldinfos[key]);
 									return res;
-								})(),['file','id','autonumber','creator','createdtime','modifier','modifiedtime']),'caption','id');
+								})(),['canvas','file','id','autonumber','creator','createdtime','modifier','modifiedtime']),'caption','id');
 								this.keep.action.formula.each((values,index) => {
 									if (values.field in formulainfos)
 										((row) => {
@@ -9266,6 +9262,7 @@ pd.modules={
 							{
 								switch (this.keep.fields[key].type)
 								{
+									case 'canvas':
 									case 'file':
 									case 'spacer':
 									case 'table':
@@ -10266,6 +10263,7 @@ pd.modules={
 																		((fieldinfo) => {
 																			switch (fieldinfo.type)
 																			{
+																				case 'canvas':
 																				case 'file':
 																					mappings.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
 																					pickers.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
@@ -11263,6 +11261,7 @@ pd.modules={
 														((fieldinfo) => {
 															switch (fieldinfo.type)
 															{
+																case 'canvas':
 																case 'file':
 																	displays.template.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
 																	res.display[fieldinfo.id]=fieldinfo;
@@ -13764,6 +13763,7 @@ pd.modules={
 									switch (this.keep.fields[key].type)
 									{
 										case 'box':
+										case 'canvas':
 										case 'file':
 										case 'spacer':
 										case 'table':
@@ -13836,6 +13836,11 @@ pd.modules={
 										case 'spacer':
 										case 'table':
 											break;
+										case 'canvas':
+										case 'file':
+										case 'textarea':
+											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											break;
 										case 'createdtime':
 										case 'date':
 										case 'datetime':
@@ -13844,10 +13849,6 @@ pd.modules={
 											elements.task.end.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
 											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
 											elements.rows.field.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
-											break;
-										case 'file':
-										case 'textarea':
-											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
 											break;
 										default:
 											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
@@ -15132,6 +15133,7 @@ pd.modules={
 									switch (fieldinfo.type)
 									{
 										case 'autonumber':
+										case 'canvas':
 										case 'creator':
 										case 'createdtime':
 										case 'file':
@@ -15248,6 +15250,7 @@ pd.modules={
 														switch (fieldinfo.type)
 														{
 															case 'autonumber':
+															case 'canvas':
 															case 'creator':
 															case 'createdtime':
 															case 'file':
@@ -15379,6 +15382,7 @@ pd.modules={
 									switch (fieldinfo.type)
 									{
 										case 'autonumber':
+										case 'canvas':
 										case 'creator':
 										case 'createdtime':
 										case 'file':
@@ -16989,8 +16993,8 @@ pd.constants=pd.extend({
 				ja:'リンクするレコードの関連付け'
 			},
 			display:{
-				en:'Datasource App Fields to Display',
-				ja:'表示するフィールド'
+				en:'Datasource App Fields to Display and Mappings',
+				ja:'表示するフィールドとコピー先テーブル内フィールド'
 			},
 			external:{
 				en:'Datasource App',

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.2.4
+* Version: 1.2.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -95,6 +95,10 @@ class panda_filter extends panda_dialog{
 				var res='';
 				switch (rhs.type)
 				{
+					case 'canvas':
+					case 'file':
+						res='""';
+						break;
 					case 'checkbox':
 					case 'creator':
 					case 'department':
@@ -106,9 +110,6 @@ class panda_filter extends panda_dialog{
 					case 'dropdown':
 					case 'radio':
 						res='("'+((rhs.value)?rhs.value:'')+'")';
-						break;
-					case 'file':
-						res='""';
 						break;
 					case 'id':
 					case 'number':
@@ -146,6 +147,10 @@ class panda_filter extends panda_dialog{
 							res.push({id:{value:'>'},caption:{value:pd.constants.filter.operator.greater[pd.lang]}});
 							res.push({id:{value:'like'},caption:{value:pd.constants.filter.operator.like[pd.lang]}});
 							res.push({id:{value:'not like'},caption:{value:pd.constants.filter.operator.notlike[pd.lang]}});
+							break;
+						case 'canvas':
+							res.push({id:{value:'!='},caption:{value:pd.constants.filter.operator.drawn[pd.lang]}});
+							res.push({id:{value:'='},caption:{value:pd.constants.filter.operator.undrawn[pd.lang]}});
 							break;
 						case 'checkbox':
 						case 'creator':
@@ -362,6 +367,9 @@ class panda_filter extends panda_dialog{
 												var res='';
 												switch (fieldinfo.type)
 												{
+													case 'canvas':
+														res='""';
+														break;
 													case 'checkbox':
 													case 'dropdown':
 													case 'radio':
@@ -442,6 +450,8 @@ class panda_filter extends panda_dialog{
 											set:(value) => {
 												switch (fieldinfo.type)
 												{
+													case 'canvas':
+														break;
 													case 'checkbox':
 													case 'dropdown':
 													case 'radio':
@@ -544,6 +554,9 @@ class panda_filter extends panda_dialog{
 													nocaption:true,
 													format:(fieldinfo.type=='id')?'nondemiliternumber':'text'
 												});
+												break;
+											case 'canvas':
+												res=pd.create('div');
 												break;
 											case 'creator':
 											case 'modifier':
@@ -1585,6 +1598,14 @@ class panda_record{
 						if (fieldinfo.type!='table') field=field.elm('.pd-field-value');
 						switch (fieldinfo.type)
 						{
+							case 'canvas':
+								if (fieldinfo.required)
+									if (!field.elm('input').val())
+									{
+										field.alert(pd.constants.common.message.invalid.required[pd.lang]);
+										res.error=true;
+									}
+								break;
 							case 'checkbox':
 								if (fieldinfo.required)
 									if (!field.elms('input').some((item) => item.checked))
@@ -1789,6 +1810,7 @@ class panda_record{
 								switch (fieldinfo.type)
 								{
 									case 'autonumber':
+									case 'canvas':
 									case 'checkbox':
 									case 'creator':
 									case 'createdtime':
@@ -1820,6 +1842,15 @@ class panda_record{
 								case 'autonumber':
 								case 'id':
 									field.elm('.pd-guide').html(value.value);
+									break;
+								case 'canvas':
+									field.elm('.pd-guide').empty();
+									if (value.value)
+									{
+										field.elm('input').val(value.value);
+										field.guide(value.value);
+									}
+									else field.elm('input').val('');
 									break;
 								case 'checkbox':
 									field.elms('input').each((element,index) => element.parentNode.removeclass('pd-hidden'));
@@ -2158,15 +2189,16 @@ class panda_recordpicker extends panda_dialog{
 									((picker) => {
 										switch (picker.type)
 										{
-											case 'checkbox':
-												res.push(picker.id+' in ("'+keyword+'")');
-												break;
+											case 'canvas':
 											case 'creator':
 											case 'department':
 											case 'group':
 											case 'modifier':
 											case 'spacer':
 											case 'user':
+												break;
+											case 'checkbox':
+												res.push(picker.id+' in ("'+keyword+'")');
 												break;
 											default:
 												res.push(picker.id+' like "'+keyword+'"');
@@ -3045,6 +3077,134 @@ class panda_user_interface{
 									});
 								};
 								break;
+							case 'canvas':
+								field.elm('.pd-search').on('click',(e) => {
+									fp.build(
+										field.container.show(),
+										field.container.outerwidth(false)-50,
+										field.container.outerheight(false)-50,
+										null,
+										(blob,properties) => {
+											var reader=new FileReader();
+											reader.onload=((readData) => {
+												((files) => {
+													pd.request(this.baseuri()+'/limit.php','GET',{},{option:'upload_max_filesize'},true)
+													.then((resp) => {
+														if (files.size>resp.size) pd.alert(pd.constants.common.message.invalid.upload[pd.lang].replace(/%value%/g,resp.value));
+														else
+														{
+															pd.file(this.baseuri()+'/file.php','POST',{},{dir:'attachment',files:files})
+															.then((resp) => {
+																field.elm('input').val(resp.files[0].filekey);
+																call('pd.change.'+fieldinfo.id);
+																field.container.hide();
+															})
+															.catch((error) => pd.alert(error.message));
+														}
+													})
+													.catch((error) => pd.alert(error.message));
+												})([new File([new Blob([JSON.stringify({properties:properties,uri:readData.target.result})],{type:'text/plain'})],'canvas.fpdx')]);
+											});
+											reader.readAsDataURL(blob);
+										},
+										() => {
+											field.container.hide();
+										},
+										false
+									);
+									if (field.elm('input').val())
+									{
+										pd.file(this.baseuri()+'/file.php','GET',{},{dir:'attachment',filekey:field.elm('input').val()})
+										.then((resp) => {
+											try
+											{
+												fetch(new Request(this.objecturl(resp.file,'text/plain')))
+												.then((resp) => resp.text())
+												.then((text) => {
+													fp.properties.set(JSON.parse(text).properties,field.elm('input').val().replace(/\.fpdx$/,''))
+													.then((layers) => {
+														layers.first().focus();
+														fp.operate(fp.operations.brush);
+													})
+													.catch(() => {});
+												});
+											}
+											catch(e){pd.alert(e.message);}
+										})
+										.catch((error) => pd.alert(error.message));
+									}
+									else fp.operate(fp.operations.brush);
+								});
+								field.container=new panda_dialog(999996,true,true).cover;
+								field.guide=(file) => {
+									pd.file(this.baseuri()+'/file.php','GET',{},{dir:'attachment',filekey:file})
+									.then((resp) => {
+										try
+										{
+											fetch(new Request(this.objecturl(resp.file,'text/plain')))
+											.then((resp) => resp.text())
+											.then((text) => {
+												((uri) => {
+													var src=(() => {
+														var res='';
+														switch (pd.theme)
+														{
+															case 'dark':
+																res='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAFN++nkAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAtFJREFUeNpiYKA6+A8EyHwmfJI4dQKZBjA+C9EmICm6T5KjAQKIHn7H6vr/EGCAroARl18ZgYB8vwIEEE29/h6EyQ43fBHLhEPTfmLEsNoEBAFY5AIIuQSkKOE/bpBAtQAFCKDhiAhlXiZKDKe+ZuRCCD2jEsrmMIWGSLQALgNgmhygtrzHk8NAwAGbzTBBARzmC6CpQy1XSSpfYQUUsRoxCi08YaAA9aPC4Eu+AAE0iugGGKlRxBCd7KhVitCl+ELKIxhVFVptRJs8BCsWsQADalqyHt10LA4wwOFzEFhPqoUNBGt/EtoyIPNIjmMsvjgPxAJoagSg4v9xpQOisxO09UiNhPIAmNsUKY3z+f/xg/mjReOgAwABNIpGwSggujM79FsgI9ti5PoYvW6m1bAKIfB+ICx/PxA+p5lP5yO3LtAsf49LHbmWJeAbOkIfSiOkntRmKcltKWztMqq0h2naNqekR4Cv90GOxcigAIv6AnwaiG7QU9p1IWbYBleRGUhFewPJKpNBY7//SQf7qVaGQwfw8BaZyIN3tCrJGqiR5UbBKKAJAAjQrhXYMAgCQUk6gCO4QjeoGziCo7iBK3SDjlA3qBvQDXSDFpJr2hKoovii/YvGaBS4/wfkHj4YDMamIKgrhHiffTzS+up9z4SH9zrsUYP4O9GFCRPhsFA/dS1gTq71iLo0jvVlE70VkWzsHvPQBc2ORkx8e0QnEo+fKHYKaHFJjknYO4h3jvdskKgvoyJYjgxRaVPeDELXXx4dMKRpsHJpZedL16TaeQiDXxztqKjmYR1e6dLJF5SfJmH2R8zysCvM6qmDEEK+9hzhyTxsg/aE7sM3S/gXBrnCDFP9Hb4PHjXCx+poSKw4qr+yNpiHdWECULe5Os/q7Fci16P+XLzRkrYAc3I1cirxgUS5WRI7kK4pPVI2V7y/2IgvVjLES+YhlXcYDAZjc3gC2vR/IwVkWLEAAAAASUVORK5CYII=';
+																break;
+															case 'light':
+																res='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAFN++nkAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA1FJREFUeNpiYKA66J8y8T8ynwmfJE6dQHYAjM9CtAlIihJIcjRAANHD71hdDxIA+RVdAbKf1wMFqeRXgACiqdcbQBiXPBMB/fVQTLxmoG3riRHDlXwWgIjCnHxGJOkPMHmYOCMx0QwDaIZRBgACaDgiYMDtxydPKJE4UKIZL8AVzwZA6jySkCEwji8QtBmoUQBIgbAhTCOIDxXHX4DgSl3Y5CjyMwspaRuvn6EJfwEOtQtIyhiEEsnAAYAAGkV0A4wUFDH/KSmPmYaEj4nJpcT6niQfQw01xCFtSEqQMxLwYT+QKsDmI6RyGV4eYwmRCUC5QpIsRjJEEaj5ARmJTwFI3ccV/CxEmHEfS2svEWjYArQG33yKi3ooCAQ1MXHIzQdaRqxFjtRI1aDgA5X+ClikQdHhSE60jAKaAoAAGkWjYBSgtF8pacOyUGC3AyUOH7Cmz8izmJGUxEREvB4AVouOtGhlvod2Y7GBD0BLBWnWoMdhOUmWEh3HoDYVrKkDteADNktBaogdcGMksZnTCLSkAcnnDEiWgsTriW0KMRKZkEDd8kQiQwcUMgmEEhwLgVKJ5LiDOjARKS04kFNkCkAb9h+gwXaBgG8NoNEjQK2yGmTQeWjD/gCozQ10xAekkaL1pJbduCz+gMfVIAve4x1LxjSLuOwEjdcNVCgZN+BKI4xEpFKi4w3JhwTTA6lFJqjL2o8rQQMtm0CPFgjesfhRMAoGDAAEaNdqbxCEgWhjGKAjMAKbyAg6ATM4gWECGQE2cBRGcAS5eI1VGvt110C8F/hDSNvX69217yqPQCAQbBnF69iuikbJevrh3ywshIUwrf82Md93E7QSjpXJR81NRelE4ixEi6alQOKsRMkI4+XCo/rU7wxAiBo9xFdEsU1X0XhY3sluk5VwhHo2q5c+dTHKm8Pi3fL2LotiP6DAAvHa09ddWQofNWHXvQ8YMMh6Y2iniStJ4wTARDWpuzWKtNTgkm6ZQ4FxnawUVhEOpv26kDFblp8jLFlblqypZ61itAgMFtTVqyVkP9C3J/UWwM3q0KoAYglDUeOW0Z/GaH4i5nEO/THneh7r0vNkgGhXYdt4YBWRKoiNmHeHPe60uh++any7595pCQQCgWDLeALGLWqyLWBxZQAAAABJRU5ErkJggg==';
+																break;
+														}
+														return res;
+													})();
+													var download=() => {
+														var a=pd.create('a')
+														.css({display:'none'})
+														.attr('href',uri)
+														.attr('target','_blank')
+														.attr('download',fieldinfo.caption);
+														pd.elm('body').append(a);
+														a.click();
+														document.body.removeChild(a);
+													};
+													field.elm('.pd-guide').append(
+														((guide) => {
+															guide
+															.append(
+																pd.create('button').addclass('pd-icon pd-icon-del pd-canvasguide-icon').on('click',(e) => {
+																	pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+																		field.elm('input').val('');
+																		call('pd.change.'+fieldinfo.id);
+																	});
+																})
+															)
+															.append(
+																pd.create('img').addclass('pd-thumbnail pd-canvasguide-thumbnail').attr('src',uri).on('click',(e) => {
+																	pd.create('img').addclass('pd-thumbnail').css({
+																		maxHeight:'calc(100vh - 4em)',
+																		maxWidth:'calc(100vw - 2em)'
+																	}).attr('src',uri).popup(null,null,[{src:src,handler:download}]).show();
+																})
+															);
+															return guide;
+														})(pd.create('span').addclass('pd-canvasguide'))
+													);
+												})(JSON.parse(text).uri);
+											});
+										}
+										catch(e){pd.alert(e.message);}
+									})
+									.catch((error) => pd.alert(error.message));
+								};
+								if (fieldinfo.required)
+								{
+									field.alert=(message) => {
+										if (!field.elm('.pd-field-alert')) field.append(alert().addclass('pd-field-alert'));
+										field.elm('.pd-field-alert').elm('span').html(message).parentNode.show();
+									};
+								}
+								break;
 							case 'checkbox':
 								if (fieldinfo.required)
 								{
@@ -3330,23 +3490,14 @@ class panda_user_interface{
 												return res;
 											})();
 											var download=() => {
-												if (window.navigator.msSaveBlob) window.navigator.msSaveOrOpenBlob(((data) => {
-													var datas=atob(data);
-													var buffer=new Uint8Array(datas.length);
-													datas.length.each((index) => buffer[index]=datas.charCodeAt(index));
-													return new Blob([buffer.buffer],{type:file.filetype});
-												})(resp.file),file.name);
-												else
-												{
-													var a=pd.create('a')
-													.css({display:'none'})
-													.attr('href',this.objecturl(resp.file,file.filetype))
-													.attr('target','_blank')
-													.attr('download',file.name);
-													pd.elm('body').append(a);
-													a.click();
-													document.body.removeChild(a);
-												}
+												var a=pd.create('a')
+												.css({display:'none'})
+												.attr('href',this.objecturl(resp.file,file.filetype))
+												.attr('target','_blank')
+												.attr('download',file.name);
+												pd.elm('body').append(a);
+												a.click();
+												document.body.removeChild(a);
 											};
 											switch (file.filetype)
 											{
@@ -3508,10 +3659,13 @@ class panda_user_interface{
 															((value) => {
 																switch (fields.internal[criteria.internal].type)
 																{
+																	case 'canvas':
+																	case 'file':
+																		value=null;
+																		break;
 																	case 'checkbox':
 																	case 'creator':
 																	case 'department':
-																	case 'file':
 																	case 'group':
 																	case 'modifier':
 																	case 'user':
@@ -3857,6 +4011,7 @@ class panda_user_interface{
 							switch (fieldinfo.type)
 							{
 								case 'address':
+								case 'canvas':
 								case 'color':
 								case 'department':
 								case 'file':
@@ -3910,6 +4065,15 @@ class panda_user_interface{
 									.append(pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search'))
 									.append(pd.create('button').addclass('pd-icon pd-icon-open pd-open'));
 									break;
+								case 'canvas':
+								case 'department':
+								case 'file':
+								case 'group':
+								case 'user':
+									field
+									.append(pd.create('input').attr('type','hidden').attr('data-type',fieldinfo.type))
+									.append(pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search'));
+									break;
 								case 'checkbox':
 									fieldinfo.options.each((option,index) => {
 										field
@@ -3937,20 +4101,8 @@ class panda_user_interface{
 										.append(pd.create('button').addclass('pd-icon pd-icon-date pd-search'))
 									);
 									break;
-								case 'department':
-								case 'group':
-								case 'user':
-									field
-									.append(pd.create('input').attr('type','hidden').attr('data-type',fieldinfo.type))
-									.append(pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search'));
-									break;
 								case 'dropdown':
 									field.append(pd.create('select').assignoption(fieldinfo.options,'option','option'));
-									break;
-								case 'file':
-									field
-									.append(pd.create('input').attr('type','hidden').attr('data-type',fieldinfo.type))
-									.append(pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search'));
 									break;
 								case 'lookup':
 									field
@@ -4025,6 +4177,7 @@ class panda_user_interface{
 					switch (fieldinfo.type)
 					{
 						case 'autonumber':
+						case 'canvas':
 						case 'creator':
 						case 'createdtime':
 						case 'department':
@@ -4042,6 +4195,7 @@ class panda_user_interface{
 						switch (fieldinfo.type)
 						{
 							case 'autonumber':
+							case 'canvas':
 							case 'checkbox':
 							case 'creator':
 							case 'createdtime':
@@ -4199,6 +4353,7 @@ class panda_user_interface{
 					switch (sender.type)
 					{
 						case 'address':
+						case 'canvas':
 						case 'checkbox':
 						case 'color':
 						case 'date':
@@ -4900,7 +5055,11 @@ class panda_user_interface{
 													if (pd.isnumeric(width)) res=parseFloat(width);
 												})(app.styles[id].width.replace(/px$/g,''));
 									}
-									else res=(cell.outerwidth(false) || res);
+									else
+									{
+										if (pd.elm('.pdstyle_'+key))
+											if (pd.elm('.pdstyle_'+key).text().match(new RegExp('\\\[column-id="'+CSS.escape(id)+'"\\\]','g'))) res=cell.outerwidth(false);
+									}
 									return res;
 								})();
 								pd.elm('[view-id=view_'+app.id+'_'+viewid+']').elms('[field-id="'+CSS.escape(id)+'"]').each((element,index) => {
@@ -5320,6 +5479,14 @@ pd.constants=pd.extend({
 			}
 		},
 		operator:{
+			drawn:{
+				en:'drawn',
+				ja:'描画済み'
+			},
+			undrawn:{
+				en:'undrawn',
+				ja:'未描画'
+			},
 			equal:{
 				en:'equal',
 				ja:'等しい'
