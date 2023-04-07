@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.2.5
+* Version: 1.2.6
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -5436,7 +5436,7 @@ pd.modules={
 															res=pd.extend({
 																placeholder:'',
 																demiliter:false,
-																decimals:'0',
+																decimals:'',
 																unit:'',
 																unitposition:'suffix'
 															},res);
@@ -10575,6 +10575,14 @@ pd.modules={
 										this.fieldinfo.options=record.options.value.map((item) => ({option:{value:item}}));
 										if (this.fieldinfo.type=='dropdown') this.fieldinfo.options=[{option:{value:''}}].concat(this.fieldinfo.options);
 									}
+									break;
+								case 'number':
+									if (record.decimals.value)
+										if (parseFloat(record.decimals.value)<0)
+										{
+											pd.alert(pd.constants.field.message.invalid.decimals[pd.lang]);
+											res=true;
+										}
 									break;
 								case 'textarea':
 									if (record.lines.value)
@@ -16887,6 +16895,10 @@ pd.constants=pd.extend({
 		},
 		message:{
 			invalid:{
+				decimals:{
+					en:'Number of decimal places to display must be greater than or equal to 0',
+					ja:'小数点以下の表示桁数は0以上にする必要があります'
+				},
 				lookup:{
 					app:{
 						en:'Please specify an app from [Datasource App] dropdown',

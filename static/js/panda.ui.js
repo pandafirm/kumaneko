@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.2.5
+* Version: 1.2.6
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1345,13 +1345,13 @@ class panda_formula{
 				return (value)?value.length:0;
 			};
 			var LEFT=(value,len) => {
-				return STR(value).substr(0,NUM(len));
+				return STR(value).substring(0,NUM(len));
 			};
 			var RIGHT=(value,len) => {
 				return STR(value).slice(NUM(len)*-1);
 			};
 			var MID=(value,start,len) => {
-				return STR(value).substr(NUM(start)-1,NUM(len));
+				return STR(value).substring(NUM(start)-1,NUM(start)+NUM(len)-1);
 			};
 			var LINE=(value,index) => {
 				var res=STR(value).split('\n');
@@ -1695,7 +1695,7 @@ class panda_record{
 								break;
 							case 'number':
 								res.record[fieldinfo.id]={
-									value:((field.elm('input').val())?parseFloat(field.elm('input').val()):field.elm('input').val())
+									value:((pd.isnumeric(field.elm('input').val()))?parseFloat(field.elm('input').val()):field.elm('input').val())
 								};
 								break;
 							case 'radio':
@@ -4114,7 +4114,7 @@ class panda_user_interface{
 								case 'number':
 									field.append(
 										((res) => {
-											if (fieldinfo.decimals) res.attr('data-decimals',fieldinfo.decimals);
+											if ('decimals' in fieldinfo) res.attr('data-decimals',fieldinfo.decimals);
 											return res.attr('data-type',((fieldinfo.demiliter)?'number':'nondemiliternumber'));
 										})(pd.create('input').attr('type','text'))
 									);

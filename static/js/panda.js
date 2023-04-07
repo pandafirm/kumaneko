@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.2.5
+* Version: 1.2.6
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -347,7 +347,7 @@ class panda{
 	/* check number */
 	isnumeric(value){
 		if (typeof value==='string') return value.match(/^-?[0-9]+(\.[0-9]+)*$/g);
-		if (typeof value==='number') return true;
+		if (typeof value==='number') return !isNaN(value);
 		return false;
 	}
 	/* hide loader */
@@ -1150,7 +1150,7 @@ class panda_addresspicker extends panda_dialog{
 								name:resp.streetname.value
 							},
 							address:resp.name.value,
-							postalcode:((resp.id.value.length==7)?resp.id.value.substr(0,3)+'-'+resp.id.value.substr(3,4):resp.id.value),
+							postalcode:((resp.id.value.length==7)?resp.id.value.substring(0,3)+'-'+resp.id.value.substring(3,7):resp.id.value),
 							label:resp.label.value,
 							resourceid:resp.resourceid.value
 						})
@@ -1172,7 +1172,7 @@ class panda_addresspicker extends panda_dialog{
 							name:(resp.records.length==0)?'':resp.records.first().streetname.value
 						},
 						address:(resp.records.length==0)?'':resp.records.first().name.value,
-						postalcode:(resp.records.length==0)?'':((resp.records.first().id.value.length==7)?resp.records.first().id.value.substr(0,3)+'-'+resp.records.first().id.value.substr(3,4):resp.records.first().id.value),
+						postalcode:(resp.records.length==0)?'':((resp.records.first().id.value.length==7)?resp.records.first().id.value.substring(0,3)+'-'+resp.records.first().id.value.substring(3,7):resp.records.first().id.value),
 						label:(resp.records.length==0)?'':resp.records.first().label.value,
 						resourceid:(resp.records.length==0)?'':resp.records.first().resourceid.value
 					});
@@ -1222,7 +1222,7 @@ class panda_addresspicker extends panda_dialog{
 									name:name
 								},
 								address:this.prefecture.selectedtext()+this.city.selectedtext()+name,
-								postalcode:((id.length==7)?id.substr(0,3)+'-'+id.substr(3,4):id),
+								postalcode:((id.length==7)?id.substring(0,3)+'-'+id.substring(3,7):id),
 								label:(label==name)?this.prefecture.selectedtext()+this.city.selectedtext()+name:label,
 								resourceid:resourceid
 							});
@@ -1744,14 +1744,14 @@ class panda_coloradjuster extends panda_dialog{
 			switch (color.length)
 			{
 				case 3:
-					rgb.r=parseInt(color.substr(0,1),16);
-					rgb.g=parseInt(color.substr(1,1),16);
-					rgb.b=parseInt(color.substr(2,1),16);
+					rgb.r=parseInt(color.substring(0,1),16);
+					rgb.g=parseInt(color.substring(1,2),16);
+					rgb.b=parseInt(color.substring(2,3),16);
 					break;
 				case 6:
-					rgb.r=parseInt(color.substr(0,2),16);
-					rgb.g=parseInt(color.substr(2,2),16);
-					rgb.b=parseInt(color.substr(4,2),16);
+					rgb.r=parseInt(color.substring(0,2),16);
+					rgb.g=parseInt(color.substring(2,4),16);
+					rgb.b=parseInt(color.substring(4,6),16);
 					break;
 			}
 		}
@@ -3345,6 +3345,7 @@ HTMLElement.prototype.initialize=function(){
 			display:'block',
 			lineHeight:'2em',
 			margin:'0px',
+			minWidth:'max-content',
 			padding:'0px 0.5em',
 			position:'relative'
 		})
@@ -3436,7 +3437,7 @@ HTMLElement.prototype.initialize=function(){
 				.on('focus',(e) => e.currentTarget.val(e.currentTarget.val().replace(/[^0-9]+/g,'')))
 				.on('blur',(e) => {
 					var value=e.currentTarget.val().replace(/[^0-9]+/g,'');
-					if (value.length==8) e.currentTarget.val(value.substr(0,4)+'-'+value.substr(4,2)+'-'+value.substr(6,2));
+					if (value.length==8) e.currentTarget.val(value.substring(0,4)+'-'+value.substring(4,6)+'-'+value.substring(6,8));
 				});
 				break;
 			case 'datetime':
@@ -3462,7 +3463,7 @@ HTMLElement.prototype.initialize=function(){
 				.on('focus',(e) => e.currentTarget.val(e.currentTarget.val().replace(/[^0-9]+/g,'')))
 				.on('blur',(e) => {
 					var value=e.currentTarget.val().replace(/[^0-9]+/g,'');
-					if (value.length==7) e.currentTarget.val(value.substr(0,3)+'-'+value.substr(3,4));
+					if (value.length==7) e.currentTarget.val(value.substring(0,3)+'-'+value.substring(3,7));
 				});
 				break;
 			case 'tel':
@@ -3771,7 +3772,7 @@ HTMLElement.prototype.text=function(value){
 					case 'date':
 						if (value.length==8)
 							if (pd.isnumeric(value))
-								value=value.substr(0,4)+'-'+value.substr(4,2)+'-'+value.substr(6,2);
+								value=value.substring(0,4)+'-'+value.substring(4,6)+'-'+value.substring(6,8);
 						break;
 					case 'number':
 						value=value.replace(/,/g,'');
@@ -3796,7 +3797,7 @@ HTMLElement.prototype.val=function(value){
 					case 'date':
 						if (value.length==8)
 							if (pd.isnumeric(value))
-								value=value.substr(0,4)+'-'+value.substr(4,2)+'-'+value.substr(6,2);
+								value=value.substring(0,4)+'-'+value.substring(4,6)+'-'+value.substring(6,8);
 						break;
 					case 'number':
 						value=value.replace(/,/g,'');
@@ -3984,10 +3985,10 @@ FileList.prototype.last=function(){
 Number extention
 */
 Number.prototype.comma=function(decimals){
-	var res=(pd.isnumeric(decimals))?this.toFixed(parseInt(decimals)).split('.'):String(this).split('.');
-	res[0]=res[0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g,'$1,');
-	res=res.join('.');
-	return res;
+	return (!isNaN(this))?((res) => {
+		res[0]=res[0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g,'$1,');
+		return res.join('.');
+	})((pd.isnumeric(decimals))?this.toFixed(parseInt(decimals)).split('.'):String(this).split('.')):'';
 }
 Number.prototype.parseByteunit=function(){
 	if (this==0) return '0 Bytes';
