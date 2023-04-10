@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.2.6
+* Version: 1.2.7
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -10578,7 +10578,7 @@ pd.modules={
 									break;
 								case 'number':
 									if (record.decimals.value)
-										if (parseFloat(record.decimals.value)<0)
+										if (parseFloat(record.decimals.value)<0 || parseFloat(record.decimals.value)>100)
 										{
 											pd.alert(pd.constants.field.message.invalid.decimals[pd.lang]);
 											res=true;
@@ -16896,8 +16896,8 @@ pd.constants=pd.extend({
 		message:{
 			invalid:{
 				decimals:{
-					en:'Number of decimal places to display must be greater than or equal to 0',
-					ja:'小数点以下の表示桁数は0以上にする必要があります'
+					en:'Number of decimal places to display must be between 0 and 100',
+					ja:'小数点以下の表示桁数は0以上100以下にする必要があります'
 				},
 				lookup:{
 					app:{
