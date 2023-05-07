@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.2.7
+* Version: 1.2.8
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -640,6 +640,18 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 }
 .pd-kumaneko-appbuilder .pd-kumaneko-main .pd-kumaneko-button{
 	margin:calc(0.25em - 1px) 0;
+}
+.pd-kumaneko-appbuilder .pd-kumaneko-main .pd-kumaneko-drag .pd-kumaneko-drag-field{
+	min-width:5.25em;
+}
+.pd-kumaneko-appbuilder .pd-kumaneko-main .pd-kumaneko-drag .pd-kumaneko-drag-field.pd-kumaneko-drag-field-date{
+	min-width:calc(8em + 2px);
+}
+.pd-kumaneko-appbuilder .pd-kumaneko-main .pd-kumaneko-drag .pd-kumaneko-drag-field.pd-kumaneko-drag-field-datetime{
+	min-width:calc(14.25em + 6px);
+}
+.pd-kumaneko-appbuilder .pd-kumaneko-main .pd-kumaneko-drag .pd-kumaneko-drag-field.pd-kumaneko-drag-field-time{
+	min-width:calc(6.75em + 4px);
 }
 .pd-kumaneko-appbuilder .pd-kumaneko-main .pd-kumaneko-nav{
 	box-shadow:none !important;

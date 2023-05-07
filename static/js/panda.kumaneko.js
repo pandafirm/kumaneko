@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.2.7
+* Version: 1.2.8
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -2708,7 +2708,32 @@ pd.modules={
 										action.hidden.each((hidden,index) => {
 											if (this.app.layout.some((item) => (item.id==hidden.field && item.type=='box')))
 											{
-												if (workplace=='record') this.record.ui.body.elm('[field-id="'+CSS.escape(hidden.field)+'"]').addclass('pd-hidden');
+												if (workplace=='record')
+													if (((box) => {
+														if (box) box.addclass('pd-hidden');
+														return box;
+													})(this.record.ui.body.elm('[field-id="'+CSS.escape(hidden.field)+'"]'))) return;
+												((fields) => {
+													fields.each((field,index) => {
+														if (field in fieldinfos)
+														{
+															((fieldinfo) => {
+																switch (fieldinfo.type)
+																{
+																	case 'spacer':
+																		record[fieldinfo.id]={hidden:true};
+																		break;
+																	default:
+																		result[fieldinfo.id].hidden=true;
+																		break;
+																}
+															})(fieldinfos[field]);
+														}
+													});
+												})(this.app.layout.reduce((result,current) => {
+													if (current.id==hidden.field && current.type=='box') result=result.concat(current.rows.map((item) => item.fields).flat());
+													return result;
+												},[]));
 											}
 											else
 											{
@@ -4237,7 +4262,7 @@ pd.modules={
 								};
 								/* setup properties */
 								if ('tableid' in fieldinfo) delete fieldinfo.tableid;
-								element.fieldinfo=fieldinfo;
+								element.addclass('pd-kumaneko-drag-field pd-kumaneko-drag-field-'+fieldinfo.type).fieldinfo=fieldinfo;
 								if (addtrash)
 								{
 									/* modify elements */

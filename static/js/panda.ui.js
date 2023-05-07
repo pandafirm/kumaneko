@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.2.7
+* Version: 1.2.8
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1636,6 +1636,10 @@ class panda_record{
 								break;
 						}
 					}
+					if (res.error)
+						((box) => {
+							if (box) box.open();
+						})(field.closest('.pd-box'));
 				})(container.elm('[field-id="'+CSS.escape(key)+'"]'),app.fields[key]);
 				if (res.error) break;
 			}
@@ -5044,30 +5048,28 @@ class panda_user_interface{
 						var css='[view-id=view_'+app.id+'_'+viewid+'] .pd-guide{min-width:auto !important;}';
 						pd.elm('[view-id=view_'+app.id+'_'+viewid+']').elms('.pd-view-head-resizer').each((element,index) => {
 							var cell=element.closest('.pd-view-head-cell');
-							((id) => {
-								var width=(() => {
-									var res=235;
-									if (initialize)
-									{
-										if (id in app.styles)
-											if ('width' in app.styles[id])
-												((width) => {
-													if (pd.isnumeric(width)) res=parseFloat(width);
-												})(app.styles[id].width.replace(/px$/g,''));
-									}
-									else
-									{
-										if (pd.elm('.pdstyle_'+key))
-											if (pd.elm('.pdstyle_'+key).text().match(new RegExp('\\\[column-id="'+CSS.escape(id)+'"\\\]','g'))) res=cell.outerwidth(false);
-									}
-									return res;
-								})();
-								pd.elm('[view-id=view_'+app.id+'_'+viewid+']').elms('[field-id="'+CSS.escape(id)+'"]').each((element,index) => {
-									if (width<element.outerwidth(false)) width=element.outerwidth(false);
-								});
-								css+='[view-id=view_'+app.id+'_'+viewid+'] [column-id="'+CSS.escape(id)+'"]{max-width:'+width+'px;width:'+width+'px;}';
-								css+='[view-id=view_'+app.id+'_'+viewid+'] [field-id="'+CSS.escape(id)+'"]{width:'+width+'px;}';
-							})(cell.attr('column-id'));
+							if (!cell.hasclass('pd-unuse'))
+								((id) => {
+									var width=(() => {
+										var res=(() => {
+											var res=235;
+											if (id in app.styles)
+												if ('width' in app.styles[id])
+													((width) => {
+														if (pd.isnumeric(width)) res=parseFloat(width);
+													})(app.styles[id].width.replace(/px$/g,''));
+											return res;
+										})();
+										if (!initialize)
+										{
+											if (pd.elm('.pdstyle_'+key))
+												if (pd.elm('.pdstyle_'+key).text().match(new RegExp('\\\[column-id="'+CSS.escape(id)+'"\\\]','g'))) res=cell.outerwidth(false);
+										}
+										return res;
+									})();
+									css+='[view-id=view_'+app.id+'_'+viewid+'] [column-id="'+CSS.escape(id)+'"]{max-width:'+width+'px;width:'+width+'px;}';
+									css+='[view-id=view_'+app.id+'_'+viewid+'] [field-id="'+CSS.escape(id)+'"]{width:'+width+'px;}';
+								})(cell.attr('column-id'));
 						});
 						/* embed stylesheet */
 						if (pd.elm('.pdstyle_'+key))
