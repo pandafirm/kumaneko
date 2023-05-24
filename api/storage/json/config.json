@@ -193,6 +193,7 @@
                 },
                 "customize": [],
                 "actions": [],
+                "injectors": [],
                 "deduplications": []
             },
             "users": {
@@ -334,6 +335,7 @@
                 },
                 "customize": [],
                 "actions": [],
+                "injectors": [],
                 "deduplications": []
             },
             "departments": {
@@ -386,6 +388,7 @@
                 },
                 "customize": [],
                 "actions": [],
+                "injectors": [],
                 "deduplications": []
             },
             "groups": {
@@ -438,6 +441,7 @@
                 },
                 "customize": [],
                 "actions": [],
+                "injectors": [],
                 "deduplications": []
             }
         }
@@ -450,6 +454,7 @@
         "app": 0,
         "deduplication": 0,
         "field": 0,
+        "injector": 0,
         "linkage": 0,
         "view": 0
     }
