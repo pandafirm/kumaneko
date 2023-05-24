@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.2.8
+* Version: 1.3.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -10,7 +10,7 @@ class panda_kumaneko{
 	/* constructor */
 	constructor(){}
 	/* build kumaneko */
-	build(baseuri){
+	build(baseuri,setting){
 		/* setup properties */
 		this.bootups=[];
 		this.apps={};
@@ -115,21 +115,48 @@ class panda_kumaneko{
 			}
 		};
 		this.users={
-			login:(app,record,workplace) => {
-				return pd.extend({},pd.operator);
+			login:() => {
+				return ((res) => {
+					if (this.hasOwnProperty('setting'))
+						res=pd.extend({
+							account:{value:''},
+							name:{value:''},
+							pwd:{value:''},
+							authority:{value:''},
+							available:{value:''},
+							__creator:{value:['']},
+							__createdtime:{value:''},
+							__modifier:{value:[]},
+							__modifiedtime:{value:''},
+							__autonumber:{value:''}
+						},res);
+					return res;
+				})(pd.extend({},pd.operator));
 			}
 		};
 		this.view={
 			query:(app,view) => {
 				var res='';
 				if (app in this.apps)
-					if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].query;
+				{
+					if (this.hasOwnProperty('setting')) res=this.apps[app].app.views.reduce((result,current) => (current.id==view)?current.query:result,'');
+					else
+					{
+						if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].query;
+					}
+				}
 				return res;
 			},
 			order:(app,view) => {
 				var res='';
 				if (app in this.apps)
-					if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].sort;
+				{
+					if (this.hasOwnProperty('setting')) res=this.apps[app].app.views.reduce((result,current) => (current.id==view)?current.sort:result,'');
+					else
+					{
+						if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].sort;
+					}
+				}
 				return res;
 			}
 		};
@@ -176,58 +203,6 @@ class panda_kumaneko{
 			};
 			var build=() => {
 				((apps) => {
-					var load=(index,callback) => {
-						var setup=(index,callback) => {
-							var finish=() => {
-								index++;
-								if (index<this.project.scripts.length) setup(index,callback);
-								else
-								{
-									this.project.scripts=[];
-									callback();
-								}
-							};
-							if (this.project.scripts.length!=0)
-							{
-								pd.elm('body').append(
-									this.project.scripts[index].on('load',(e) => finish()).on('error',(e) => finish())
-								);
-							}
-							else callback();
-						};
-						setup(0,() => {
-							if (apps.length!=0)
-							{
-								((app) => {
-									var setup=(index,callback) => {
-										var finish=() => {
-											index++;
-											if (index<app.scripts.length) setup(index,callback);
-											else callback();
-										};
-										if (app.scripts.length!=0)
-										{
-											pd.elm('body').append(
-												app.scripts[index].on('load',(e) => finish()).on('error',(e) => finish())
-											);
-										}
-										else callback();
-									};
-									pd.elm('body').append(pd.create('script').html('pd.APP_ID=\''+app.id+'\';'));
-									setup(0,() => {
-										index++;
-										if (index<apps.length) load(index,callback);
-										else
-										{
-											pd.elm('body').append(pd.create('script').html('delete pd.APP_ID;'));
-											callback();
-										}
-									});
-								})(apps[index]);
-							}
-							else callback();
-						});
-					};
 					/* build container */
 					pd.elm('body')
 					.append(
@@ -818,8 +793,8 @@ class panda_kumaneko{
 						})(e.records.put.filter((item) => item['__id'].value==pd.operator.__id.value));
 						return e;
 					});
-					/* load scripts */
-					load(0,() => {
+					/* embed scripts */
+					embed(0,apps,() => {
 						((contents,tab,nav) => {
 							/* build applications */
 							this.sort(this.config.apps.user,this.config.apps.sort).each((app,index) => {
@@ -900,6 +875,58 @@ class panda_kumaneko{
 					return res;
 				})());
 			};
+			var embed=(index,apps,callback) => {
+				var setup=(index,callback) => {
+					var finish=() => {
+						index++;
+						if (index<this.project.scripts.length) setup(index,callback);
+						else
+						{
+							this.project.scripts=[];
+							callback();
+						}
+					};
+					if (this.project.scripts.length!=0)
+					{
+						pd.elm('body').append(
+							this.project.scripts[index].on('load',(e) => finish()).on('error',(e) => finish())
+						);
+					}
+					else callback();
+				};
+				setup(0,() => {
+					if (apps.length!=0)
+					{
+						((app) => {
+							var setup=(index,callback) => {
+								var finish=() => {
+									index++;
+									if (index<app.scripts.length) setup(index,callback);
+									else callback();
+								};
+								if (app.scripts.length!=0)
+								{
+									pd.elm('body').append(
+										app.scripts[index].on('load',(e) => finish()).on('error',(e) => finish())
+									);
+								}
+								else callback();
+							};
+							if (app.scripts.length!=0) pd.elm('body').append(pd.create('script').html('pd.APP_ID=\''+app.id+'\';'));
+							setup(0,() => {
+								index++;
+								if (index<apps.length) embed(index,apps,callback);
+								else
+								{
+									pd.elm('body').append(pd.create('script').html('delete pd.APP_ID;'));
+									callback();
+								}
+							});
+						})(apps[index]);
+					}
+					else callback();
+				});
+			};
 			var load=(config) => {
 				this.config=config;
 				pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'project',id:'1'})
@@ -930,7 +957,113 @@ class panda_kumaneko{
 				})
 				.catch((error) => pd.alert(error.message));
 			};
-			auth();
+			if (setting)
+			{
+				(() => {
+					var build=() => {
+						((apps) => {
+							/* build container */
+							pd.elm('body')
+							.append(
+								pd.create('div').addclass('pd-container')
+								.append(
+									((container) => {
+										this.setting.ui.container=container;
+										return container;
+									})(pd.create('div').addclass('pd-kumaneko-injector'))
+									.append(
+										pd.create('div').addclass('pd-kumaneko-injector-main')
+										.append(
+											((header) => {
+												this.setting.ui.header=header;
+												return header;
+											})(pd.create('header').addclass('pd-kumaneko-injector-header'))
+											.append(pd.create('div').addclass('pd-kumaneko-injector-header-title').html(this.setting.title))
+											.append(pd.create('div').addclass('pd-kumaneko-injector-header-description').html((this.setting.description)?this.setting.description.replace(/\n/g,'<br>'):''))
+											.append(pd.create('div').addclass('pd-kumaneko-injector-header-space'))
+										)
+										.append(((body) => {
+											this.setting.ui.body=body;
+											return body;
+										})(pd.create('main').addclass('pd-kumaneko-injector-body')))
+										.append(((footer) => {
+											this.setting.ui.footer=footer;
+											this.setting.ui.buttons={
+												ok:pd.create('button').addclass('pd-button pd-kumaneko-injector-button pd-kumaneko-injector-button-submit').html(pd.constants.injector.caption.button.submit[pd.lang])
+											};
+											return footer.append(this.setting.ui.buttons.ok);
+										})(pd.create('footer').addclass('pd-kumaneko-injector-footer')))
+									)
+								)
+							);
+							/* embed scripts */
+							embed(0,apps,() => {
+								/* build applications */
+								this.sort(this.config.apps.user,this.config.apps.sort).each((app,index) => {
+									this.apps[app.id]=new pd.modules.injector(app,(app.id==this.setting.app)?this.setting:null);
+								});
+								for (var key in this.config.apps.system)
+									((app) => {
+										this.apps[app.id]=new pd.modules.injector(app);
+									})(this.config.apps.system[key]);
+								/* show */
+								pd.event.call(this.setting.app,'pd.create.call',{});
+							});
+						})((() => {
+							var res=[];
+							for (var key in this.config.apps.user)
+								((app) => {
+									res.push({
+										id:app.id,
+										scripts:((customize) => {
+											var res=[];
+											if (app.id==this.setting.app)
+											{
+												res=customize.map((item) => {
+													return pd.create('script')
+													.attr('src',pd.ui.baseuri()+'/storage/customize/'+item.filekey)
+													.attr('type','text/javascript')
+												})
+											};
+											return res;
+										})(app.customize)
+									});
+								})(this.config.apps.user[key]);
+							for (var key in this.config.apps.system)
+								((app) => {
+									res.push({
+										id:app.id,
+										scripts:[]
+									});
+								})(this.config.apps.system[key]);
+							return res;
+						})());
+					};
+					pd.operator={__id:{value:setting.operator.id},department:{value:setting.operator.department},group:{value:setting.operator.group}};
+					pd.filter.record.load().then((config) => {
+						this.config=config;
+						this.setting=pd.extend({app:setting.app,ui:{}},this.config.apps.user[setting.app].injectors.reduce((result,current) => (current.id==setting.id)?current:result,{}));
+						pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'project',id:'1'})
+						.then((resp) => {
+							var apikey='';
+							if (resp.total!=0)
+								for (var key in resp.record)
+									switch(key)
+									{
+										case 'apikey':
+											if (resp.record.apikey.value) apikey=resp.record.apikey.value;
+											break;
+									}
+							pd.chart.ready().then(() => {
+								if (apikey) pd.map.ready(apikey).then((map) => map.init()).then(() => build()).catch((error) => pd.alert(error));
+								else build();
+							}).catch((error) => pd.alert(error));
+						})
+						.catch((error) => pd.alert(error.message));
+					});
+				})();
+			}
+			else auth();
 		}
 		catch(e){pd.alert(e.message);}
 	}
@@ -1010,8 +1143,943 @@ class panda_kumaneko{
 		});
 	}
 };
+class panda_kumaneko_app{
+	/* constructor */
+	constructor(app){
+		/* setup properties */
+		this.app=app;
+		this.actions={
+			button:(action,record,workplace='record') => {
+				return new Promise((resolve,reject) => {
+					((fieldinfos) => {
+						var result=pd.filter.scan(this.app,record,action.filter);
+						if (result)
+						{
+							var actions={
+								call:false,
+								formula:() => {
+									return new Promise((resolve,reject) => {
+										action.formula.each((formula,index) => {
+											if (formula.field in fieldinfos)
+												((fieldinfo) => {
+													if (fieldinfo.tableid)
+													{
+														result[fieldinfo.tableid].value.each((row,index) => {
+															row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,record,fieldinfos);
+															if (fieldinfo.type=='lookup') row[fieldinfo.id].lookup=true;
+														});
+													}
+													else
+													{
+														result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,record,fieldinfos);
+														if (fieldinfo.type=='lookup') result[fieldinfo.id].lookup=true;
+													}
+													actions.call=true;
+												})(fieldinfos[formula.field]);
+										});
+										resolve();
+									});
+								},
+								mail:() => {
+									return new Promise((resolve,reject) => {
+										if (action.mail.to)
+										{
+											if (action.mail.to in fieldinfos)
+											{
+												var systems={
+													department:[],
+													group:[],
+													user:[]
+												}
+												var assign=(target,record,row) => {
+													target=target.replace(/\r/g,'').replace(/\n/g,'<br>');
+													((handler) => {
+														for (var key in record) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],record[key]));
+														for (var key in row) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],row[key]));
+													})((fieldinfo,value) => {
+														var res='';
+														if (fieldinfo)
+															switch (fieldinfo.type)
+															{
+																case 'canvas':
+																case 'spacer':
+																case 'table':
+																	break;
+																case 'checkbox':
+																	if (Array.isArray(value.value)) res=value.value.join(',');
+																	break;
+																case 'creator':
+																case 'modifier':
+																case 'user':
+																	res=value.value.shape((item) => {
+																		var id=item;
+																		var res=systems.user.filter((item) => {
+																			return item.__id.value=id;
+																		});
+																		return (res.length!=0)?res.first().name.value:PD_THROW;
+																	}).join(',');
+																	break;
+																case 'department':
+																	res=value.value.shape((item) => {
+																		var id=item;
+																		var res=systems.department.filter((item) => {
+																			return item.__id.value=id;
+																		});
+																		return (res.length!=0)?res.first().name.value:PD_THROW;
+																	}).join(',');
+																	break;
+																case 'file':
+																	res=value.value.shape((item) => {
+																		return (item.name)?item.name:PD_THROW;
+																	}).join(',');
+																	break;
+																case 'lookup':
+																	res=value.search;
+																	break;
+																case 'group':
+																	res=value.value.shape((item) => {
+																		var id=item;
+																		var res=systems.group.filter((item) => {
+																			return item.__id.value=id;
+																		});
+																		return (res.length!=0)?res.first().name.value:PD_THROW;
+																	}).join(',');
+																	break;
+																default:
+																	res=value.value;
+																	break;
+															}
+														return res;
+													});
+													return target;
+												};
+												pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'departments',query:'',offset:0,limit:0},true)
+												.then((resp) => {
+													systems.department=resp.records;
+													pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'groups',query:'',offset:0,limit:0},true)
+													.then((resp) => {
+														systems.group=resp.records;
+														pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'users',query:'available = "available"',offset:0,limit:0},true)
+														.then((resp) => {
+															systems.user=resp.records;
+															((bodies) => {
+																var send=(index) => {
+																	var body=bodies[index];
+																	var download=(index,callback) => {
+																		if (body.attachment.length!=0)
+																		{
+																			pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'attachment',filekey:body.attachment[index].key},true)
+																			.then((resp) => {
+																				body.attachment[index].data=resp.file;
+																				index++;
+																				if (index<body.attachment.length) download(index,callback);
+																				else callback();
+																			})
+																			.catch((error) => pd.alert(error.message));
+																		}
+																		else callback();
+																	}
+																	download(0,() => {
+																		pd.request(pd.ui.baseuri()+'/limit.php','GET',{},{option:'memory_limit'},true)
+																		.then((resp) => {
+																			((size) => {
+																				if (size>resp.size)
+																				{
+																					pd.alert(pd.constants.common.message.invalid.memory[pd.lang].replace(/%value%/g,size.parseByteunit()));
+																					reject();
+																				}
+																				else
+																				{
+																					pd.request(pd.ui.baseuri()+'/mail/'+pd.lang+'.php','POST',{},body,true)
+																					.then((resp) => {
+																						index++;
+																						if (index<bodies.length) send(index);
+																						else resolve();
+																					})
+																					.catch((error) => {
+																						pd.alert(error.message);
+																						reject();
+																					});
+																				}
+																			})(new Blob([JSON.stringify(body)],{type:'text/plain'}).size*4);
+																		})
+																		.catch((error) => {
+																			pd.alert(error.message);
+																			reject();
+																		});
+																	});
+																};
+																if (bodies.length!=0) send(0);
+															})((() => {
+																var res=[];
+																((fieldinfos[action.mail.to].tableid)?result[fieldinfos[action.mail.to].tableid].value:[result]).each((record,index) => {
+																	res.push({
+																		from:action.mail.from,
+																		to:record[action.mail.to].value,
+																		cc:action.mail.cc,
+																		bcc:action.mail.bcc,
+																		subject:assign(action.mail.subject,result,(fieldinfos[action.mail.to].tableid)?record:{}),
+																		body:assign(action.mail.body,result,(fieldinfos[action.mail.to].tableid)?record:{}),
+																		attachment:(() => {
+																			var res=[];
+																			if (action.mail.attachment)
+																				if (action.mail.attachment in fieldinfos)
+																					res=((record) => {
+																						return record[action.mail.attachment].value.map((item) => {
+																							return {
+																								data:'',
+																								key:item.filekey,
+																								name:item.name,
+																								type:item.filetype
+																							};
+																						});
+																					})(((fieldinfos[action.mail.attachment].tableid)?record:result));
+																			return res;
+																		})()
+																	});
+																});
+																return res;
+															})());
+														})
+														.catch((error) => {
+															pd.alert(error.message);
+															reject();
+														});
+													})
+													.catch((error) => {
+														pd.alert(error.message);
+														reject();
+													});
+												})
+												.catch((error) => {
+													pd.alert(error.message);
+													reject();
+												});
+											}
+											else
+											{
+												pd.alert(pd.constants.action.message.notfound.email[pd.lang]);
+												reject();
+											}
+										}
+										else resolve();
+									});
+								},
+								report:() => {
+									return new Promise((resolve,reject) => {
+										if (action.report.spreadsheet)
+										{
+											if (action.report.saveas in fieldinfos)
+											{
+												pd.request(
+													pd.ui.baseuri()+'/report.php','POST',{},
+													{
+														app:this.app.id,
+														spreadsheet:action.report.spreadsheet,
+														size:action.report.size,
+														orientation:action.report.orientation,
+														template:action.report.template,
+														record:result
+													},
+													true
+												)
+												.then((resp) => {
+													if ('filekey' in resp)
+													{
+														((filekey) => {
+															var verify=() => {
+																pd.request(pd.ui.baseuri()+'/report.php','GET',{},{verify:filekey},true)
+																.then((resp) => {
+																	if (resp.result=='ok')
+																	{
+																		filekey+='.pdf';
+																		pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'report',filekey:filekey},true)
+																		.then((resp) => {
+																			var finish=(filename) => {
+																				filename+=(filename)?'.pdf':'report.pdf';
+																				return new Promise((resolve,reject) => {
+																					if (action.report.store in fieldinfos)
+																					{
+																						((files) => {
+																							pd.file(pd.ui.baseuri()+'/file.php','POST',{},{dir:'attachment',files:files})
+																							.then((resp) => {
+																								Array.prototype.push.apply(record[action.report.store].value,resp.files);
+																								actions.call=true;
+																								resolve();
+																							})
+																							.catch((error) => {
+																								pd.alert(error.message);
+																								resolve();
+																							});
+																						})(((data) => {
+																							var datas=atob(data);
+																							var buffer=new Uint8Array(datas.length);
+																							datas.length.each((index) => buffer[index]=datas.charCodeAt(index));
+																							return [new File([buffer.buffer],filename,{type:'application/pdf'})];
+																						})(resp.file));
+																					}
+																					else
+																					{
+																						var a=pd.create('a')
+																						.css({display:'none'})
+																						.attr('href',pd.ui.objecturl(resp.file,'application/pdf'))
+																						.attr('target','_blank')
+																						.attr('download',filename);
+																						pd.elm('body').append(a);
+																						a.click();
+																						document.body.removeChild(a);
+																						resolve();
+																					}
+																				});
+																			};
+																			finish(record[action.report.saveas].value).then(() => {
+																				pd.request(pd.ui.baseuri()+'/report.php','PUT',{},{filekey:filekey},true)
+																				.then((resp) => {
+																					resolve();
+																				})
+																				.catch((error) => {
+																					pd.alert(error.message);
+																					reject();
+																				});
+																			});
+																		})
+																		.catch((error) => {
+																			pd.alert(error.message);
+																			reject();
+																		});
+																	}
+																	else setTimeout(() => verify(),1000);
+																})
+																.catch((error) => {
+																	pd.alert(error.message);
+																	reject();
+																});
+															}
+															setTimeout(() => verify(),1000);
+														})(resp.filekey);
+													}
+													else
+													{
+														pd.alert(pd.constants.action.message.fail.report[pd.lang]);
+														reject();
+													}
+												})
+												.catch((error) => {
+													pd.alert(error.message);
+													reject();
+												});
+											}
+											else
+											{
+												pd.alert(pd.constants.action.message.notfound.report[pd.lang]);
+												reject();
+											}
+										}
+										else resolve();
+									});
+								},
+								rows:() => {
+									return new Promise((resolve,reject) => {
+										action.rows.del.each((del,index) => {
+											if (del.table in this.app.fields)
+											{
+												record[del.table].value=record[del.table].value.filter((item) => {
+													return !result[del.table].value.includes(item);
+												});
+												result[del.table].value=[];
+												actions.call=true;
+											}
+										});
+										action.rows.fill.each((fill,index) => {
+											if (fill.table in this.app.fields)
+											{
+												((range) => {
+													range=(pd.isnumeric(range))?parseInt(range)-result[fill.table].value.length:0;
+													if (range>0)
+													{
+														new Array(range).fill().map(() => pd.record.create(this.app.fields[fill.table],false)).each((row,index) => {
+															if (record[fill.table]==result[fill.table]) record[fill.table].value.push(row);
+															else
+															{
+																record[fill.table].value.push(row);
+																result[fill.table].value.push(row);
+															}
+														});
+														actions.call=true;
+													}
+												})(pd.formula.calculate({field:'__id',formula:fill.range},result,result,record,pd.ui.field.embed(pd.extend({},fieldinfos))));
+											}
+										});
+										resolve();
+									});
+								},
+								transfer:() => {
+									return new Promise((resolve,reject) => {
+										if (action.transfer.app)
+										{
+											pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
+											.then((resp) => {
+												var config=resp.file;
+												var target=config.apps.user[action.transfer.app];
+												((fields) => {
+													var criterias=[];
+													var mappings=[];
+													var tables={};
+													var increments={
+														record:1,
+														row:1,
+														progress:{
+															record:0,
+															row:0
+														}
+													};
+													var execute=() => {
+														var create={
+															field:(fieldinfo,index) => {
+																var res=null;
+																if (fieldinfo.tableid)
+																{
+																	if (result[fieldinfo.tableid].value.length>index) res=result[fieldinfo.tableid].value[index][fieldinfo.id];
+																	else
+																	{
+																		switch (fieldinfo.type)
+																		{
+																			case 'checkbox':
+																			case 'creator':
+																			case 'department':
+																			case 'file':
+																			case 'group':
+																			case 'modifier':
+																			case 'user':
+																				res={value:[]};
+																				break;
+																			case 'lookup':
+																				res={search:'',value:''};
+																				break;
+																			default:
+																				res={value:''};
+																				break;
+																		}
+																	}
+																}
+																else res=result[fieldinfo.id];
+																return pd.extend({type:fieldinfo.type},res);
+															},
+															record:(origin) => {
+																increments.row.each((index) => {
+																	var record=((param) => {
+																		var res=pd.filter.scan(target,origin,param.query);
+																		if (!res)
+																			if (action.transfer.pattern=='upsert')
+																			{
+																				for (var key in param.rows)
+																					if (pd.filter.result[key].value.length==0)
+																					{
+																						origin[key].value.push(pd.extend({},param.rows[key]));
+																						pd.filter.result[key]={value:[origin[key].value.last()]};
+																					}
+																				res=pd.filter.result;
+																			}
+																		return res;
+																	})((() => {
+																		var res={
+																			rows:{},
+																			query:[]
+																		};
+																		increments.progress.row=index;
+																		criterias.each((criteria,index) => {
+																			if (criteria.external.tableid)
+																			{
+																				if (!(criteria.external.tableid in res.rows)) res.rows[criteria.external.tableid]=pd.record.create(target.fields[criteria.external.tableid],false);
+																				res.rows[criteria.external.tableid][criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.row));
+																				res.query.push(pd.filter.query.create(criteria.external,criteria.operator,create.field(criteria.internal,increments.progress.row)));
+																			}
+																		});
+																		res.query=res.query.join(' and ');
+																		return res;
+																	})());
+																	if (record)
+																	{
+																		mappings.each((mapping,index) => {
+																			if (mapping.external.tableid)
+																			{
+																				if (mapping.external.tableid in tables)
+																				{
+																					origin[mapping.external.tableid]={value:tables[mapping.external.tableid]};
+																					tables[mapping.external.tableid].each((row,index) => {
+																						row[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,index));
+																					});
+																				}
+																				else
+																				{
+																					record[mapping.external.tableid].value.each((row,index) => {
+																						row[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,increments.progress.row));
+																					});
+																				}
+																			}
+																			else origin[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,increments.progress.record));
+																		});
+																	}
+																});
+																return pd.kumaneko.app.action(action.transfer.app,origin,'backend');
+															}
+														};
+														var cast=(fieldinfo,value) => {
+															var res=value;
+															switch (fieldinfo.type)
+															{
+																case 'lookup':
+																	res=pd.extend((!('search' in res))?{lookup:true,search:''}:{lookup:true},res);
+																	break;
+															}
+															return res;
+														};
+														var finish=() => {
+															increments.progress.record++;
+															if (increments.progress.record<increments.record) execute();
+															else resolve();
+														};
+														if (action.transfer.pattern=='insert')
+														{
+															pd.event.call(action.transfer.app,'pd.saving.call',{records:[create.record(pd.record.create(target))]})
+															.then((e) => {
+																pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:e.records,notify:true},true)
+																.then((resp) => finish())
+																.catch((error) => {
+																	pd.alert(error.message);
+																	reject();
+																});
+															})
+															.catch(() => reject());
+														}
+														else
+														{
+															this.fetch({
+																app:action.transfer.app,
+																query:criterias.shape((item) => {
+																	return (!item.external.tableid)?pd.filter.query.create(item.external,item.operator,create.field(item.internal,increments.progress.record)):PD_THROW;
+																}).join(' and '),
+																sort:'__id asc',
+																offset:0,
+																limit:500
+															},[],true,(records) => {
+																records=((records) => {
+																	var res=[];
+																	if (records.length!=0) res=records.map((item) => create.record(item));
+																	else
+																	{
+																		if (action.transfer.pattern=='upsert')
+																			((criterias) => {
+																				res.push(create.record((() => {
+																					var res=pd.record.create(target);
+																					criterias.each((criteria,index) => {
+																						if (criteria.external.tableid) res[criteria.external.tableid]={value:[]};
+																						else res[criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.record));
+																					});
+																					return res;
+																				})()));
+																			})(criterias.filter((item) => !['id','autonumber','creator','createdtime','modifier','modifiedtime'].includes(item.external.type)));
+																	}
+																	return res;
+																})(records);
+																pd.event.call(action.transfer.app,'pd.saving.call',{records:records})
+																.then((e) => {
+																	pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:records.filter((item) => !item['__id'].value)},true)
+																	.then((resp) => {
+																		pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:action.transfer.app,records:records.filter((item) => item['__id'].value),notify:true},true)
+																		.then((resp) => finish())
+																		.catch((error) => {
+																			pd.alert(error.message);
+																			reject();
+																		});
+																	})
+																	.catch((error) => {
+																		pd.alert(error.message);
+																		reject();
+																	});
+																})
+																.catch(() => reject());
+															},() => reject());
+														}
+													};
+													if (action.transfer.mapping.some((item) => !((item.external in fields.external) && (item.internal in fields.internal))))
+													{
+														pd.alert(pd.constants.action.message.notfound.transfer.field[pd.lang]);
+														reject();
+													}
+													if (action.transfer.criteria.some((item) => !((item.external in fields.external) && (item.internal in fields.internal))))
+													{
+														pd.alert(pd.constants.action.message.notfound.transfer.field[pd.lang]);
+														reject();
+													}
+													action.transfer.mapping.each((mapping,index) => {
+														((external,internal) => {
+															if (external.tableid)
+															{
+																tables[external.tableid]=((rows) => {
+																	var range=(rows)?rows.length:1;
+																	if (internal.tableid)
+																		range=(range<result[internal.tableid].value.length)?result[internal.tableid].value.length:range;
+																	return new Array(range).fill().map(() => pd.record.create(target.fields[external.tableid],false));
+																})(tables[external.tableid]);
+															}
+															else
+															{
+																if (internal.tableid)
+																{
+																	if (result[internal.tableid].value.length==0) increments.record=0;
+																	else increments.record=(increments.record<result[internal.tableid].value.length)?result[internal.tableid].value.length:increments.record;
+																}
+															}
+															mappings.push({
+																external:external,
+																internal:internal
+															});
+														})(fields.external[mapping.external],fields.internal[mapping.internal]);
+													});
+													action.transfer.criteria.each((criteria,index) => {
+														((external,operator,internal) => {
+															if (external.tableid)
+															{
+																if (external.tableid in tables) delete tables[external.tableid];
+																if (internal.tableid)
+																	increments.row=(increments.row<result[internal.tableid].value.length)?result[internal.tableid].value.length:increments.row;
+															}
+															else
+															{
+																if (internal.tableid)
+																{
+																	if (result[internal.tableid].value.length==0) increments.record=0;
+																	else increments.record=(increments.record<result[internal.tableid].value.length)?result[internal.tableid].value.length:increments.record;
+																}
+															}
+															criterias.push({
+																external:external,
+																operator:operator,
+																internal:internal
+															});
+														})(fields.external[criteria.external],criteria.operator,fields.internal[criteria.internal]);
+													});
+													if (increments.record!=0)
+													{
+														increments.progress.record=0;
+														increments.progress.row=0;
+														execute();
+													}
+													else
+													{
+														pd.alert(pd.constants.action.message.notfound.transfer.record[pd.lang]);
+														reject();
+													}
+												})({
+													external:pd.ui.field.parallelize(target.fields),
+													internal:fieldinfos
+												});
+											})
+											.catch((error) => {
+												pd.alert(error.message);
+												reject();
+											});
+										}
+										else resolve();
+									});
+								}
+							};
+							actions.rows().then(() => {
+								actions.formula().then(() => {
+									actions.report().then(() => {
+										actions.transfer().then(() => {
+											actions.mail().then(() => {
+												resolve((actions.call)?{record:record}:{});
+											}).catch(() => reject({}));
+										}).catch(() => reject({}));
+									}).catch(() => reject({}));
+								}).catch(() => reject({}));
+							}).catch(() => reject({}));
+						}
+						else
+						{
+							if (workplace=='record') pd.alert(pd.constants.action.message.invalid.scan[pd.lang],() => reject({}));
+							else resolve({});
+						}
+					})(pd.ui.field.parallelize(this.app.fields));
+				});
+			},
+			saving:(records) => {
+				return new Promise((resolve,reject) => {
+					var confirmed=false;
+					((actions) => {
+						var execute=(index) => {
+							var record=records[index];
+							var finish=() => {
+								index++;
+								if (index<records.length) execute(index);
+								else resolve(confirmed);
+							};
+							var scan=(index) => {
+								var action=actions[index];
+								var result=pd.filter.scan(this.app,record,action.filter);
+								if (result)
+								{
+									if (action.suspend.continue)
+									{
+										confirmed=true;
+										pd.confirm(action.suspend.message,(cancel) => {
+											if (cancel) reject();
+											else
+											{
+												index++;
+												if (index<actions.length) scan(index);
+												else finish();
+											}
+										},true);
+									}
+									else pd.alert(action.suspend.message,() => reject())
+								}
+								else
+								{
+									index++;
+									if (index<actions.length) scan(index);
+									else finish();
+								}
+							};
+							scan(0);
+						};
+						if (actions.length!=0)
+						{
+							if (records.length!=0) execute(0);
+							else resolve(confirmed);
+						}
+						else resolve(confirmed);
+					})(this.app.actions.filter((item) => item.trigger=='saving' && item.suspend.message));
+				});
+			},
+			value:(record,workplace='record') => {
+				if (workplace=='record') this.record.ui.body.elms('.pd-box').each((element,index) => element.removeclass('pd-hidden'));
+				((actions,fieldinfos) => {
+					actions.each((action,index) => {
+						var result=pd.filter.scan(this.app,record,action.filter);
+						if (result)
+						{
+							if ((action.user.length!=0)?(pd.kumaneko.permit({admin:action.user})=='admin'):true)
+							{
+								action.rows.del.each((del,index) => {
+									if (del.table in this.app.fields)
+									{
+										record[del.table].value=record[del.table].value.filter((item) => {
+											return !result[del.table].value.includes(item);
+										});
+										result[del.table].value=[];
+									}
+								});
+								action.rows.fill.each((fill,index) => {
+									if (fill.table in this.app.fields)
+									{
+										((range) => {
+											range=(pd.isnumeric(range))?parseInt(range)-result[fill.table].value.length:0;
+											if (range>0)
+											{
+												new Array(range).fill().map(() => pd.record.create(this.app.fields[fill.table],false)).each((row,index) => {
+													if (record[fill.table]==result[fill.table]) record[fill.table].value.push(row);
+													else
+													{
+														record[fill.table].value.push(row);
+														result[fill.table].value.push(row);
+													}
+												});
+											}
+										})(pd.formula.calculate({field:'__id',formula:fill.range},result,result,record,pd.ui.field.embed(pd.extend({},fieldinfos))));
+									}
+								});
+								action.formula.each((formula,index) => {
+									if (formula.field in fieldinfos)
+										((fieldinfo) => {
+											if (fieldinfo.tableid)
+											{
+												result[fieldinfo.tableid].value.each((row,index) => {
+													row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,record,fieldinfos);
+													if (fieldinfo.type=='lookup') row[fieldinfo.id].lookup=true;
+												});
+											}
+											else
+											{
+												result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,record,fieldinfos);
+												if (fieldinfo.type=='lookup') result[fieldinfo.id].lookup=true;
+											}
+										})(fieldinfos[formula.field]);
+								});
+								if (['record','view'].includes(workplace))
+								{
+									action.style.each((style,index) => {
+										if (style.field in fieldinfos)
+											((fieldinfo) => {
+												if (fieldinfo.tableid)
+												{
+													result[fieldinfo.tableid].value.each((row,index) => {
+														row[fieldinfo.id].backcolor=style.backcolor;
+														row[fieldinfo.id].forecolor=style.forecolor;
+													});
+												}
+												else
+												{
+													result[fieldinfo.id].backcolor=style.backcolor;
+													result[fieldinfo.id].forecolor=style.forecolor;
+												}
+											})(fieldinfos[style.field]);
+									});
+									if (action.disabled.record) record['__uneditable']={value:true};
+									else
+									{
+										action.disabled.fields.each((disabled,index) => {
+											if (disabled.field in fieldinfos)
+											{
+												((fieldinfo) => {
+													if (fieldinfo.tableid) result[fieldinfo.tableid].value.each((row,index) => row[fieldinfo.id].disabled=true);
+													else result[fieldinfo.id].disabled=true;
+												})(fieldinfos[disabled.field]);
+											}
+											else
+											{
+												if (disabled.field in this.app.fields)
+													if (this.app.fields[disabled.field].type=='table') result[this.app.fields[disabled.field].id].disabled=true;
+											}
+										});
+									}
+									action.hidden.each((hidden,index) => {
+										if (this.app.layout.some((item) => (item.id==hidden.field && item.type=='box')))
+										{
+											if (workplace=='record')
+												if (((box) => {
+													if (box) box.addclass('pd-hidden');
+													return box;
+												})(this.record.ui.body.elm('[field-id="'+CSS.escape(hidden.field)+'"]'))) return;
+											((fields) => {
+												fields.each((field,index) => {
+													if (field in fieldinfos)
+													{
+														((fieldinfo) => {
+															switch (fieldinfo.type)
+															{
+																case 'spacer':
+																	record[fieldinfo.id]={hidden:true};
+																	break;
+																default:
+																	result[fieldinfo.id].hidden=true;
+																	break;
+															}
+														})(fieldinfos[field]);
+													}
+												});
+											})(this.app.layout.reduce((result,current) => {
+												if (current.id==hidden.field && current.type=='box') result=result.concat(current.rows.map((item) => item.fields).flat());
+												return result;
+											},[]));
+										}
+										else
+										{
+											if (hidden.field in fieldinfos)
+											{
+												((fieldinfo) => {
+													switch (fieldinfo.type)
+													{
+														case 'spacer':
+															record[fieldinfo.id]={hidden:true};
+															break;
+														default:
+															if (fieldinfo.tableid) result[fieldinfo.tableid].value.each((row,index) => row[fieldinfo.id].hidden=true);
+															else result[fieldinfo.id].hidden=true;
+															break;
+													}
+												})(fieldinfos[hidden.field]);
+											}
+											else
+											{
+												if (hidden.field in this.app.fields)
+													if (this.app.fields[hidden.field].type=='table') result[this.app.fields[hidden.field].id].hidden=true;
+											}
+										}
+									});
+									action.option.each((option,index) => {
+										if (option.field in fieldinfos)
+										{
+											((fieldinfo) => {
+												switch (fieldinfo.type)
+												{
+													case 'checkbox':
+													case 'dropdown':
+													case 'radio':
+														if (fieldinfo.tableid)
+														{
+															result[fieldinfo.tableid].value.each((row,index) => {
+																if (!Array.isArray(row[fieldinfo.id].option)) row[fieldinfo.id].option=[];
+																row[fieldinfo.id].option=option.options.reduce((result,current) => {
+																	if (!result.includes(current)) result.push(current);
+																	return result;
+																},row[fieldinfo.id].option);
+															});
+														}
+														else
+														{
+															if (!Array.isArray(result[fieldinfo.id].option)) result[fieldinfo.id].option=[];
+															result[fieldinfo.id].option=option.options.reduce((result,current) => {
+																if (!result.includes(current)) result.push(current);
+																return result;
+															},result[fieldinfo.id].option);
+														}
+														break;
+												}
+											})(fieldinfos[option.field]);
+										}
+									});
+								}
+							}
+						}
+					});
+				})(this.app.actions.filter((item) => item.trigger=='value'),pd.ui.field.parallelize(this.app.fields));
+				return record;
+			}
+		};
+		this.record={
+			bulk:() => {},
+			clear:() => {},
+			delete:() => {},
+			load:() => {},
+			save:() => {},
+			truncate:() => {},
+			show:() => {},
+			hide:() => {},
+			id:'',
+			ui:{}
+		};
+		this.view={
+			build:() => {},
+			load:() => {},
+			show:() => {},
+			hide:() => {},
+			ui:{}
+		};
+	}
+	fetch(body,records,silent,success,fail){
+		pd.request(pd.ui.baseuri()+'/records.php','GET',{},body,silent)
+		.then((resp) => {
+			if (resp.records.length!=0)
+			{
+				Array.prototype.push.apply(records,resp.records);
+				body.offset+=body.limit;
+				if (resp.total>body.offset) this.fetch(body,records,silent,success,fail);
+				else success(records);
+			}
+			else success(records);
+		})
+		.catch((error) => {
+			pd.loadend();
+			pd.alert(error.message);
+			if (fail) fail();
+		});
+	}
+};
 pd.modules={
-	app:class{
+	app:class extends panda_kumaneko_app{
 		/* constructor */
 		constructor(app,contents,tab,nav,single){
 			var create=(viewid) => {
@@ -1587,7 +2655,7 @@ pd.modules={
 															})
 															.then((param) => {
 																var overwrite=(!param.error)?param.query:res.query;
-																this.record.bulk({
+																this.fetch({
 																	app:this.app.id,
 																	query:overwrite,
 																	sort:res.sort,
@@ -1638,7 +2706,7 @@ pd.modules={
 														})
 														.then((param) => {
 															var overwrite=(!param.error)?param.query:res.query;
-															this.record.bulk({
+															this.fetch({
 																app:this.app.id,
 																query:overwrite,
 																sort:res.sort,
@@ -1891,6 +2959,7 @@ pd.modules={
 				});
 				return res;
 			};
+			super(app);
 			/* setup properties */
 			this.app=app;
 			this.area={
@@ -1900,904 +2969,6 @@ pd.modules={
 			};
 			this.queues={
 				linkage:[]
-			};
-			this.actions={
-				button:(action,record,workplace='record') => {
-					return new Promise((resolve,reject) => {
-						((fieldinfos) => {
-							var result=pd.filter.scan(this.app,record,action.filter);
-							if (result)
-							{
-								var actions={
-									call:false,
-									formula:() => {
-										return new Promise((resolve,reject) => {
-											action.formula.each((formula,index) => {
-												if (formula.field in fieldinfos)
-													((fieldinfo) => {
-														if (fieldinfo.tableid)
-														{
-															result[fieldinfo.tableid].value.each((row,index) => {
-																row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,record,fieldinfos);
-																if (fieldinfo.type=='lookup') row[fieldinfo.id].lookup=true;
-															});
-														}
-														else
-														{
-															result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,record,fieldinfos);
-															if (fieldinfo.type=='lookup') result[fieldinfo.id].lookup=true;
-														}
-														actions.call=true;
-													})(fieldinfos[formula.field]);
-											});
-											resolve();
-										});
-									},
-									mail:() => {
-										return new Promise((resolve,reject) => {
-											if (action.mail.to)
-											{
-												if (action.mail.to in fieldinfos)
-												{
-													var systems={
-														department:[],
-														group:[],
-														user:[]
-													}
-													var assign=(target,record,row) => {
-														target=target.replace(/\r/g,'').replace(/\n/g,'<br>');
-														((handler) => {
-															for (var key in record) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],record[key]));
-															for (var key in row) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],row[key]));
-														})((fieldinfo,value) => {
-															var res='';
-															if (fieldinfo)
-																switch (fieldinfo.type)
-																{
-																	case 'canvas':
-																	case 'spacer':
-																	case 'table':
-																		break;
-																	case 'checkbox':
-																		if (Array.isArray(value.value)) res=value.value.join(',');
-																		break;
-																	case 'creator':
-																	case 'modifier':
-																	case 'user':
-																		res=value.value.shape((item) => {
-																			var id=item;
-																			var res=systems.user.filter((item) => {
-																				return item.__id.value=id;
-																			});
-																			return (res.length!=0)?res.first().name.value:PD_THROW;
-																		}).join(',');
-																		break;
-																	case 'department':
-																		res=value.value.shape((item) => {
-																			var id=item;
-																			var res=systems.department.filter((item) => {
-																				return item.__id.value=id;
-																			});
-																			return (res.length!=0)?res.first().name.value:PD_THROW;
-																		}).join(',');
-																		break;
-																	case 'file':
-																		res=value.value.shape((item) => {
-																			return (item.name)?item.name:PD_THROW;
-																		}).join(',');
-																		break;
-																	case 'lookup':
-																		res=value.search;
-																		break;
-																	case 'group':
-																		res=value.value.shape((item) => {
-																			var id=item;
-																			var res=systems.group.filter((item) => {
-																				return item.__id.value=id;
-																			});
-																			return (res.length!=0)?res.first().name.value:PD_THROW;
-																		}).join(',');
-																		break;
-																	default:
-																		res=value.value;
-																		break;
-																}
-															return res;
-														});
-														return target;
-													};
-													pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'departments',query:'',offset:0,limit:0},true)
-													.then((resp) => {
-														systems.department=resp.records;
-														pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'groups',query:'',offset:0,limit:0},true)
-														.then((resp) => {
-															systems.group=resp.records;
-															pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'users',query:'available = "available"',offset:0,limit:0},true)
-															.then((resp) => {
-																systems.user=resp.records;
-																((bodies) => {
-																	var send=(index) => {
-																		var body=bodies[index];
-																		var download=(index,callback) => {
-																			if (body.attachment.length!=0)
-																			{
-																				pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'attachment',filekey:body.attachment[index].key},true)
-																				.then((resp) => {
-																					body.attachment[index].data=resp.file;
-																					index++;
-																					if (index<body.attachment.length) download(index,callback);
-																					else callback();
-																				})
-																				.catch((error) => pd.alert(error.message));
-																			}
-																			else callback();
-																		}
-																		download(0,() => {
-																			pd.request(pd.ui.baseuri()+'/limit.php','GET',{},{option:'memory_limit'},true)
-																			.then((resp) => {
-																				((size) => {
-																					if (size>resp.size)
-																					{
-																						pd.alert(pd.constants.common.message.invalid.memory[pd.lang].replace(/%value%/g,size.parseByteunit()));
-																						reject();
-																					}
-																					else
-																					{
-																						pd.request(pd.ui.baseuri()+'/mail/'+pd.lang+'.php','POST',{},body,true)
-																						.then((resp) => {
-																							index++;
-																							if (index<bodies.length) send(index);
-																							else resolve();
-																						})
-																						.catch((error) => {
-																							pd.alert(error.message);
-																							reject();
-																						});
-																					}
-																				})(new Blob([JSON.stringify(body)],{type:'text/plain'}).size*4);
-																			})
-																			.catch((error) => {
-																				pd.alert(error.message);
-																				reject();
-																			});
-																		});
-																	};
-																	if (bodies.length!=0) send(0);
-																})((() => {
-																	var res=[];
-																	((fieldinfos[action.mail.to].tableid)?result[fieldinfos[action.mail.to].tableid].value:[result]).each((record,index) => {
-																		res.push({
-																			from:action.mail.from,
-																			to:record[action.mail.to].value,
-																			cc:action.mail.cc,
-																			bcc:action.mail.bcc,
-																			subject:assign(action.mail.subject,result,(fieldinfos[action.mail.to].tableid)?record:{}),
-																			body:assign(action.mail.body,result,(fieldinfos[action.mail.to].tableid)?record:{}),
-																			attachment:(() => {
-																				var res=[];
-																				if (action.mail.attachment)
-																					if (action.mail.attachment in fieldinfos)
-																						res=((record) => {
-																							return record[action.mail.attachment].value.map((item) => {
-																								return {
-																									data:'',
-																									key:item.filekey,
-																									name:item.name,
-																									type:item.filetype
-																								};
-																							});
-																						})(((fieldinfos[action.mail.attachment].tableid)?record:result));
-																				return res;
-																			})()
-																		});
-																	});
-																	return res;
-																})());
-															})
-															.catch((error) => {
-																pd.alert(error.message);
-																reject();
-															});
-														})
-														.catch((error) => {
-															pd.alert(error.message);
-															reject();
-														});
-													})
-													.catch((error) => {
-														pd.alert(error.message);
-														reject();
-													});
-												}
-												else
-												{
-													pd.alert(pd.constants.action.message.notfound.email[pd.lang]);
-													reject();
-												}
-											}
-											else resolve();
-										});
-									},
-									report:() => {
-										return new Promise((resolve,reject) => {
-											if (action.report.spreadsheet)
-											{
-												if (action.report.saveas in fieldinfos)
-												{
-													pd.request(
-														pd.ui.baseuri()+'/report.php','POST',{},
-														{
-															app:this.app.id,
-															spreadsheet:action.report.spreadsheet,
-															size:action.report.size,
-															orientation:action.report.orientation,
-															template:action.report.template,
-															record:result
-														},
-														true
-													)
-													.then((resp) => {
-														if ('filekey' in resp)
-														{
-															((filekey) => {
-																var verify=() => {
-																	pd.request(pd.ui.baseuri()+'/report.php','GET',{},{verify:filekey},true)
-																	.then((resp) => {
-																		if (resp.result=='ok')
-																		{
-																			filekey+='.pdf';
-																			pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'report',filekey:filekey},true)
-																			.then((resp) => {
-																				var finish=(filename) => {
-																					filename+=(filename)?'.pdf':'report.pdf';
-																					return new Promise((resolve,reject) => {
-																						if (action.report.store in fieldinfos)
-																						{
-																							((files) => {
-																								pd.file(pd.ui.baseuri()+'/file.php','POST',{},{dir:'attachment',files:files})
-																								.then((resp) => {
-																									Array.prototype.push.apply(record[action.report.store].value,resp.files);
-																									actions.call=true;
-																									resolve();
-																								})
-																								.catch((error) => {
-																									pd.alert(error.message);
-																									resolve();
-																								});
-																							})(((data) => {
-																								var datas=atob(data);
-																								var buffer=new Uint8Array(datas.length);
-																								datas.length.each((index) => buffer[index]=datas.charCodeAt(index));
-																								return [new File([buffer.buffer],filename,{type:'application/pdf'})];
-																							})(resp.file));
-																						}
-																						else
-																						{
-																							var a=pd.create('a')
-																							.css({display:'none'})
-																							.attr('href',pd.ui.objecturl(resp.file,'application/pdf'))
-																							.attr('target','_blank')
-																							.attr('download',filename);
-																							pd.elm('body').append(a);
-																							a.click();
-																							document.body.removeChild(a);
-																							resolve();
-																						}
-																					});
-																				};
-																				finish(record[action.report.saveas].value).then(() => {
-																					pd.request(pd.ui.baseuri()+'/report.php','PUT',{},{filekey:filekey},true)
-																					.then((resp) => {
-																						resolve();
-																					})
-																					.catch((error) => {
-																						pd.alert(error.message);
-																						reject();
-																					});
-																				});
-																			})
-																			.catch((error) => {
-																				pd.alert(error.message);
-																				reject();
-																			});
-																		}
-																		else setTimeout(() => verify(),1000);
-																	})
-																	.catch((error) => {
-																		pd.alert(error.message);
-																		reject();
-																	});
-																}
-																setTimeout(() => verify(),1000);
-															})(resp.filekey);
-														}
-														else
-														{
-															pd.alert(pd.constants.action.message.fail.report[pd.lang]);
-															reject();
-														}
-													})
-													.catch((error) => {
-														pd.alert(error.message);
-														reject();
-													});
-												}
-												else
-												{
-													pd.alert(pd.constants.action.message.notfound.report[pd.lang]);
-													reject();
-												}
-											}
-											else resolve();
-										});
-									},
-									rows:() => {
-										return new Promise((resolve,reject) => {
-											action.rows.del.each((del,index) => {
-												if (del.table in this.app.fields)
-												{
-													record[del.table].value=record[del.table].value.filter((item) => {
-														return !result[del.table].value.includes(item);
-													});
-													result[del.table].value=[];
-													actions.call=true;
-												}
-											});
-											action.rows.fill.each((fill,index) => {
-												if (fill.table in this.app.fields)
-												{
-													((range) => {
-														range=(pd.isnumeric(range))?parseInt(range)-result[fill.table].value.length:0;
-														if (range>0)
-														{
-															new Array(range).fill().map(() => pd.record.create(this.app.fields[fill.table],false)).each((row,index) => {
-																if (record[fill.table]==result[fill.table]) record[fill.table].value.push(row);
-																else
-																{
-																	record[fill.table].value.push(row);
-																	result[fill.table].value.push(row);
-																}
-															});
-															actions.call=true;
-														}
-													})(pd.formula.calculate({field:'__id',formula:fill.range},result,result,record,pd.ui.field.embed(pd.extend({},fieldinfos))));
-												}
-											});
-											resolve();
-										});
-									},
-									transfer:() => {
-										return new Promise((resolve,reject) => {
-											if (action.transfer.app)
-											{
-												pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
-												.then((resp) => {
-													var config=resp.file;
-													var target=config.apps.user[action.transfer.app];
-													((fields) => {
-														var criterias=[];
-														var mappings=[];
-														var tables={};
-														var increments={
-															record:1,
-															row:1,
-															progress:{
-																record:0,
-																row:0
-															}
-														};
-														var execute=() => {
-															var create={
-																field:(fieldinfo,index) => {
-																	var res=null;
-																	if (fieldinfo.tableid)
-																	{
-																		if (result[fieldinfo.tableid].value.length>index) res=result[fieldinfo.tableid].value[index][fieldinfo.id];
-																		else
-																		{
-																			switch (fieldinfo.type)
-																			{
-																				case 'checkbox':
-																				case 'creator':
-																				case 'department':
-																				case 'file':
-																				case 'group':
-																				case 'modifier':
-																				case 'user':
-																					res={value:[]};
-																					break;
-																				case 'lookup':
-																					res={search:'',value:''};
-																					break;
-																				default:
-																					res={value:''};
-																					break;
-																			}
-																		}
-																	}
-																	else res=result[fieldinfo.id];
-																	return pd.extend({type:fieldinfo.type},res);
-																},
-																record:(origin) => {
-																	increments.row.each((index) => {
-																		var record=((param) => {
-																			var res=pd.filter.scan(target,origin,param.query);
-																			if (!res)
-																				if (action.transfer.pattern=='upsert')
-																				{
-																					for (var key in param.rows)
-																						if (pd.filter.result[key].value.length==0)
-																						{
-																							origin[key].value.push(pd.extend({},param.rows[key]));
-																							pd.filter.result[key]={value:[origin[key].value.last()]};
-																						}
-																					res=pd.filter.result;
-																				}
-																			return res;
-																		})((() => {
-																			var res={
-																				rows:{},
-																				query:[]
-																			};
-																			increments.progress.row=index;
-																			criterias.each((criteria,index) => {
-																				if (criteria.external.tableid)
-																				{
-																					if (!(criteria.external.tableid in res.rows)) res.rows[criteria.external.tableid]=pd.record.create(target.fields[criteria.external.tableid],false);
-																					res.rows[criteria.external.tableid][criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.row));
-																					res.query.push(pd.filter.query.create(criteria.external,criteria.operator,create.field(criteria.internal,increments.progress.row)));
-																				}
-																			});
-																			res.query=res.query.join(' and ');
-																			return res;
-																		})());
-																		if (record)
-																		{
-																			mappings.each((mapping,index) => {
-																				if (mapping.external.tableid)
-																				{
-																					if (mapping.external.tableid in tables)
-																					{
-																						origin[mapping.external.tableid]={value:tables[mapping.external.tableid]};
-																						tables[mapping.external.tableid].each((row,index) => {
-																							row[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,index));
-																						});
-																					}
-																					else
-																					{
-																						record[mapping.external.tableid].value.each((row,index) => {
-																							row[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,increments.progress.row));
-																						});
-																					}
-																				}
-																				else origin[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,increments.progress.record));
-																			});
-																		}
-																	});
-																	return pd.kumaneko.app.action(action.transfer.app,origin,'backend');
-																}
-															};
-															var cast=(fieldinfo,value) => {
-																var res=value;
-																switch (fieldinfo.type)
-																{
-																	case 'lookup':
-																		res=pd.extend((!('search' in res))?{lookup:true,search:''}:{lookup:true},res);
-																		break;
-																}
-																return res;
-															};
-															var finish=() => {
-																increments.progress.record++;
-																if (increments.progress.record<increments.record) execute();
-																else
-																{
-																	if (action.transfer.app in pd.kumaneko.apps)
-																		pd.kumaneko.apps[action.transfer.app].notify().then(() => {
-																			pd.event.call('0','pd.queue.notify',{source:'app',id:action.transfer.app});
-																			resolve();
-																		});
-																}
-															};
-															if (action.transfer.pattern=='insert')
-															{
-																pd.event.call(action.transfer.app,'pd.saving.call',{records:[create.record(pd.record.create(target))]})
-																.then((e) => {
-																	pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:e.records},true)
-																	.then((resp) => finish())
-																	.catch((error) => {
-																		pd.alert(error.message);
-																		reject();
-																	});
-																})
-																.catch(() => reject());
-															}
-															else
-															{
-																this.record.bulk({
-																	app:action.transfer.app,
-																	query:criterias.shape((item) => {
-																		return (!item.external.tableid)?pd.filter.query.create(item.external,item.operator,create.field(item.internal,increments.progress.record)):PD_THROW;
-																	}).join(' and '),
-																	sort:'__id asc',
-																	offset:0,
-																	limit:500
-																},[],true,(records) => {
-																	records=((records) => {
-																		var res=[];
-																		if (records.length!=0) res=records.map((item) => create.record(item));
-																		else
-																		{
-																			if (action.transfer.pattern=='upsert')
-																				((criterias) => {
-																					res.push(create.record((() => {
-																						var res=pd.record.create(target);
-																						criterias.each((criteria,index) => {
-																							if (criteria.external.tableid) res[criteria.external.tableid]={value:[]};
-																							else res[criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.record));
-																						});
-																						return res;
-																					})()));
-																				})(criterias.filter((item) => !['id','autonumber','creator','createdtime','modifier','modifiedtime'].includes(item.external.type)));
-																		}
-																		return res;
-																	})(records);
-																	pd.event.call(action.transfer.app,'pd.saving.call',{records:records})
-																	.then((e) => {
-																		pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:records.filter((item) => !item['__id'].value)},true)
-																		.then((resp) => {
-																			pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:action.transfer.app,records:records.filter((item) => item['__id'].value)},true)
-																			.then((resp) => finish())
-																			.catch((error) => {
-																				pd.alert(error.message);
-																				reject();
-																			});
-																		})
-																		.catch((error) => {
-																			pd.alert(error.message);
-																			reject();
-																		});
-																	})
-																	.catch(() => reject());
-																},() => reject());
-															}
-														};
-														if (action.transfer.mapping.some((item) => !((item.external in fields.external) && (item.internal in fields.internal))))
-														{
-															pd.alert(pd.constants.action.message.notfound.transfer.field[pd.lang]);
-															reject();
-														}
-														if (action.transfer.criteria.some((item) => !((item.external in fields.external) && (item.internal in fields.internal))))
-														{
-															pd.alert(pd.constants.action.message.notfound.transfer.field[pd.lang]);
-															reject();
-														}
-														action.transfer.mapping.each((mapping,index) => {
-															((external,internal) => {
-																if (external.tableid)
-																{
-																	tables[external.tableid]=((rows) => {
-																		var range=(rows)?rows.length:1;
-																		if (internal.tableid)
-																			range=(range<result[internal.tableid].value.length)?result[internal.tableid].value.length:range;
-																		return new Array(range).fill().map(() => pd.record.create(target.fields[external.tableid],false));
-																	})(tables[external.tableid]);
-																}
-																else
-																{
-																	if (internal.tableid)
-																	{
-																		if (result[internal.tableid].value.length==0) increments.record=0;
-																		else increments.record=(increments.record<result[internal.tableid].value.length)?result[internal.tableid].value.length:increments.record;
-																	}
-																}
-																mappings.push({
-																	external:external,
-																	internal:internal
-																});
-															})(fields.external[mapping.external],fields.internal[mapping.internal]);
-														});
-														action.transfer.criteria.each((criteria,index) => {
-															((external,operator,internal) => {
-																if (external.tableid)
-																{
-																	if (external.tableid in tables) delete tables[external.tableid];
-																	if (internal.tableid)
-																		increments.row=(increments.row<result[internal.tableid].value.length)?result[internal.tableid].value.length:increments.row;
-																}
-																else
-																{
-																	if (internal.tableid)
-																	{
-																		if (result[internal.tableid].value.length==0) increments.record=0;
-																		else increments.record=(increments.record<result[internal.tableid].value.length)?result[internal.tableid].value.length:increments.record;
-																	}
-																}
-																criterias.push({
-																	external:external,
-																	operator:operator,
-																	internal:internal
-																});
-															})(fields.external[criteria.external],criteria.operator,fields.internal[criteria.internal]);
-														});
-														if (increments.record!=0)
-														{
-															increments.progress.record=0;
-															increments.progress.row=0;
-															execute();
-														}
-														else
-														{
-															pd.alert(pd.constants.action.message.notfound.transfer.record[pd.lang]);
-															reject();
-														}
-													})({
-														external:pd.ui.field.parallelize(target.fields),
-														internal:fieldinfos
-													});
-												})
-												.catch((error) => {
-													pd.alert(error.message);
-													reject();
-												});
-											}
-											else resolve();
-										});
-									}
-								};
-								actions.rows().then(() => {
-									actions.formula().then(() => {
-										actions.report().then(() => {
-											actions.transfer().then(() => {
-												actions.mail().then(() => {
-													resolve((actions.call)?{record:record}:{});
-												}).catch(() => reject({}));
-											}).catch(() => reject({}));
-										}).catch(() => reject({}));
-									}).catch(() => reject({}));
-								}).catch(() => reject({}));
-							}
-							else
-							{
-								if (workplace=='record') pd.alert(pd.constants.action.message.invalid.scan[pd.lang],() => reject({}));
-								else resolve({});
-							}
-						})(pd.ui.field.parallelize(this.app.fields));
-					});
-				},
-				saving:(records) => {
-					return new Promise((resolve,reject) => {
-						var confirmed=false;
-						((actions) => {
-							var execute=(index) => {
-								var record=records[index];
-								var finish=() => {
-									index++;
-									if (index<records.length) execute(index);
-									else resolve(confirmed);
-								};
-								var scan=(index) => {
-									var action=actions[index];
-									var result=pd.filter.scan(this.app,record,action.filter);
-									if (result)
-									{
-										if (action.suspend.continue)
-										{
-											confirmed=true;
-											pd.confirm(action.suspend.message,(cancel) => {
-												if (cancel) reject();
-												else
-												{
-													index++;
-													if (index<actions.length) scan(index);
-													else finish();
-												}
-											},true);
-										}
-										else pd.alert(action.suspend.message,() => reject())
-									}
-									else
-									{
-										index++;
-										if (index<actions.length) scan(index);
-										else finish();
-									}
-								};
-								scan(0);
-							};
-							if (actions.length!=0)
-							{
-								if (records.length!=0) execute(0);
-								else resolve(confirmed);
-							}
-							else resolve(confirmed);
-						})(this.app.actions.filter((item) => item.trigger=='saving' && item.suspend.message));
-					});
-				},
-				value:(record,workplace='record') => {
-					if (workplace=='record') this.record.ui.body.elms('.pd-box').each((element,index) => element.removeclass('pd-hidden'));
-					((actions,fieldinfos) => {
-						actions.each((action,index) => {
-							var result=pd.filter.scan(this.app,record,action.filter);
-							if (result)
-							{
-								if ((action.user.length!=0)?(pd.kumaneko.permit({admin:action.user})=='admin'):true)
-								{
-									action.rows.del.each((del,index) => {
-										if (del.table in this.app.fields)
-										{
-											record[del.table].value=record[del.table].value.filter((item) => {
-												return !result[del.table].value.includes(item);
-											});
-											result[del.table].value=[];
-										}
-									});
-									action.rows.fill.each((fill,index) => {
-										if (fill.table in this.app.fields)
-										{
-											((range) => {
-												range=(pd.isnumeric(range))?parseInt(range)-result[fill.table].value.length:0;
-												if (range>0)
-												{
-													new Array(range).fill().map(() => pd.record.create(this.app.fields[fill.table],false)).each((row,index) => {
-														if (record[fill.table]==result[fill.table]) record[fill.table].value.push(row);
-														else
-														{
-															record[fill.table].value.push(row);
-															result[fill.table].value.push(row);
-														}
-													});
-												}
-											})(pd.formula.calculate({field:'__id',formula:fill.range},result,result,record,pd.ui.field.embed(pd.extend({},fieldinfos))));
-										}
-									});
-									action.formula.each((formula,index) => {
-										if (formula.field in fieldinfos)
-											((fieldinfo) => {
-												if (fieldinfo.tableid)
-												{
-													result[fieldinfo.tableid].value.each((row,index) => {
-														row[fieldinfo.id].value=pd.formula.calculate(formula,row,result,record,fieldinfos);
-														if (fieldinfo.type=='lookup') row[fieldinfo.id].lookup=true;
-													});
-												}
-												else
-												{
-													result[fieldinfo.id].value=pd.formula.calculate(formula,result,result,record,fieldinfos);
-													if (fieldinfo.type=='lookup') result[fieldinfo.id].lookup=true;
-												}
-											})(fieldinfos[formula.field]);
-									});
-									if (['record','view'].includes(workplace))
-									{
-										action.style.each((style,index) => {
-											if (style.field in fieldinfos)
-												((fieldinfo) => {
-													if (fieldinfo.tableid)
-													{
-														result[fieldinfo.tableid].value.each((row,index) => {
-															row[fieldinfo.id].backcolor=style.backcolor;
-															row[fieldinfo.id].forecolor=style.forecolor;
-														});
-													}
-													else
-													{
-														result[fieldinfo.id].backcolor=style.backcolor;
-														result[fieldinfo.id].forecolor=style.forecolor;
-													}
-												})(fieldinfos[style.field]);
-										});
-										if (action.disabled.record) record['__uneditable']={value:true};
-										else
-										{
-											action.disabled.fields.each((disabled,index) => {
-												if (disabled.field in fieldinfos)
-												{
-													((fieldinfo) => {
-														if (fieldinfo.tableid) result[fieldinfo.tableid].value.each((row,index) => row[fieldinfo.id].disabled=true);
-														else result[fieldinfo.id].disabled=true;
-													})(fieldinfos[disabled.field]);
-												}
-												else
-												{
-													if (disabled.field in this.app.fields)
-														if (this.app.fields[disabled.field].type=='table') result[this.app.fields[disabled.field].id].disabled=true;
-												}
-											});
-										}
-										action.hidden.each((hidden,index) => {
-											if (this.app.layout.some((item) => (item.id==hidden.field && item.type=='box')))
-											{
-												if (workplace=='record')
-													if (((box) => {
-														if (box) box.addclass('pd-hidden');
-														return box;
-													})(this.record.ui.body.elm('[field-id="'+CSS.escape(hidden.field)+'"]'))) return;
-												((fields) => {
-													fields.each((field,index) => {
-														if (field in fieldinfos)
-														{
-															((fieldinfo) => {
-																switch (fieldinfo.type)
-																{
-																	case 'spacer':
-																		record[fieldinfo.id]={hidden:true};
-																		break;
-																	default:
-																		result[fieldinfo.id].hidden=true;
-																		break;
-																}
-															})(fieldinfos[field]);
-														}
-													});
-												})(this.app.layout.reduce((result,current) => {
-													if (current.id==hidden.field && current.type=='box') result=result.concat(current.rows.map((item) => item.fields).flat());
-													return result;
-												},[]));
-											}
-											else
-											{
-												if (hidden.field in fieldinfos)
-												{
-													((fieldinfo) => {
-														switch (fieldinfo.type)
-														{
-															case 'spacer':
-																record[fieldinfo.id]={hidden:true};
-																break;
-															default:
-																if (fieldinfo.tableid) result[fieldinfo.tableid].value.each((row,index) => row[fieldinfo.id].hidden=true);
-																else result[fieldinfo.id].hidden=true;
-																break;
-														}
-													})(fieldinfos[hidden.field]);
-												}
-												else
-												{
-													if (hidden.field in this.app.fields)
-														if (this.app.fields[hidden.field].type=='table') result[this.app.fields[hidden.field].id].hidden=true;
-												}
-											}
-										});
-										action.option.each((option,index) => {
-											if (option.field in fieldinfos)
-											{
-												((fieldinfo) => {
-													switch (fieldinfo.type)
-													{
-														case 'checkbox':
-														case 'dropdown':
-														case 'radio':
-															if (fieldinfo.tableid)
-															{
-																result[fieldinfo.tableid].value.each((row,index) => {
-																	if (!Array.isArray(row[fieldinfo.id].option)) row[fieldinfo.id].option=[];
-																	row[fieldinfo.id].option=option.options.reduce((result,current) => {
-																		if (!result.includes(current)) result.push(current);
-																		return result;
-																	},row[fieldinfo.id].option);
-																});
-															}
-															else
-															{
-																if (!Array.isArray(result[fieldinfo.id].option)) result[fieldinfo.id].option=[];
-																result[fieldinfo.id].option=option.options.reduce((result,current) => {
-																	if (!result.includes(current)) result.push(current);
-																	return result;
-																},result[fieldinfo.id].option);
-															}
-															break;
-													}
-												})(fieldinfos[option.field]);
-											}
-										});
-									}
-								}
-							}
-						});
-					})(this.app.actions.filter((item) => item.trigger=='value'),pd.ui.field.parallelize(this.app.fields));
-					return record;
-				}
 			};
 			this.linkage={
 				load:(ids,record,callback) => {
@@ -2819,7 +2990,7 @@ pd.modules={
 										internal:config.apps.user[this.app.id].fields
 									});
 									((param) => {
-										this.record.bulk(param,[],true,(records) => {
+										this.fetch(param,[],true,(records) => {
 											var keep={
 												container:linkage.contents.elm('.pd-view'),
 												records:[],
@@ -3021,58 +3192,10 @@ pd.modules={
 				}
 			};
 			this.record={
-				bulk:(body,records,silent,success,fail) => {
-					pd.request(pd.ui.baseuri()+'/records.php','GET',{},body,silent)
-					.then((resp) => {
-						if (resp.records.length!=0)
-						{
-							Array.prototype.push.apply(records,resp.records);
-							body.offset+=body.limit;
-							if (resp.total>body.offset) this.record.bulk(body,records,silent,success,fail);
-							else success(records);
-						}
-						else success(records);
-					})
-					.catch((error) => {
-						pd.loadend();
-						pd.alert(error.message);
-						if (fail) fail();
-					});
-				},
 				clear:() => {
 					this.record.id=((body) => {
-						for (var key in this.app.fields)
-						{
-							((field,fieldinfo) => {
-								if (field)
-								{
-									if (fieldinfo.type!='table') field=field.elm('.pd-field-value');
-									switch (fieldinfo.type)
-									{
-										case 'checkbox':
-											field.elms('input').each((element,index) => element.checked=false);
-											break;
-										case 'radio':
-											field.elms('[data-name='+key+']').each((element,index) => element.checked=(index==0));
-											break;
-										case 'table':
-											field.clearrows();
-											field.addrow();
-											break;
-										default:
-											field.elms('input,select,textarea').each((element,index) => element.val(''));
-											break;
-									}
-								}
-							})(body.elm('[field-id="'+CSS.escape(key)+'"]'),this.app.fields[key]);
-						}
-						if (body.elm('[data-type=id]')) body.elm('[data-type=id]').val('');
-						if (body.elm('[data-type=autonumber]')) body.elm('[data-type=autonumber]').val('');
-						if (body.elm('[data-type=creator]')) body.elm('[data-type=creator]').val('');
-						if (body.elm('[data-type=createdtime]')) body.elm('[data-type=createdtime]').val('');
-						if (body.elm('[data-type=modifier]')) body.elm('[data-type=modifier]').val('');
-						if (body.elm('[data-type=modifiedtime]')) body.elm('[data-type=modifiedtime]').val('');
-						this.record.ui.body.focus();
+						pd.record.clear(body,this.app);
+						body.focus();
 						return '';
 					})(this.record.ui.init());
 				},
@@ -3374,7 +3497,7 @@ pd.modules={
 								{
 									case 'calendar':
 										if (!deactivate) pd.loadstart();
-										this.record.bulk({
+										this.fetch({
 											app:this.app.id,
 											query:((date,query) => {
 												var res=view.fields.date+' >= "'+date.format('Y-m-d')+'" and '+view.fields.date+' <= "'+date.calc('1 month,-1 day').format('Y-m-d')+'"';
@@ -3449,7 +3572,7 @@ pd.modules={
 										break;
 									case 'kanban':
 										if (!deactivate) pd.loadstart();
-										this.record.bulk({
+										this.fetch({
 											app:this.app.id,
 											query:((date,query) => {
 												var res=(query)?['('+query+')']:[];
@@ -3502,7 +3625,7 @@ pd.modules={
 										break;
 									case 'map':
 										if (!deactivate) pd.loadstart();
-										this.record.bulk({
+										this.fetch({
 											app:this.app.id,
 											query:((query) => {
 												var res=view.fields.lat+' != null and '+view.fields.lng+' != null';
@@ -3865,7 +3988,7 @@ pd.modules={
 														})
 														.then((param) => {
 															var overwrite=(!param.error)?param.query:view.query;
-															this.record.bulk({
+															this.fetch({
 																app:this.app.id,
 																query:overwrite,
 																sort:view.sort,
@@ -4398,6 +4521,10 @@ pd.modules={
 																	break;
 															}
 														});
+														this.app.injectors.each((injector,index) => {
+															if (injector.fields.some((item) => item.id==fieldinfo.id))
+																res.push({id:fieldinfo.id,message:'-&nbsp;'+injector.title+'&nbsp;(This app)'});
+														});
 														this.app.deduplications.each((deduplication,index) => {
 															if (deduplication.criteria.some((item) => (item.external==fieldinfo.id || item.internal==fieldinfo.id)))
 																res.push({id:fieldinfo.id,message:'-&nbsp;'+deduplication.name+'&nbsp;(This app)'});
@@ -4461,17 +4588,25 @@ pd.modules={
 														}
 													};
 													((fieldinfos) => {
-														error(0,fieldinfos,(message) => {
-															if (message) pd.alert(message);
-															else
-															{
-																/* move the guide to top level element */
-																this.menus.form.contents.elm('.pd-kumaneko-drag').insertBefore(this.menus.form.contents.elm('.pd-kumaneko-drag-guide'),null);
-																/* delete */
-																element.parentNode.removeChild(element);
-															}
+														var finish=() => {
+															/* move the guide to top level element */
+															this.menus.form.contents.elm('.pd-kumaneko-drag').insertBefore(this.menus.form.contents.elm('.pd-kumaneko-drag-guide'),null);
+															/* delete */
+															element.parentNode.removeChild(element);
+														};
+														if (fieldinfos.length!=0)
+														{
+															error(0,fieldinfos,(message) => {
+																if (message) pd.alert(message);
+																else finish();
+																this.menus.form.lib.remodel();
+															});
+														}
+														else
+														{
+															finish();
 															this.menus.form.lib.remodel();
-														});
+														}
 													})((() => {
 														var res=[];
 														switch (fieldinfo.type)
@@ -5130,8 +5265,12 @@ pd.modules={
 									})
 									.on('click',(e) => {
 										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
-											res.parentNode.removeChild(res);
-											this.menus.actions.lib.remodel();
+											if (this.app.injectors.some((item) => item.saving.action.includes(res.action.id))) pd.alert(pd.constants.app.message.invalid.action.delete[pd.lang]);
+											else
+											{
+												res.parentNode.removeChild(res);
+												this.menus.actions.lib.remodel();
+											}
 										});
 									})
 								)
@@ -5158,6 +5297,121 @@ pd.modules={
 								this.app.actions=[];
 								pd.children(this.menus.actions.contents.elm('.pd-kumaneko-drag-vertical')).each((element,index) => {
 									if (!element.hasclass('pd-kumaneko-drag-guide')) this.app.actions.push(element.action);
+								});
+							}
+						}
+					},
+					injectors:{
+						id:'injectors',
+						app:{},
+						contents:null,
+						tab:null,
+						builder:null,
+						lib:{
+							create:(injector) => {
+								var res=pd.create('div').addclass('pd-row').attr('field-type','row');
+								var handler=(e) => {
+									var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
+									pd.event.call(
+										'appbuilder',
+										'pd.drag.start',
+										{
+											element:res,
+											menu:this.menus.injectors,
+											page:{
+												x:pointer.pageX,
+												y:pointer.pageY
+											}
+										}
+									);
+									window.off('touchmove,mousemove',handler);
+								};
+								var setup=(injector) => {
+									res.injector=injector;
+									res.elm('.pd-kumaneko-drag-label').empty().append(pd.create('span').html(injector.title));
+									pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
+									.then((resp) => {
+										if (this.app.id in resp.file.apps.user)
+											if (resp.file.apps.user[this.app.id].injectors.some((item) => item.id==res.injector.id)) res.elm('.pd-icon-open').css({pointerEvents:'initial'}).removeattr('disabled');
+									})
+									.catch((error) => pd.alert(error.message));
+									return res;
+								};
+								/* setup properties */
+								res.injector=injector;
+								/* modify elements */
+								res
+								.append(
+									pd.create('button').addclass('pd-icon pd-icon-edit pd-kumaneko-drag-button')
+									.on('touchstart,mousedown',(e) => {
+										e.stopPropagation();
+									})
+									.on('click',(e) => {
+										/* show injectorbuilder */
+										this.menus.injectors.builder.show(res.injector,this.app.fields,this.app,(injector) => {
+											setup(injector);
+											this.menus.injectors.lib.remodel();
+										});
+									})
+								)
+								.append(
+									pd.create('button').addclass('pd-icon pd-icon-copy pd-kumaneko-drag-button')
+									.on('touchstart,mousedown',(e) => {
+										e.stopPropagation();
+									})
+									.on('click',(e) => {
+										pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'injector'},true)
+										.then((resp) => {
+											res.parentNode.insertBefore(this.menus.injectors.lib.create(pd.extend({id:resp.id.toString(),title:res.injector.title+' Copy',directory:''},res.injector)),res.nextElementSibling);
+											this.menus.injectors.lib.remodel();
+										})
+										.catch((error) => {
+											pd.alert(error.message);
+										});
+									})
+								)
+								.append(
+									pd.create('button').addclass('pd-icon pd-icon-del pd-kumaneko-drag-button')
+									.on('touchstart,mousedown',(e) => {
+										e.stopPropagation();
+									})
+									.on('click',(e) => {
+										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+											res.parentNode.removeChild(res);
+											this.menus.injectors.lib.remodel();
+										});
+									})
+								)
+								.append(
+									pd.create('button').addclass('pd-icon pd-icon-open pd-kumaneko-drag-button').attr('disabled','disabled')
+									.on('touchstart,mousedown',(e) => {
+										e.stopPropagation();
+									})
+									.on('click',(e) => window.open(location.protocol+'//'+location.host+location.pathname.replace(/\/[^\/]*$/,'')+'/'+res.injector.directory+'/?lang='+pd.lang))
+								)
+								.append(pd.create('span').addclass('pd-kumaneko-drag-label'));
+								/* event */
+								res
+								.on('touchstart,mousedown',(e) => {
+									window.on('touchmove,mousemove',handler);
+									e.stopPropagation();
+									e.preventDefault();
+								})
+								.on('touchend,mouseup',(e) => {
+									window.off('touchmove,mousemove',handler);
+								});
+								return setup(injector);
+							},
+							init:() => {
+								this.menus.injectors.contents.elm('.pd-kumaneko-drag-vertical').insertBefore(this.menus.injectors.contents.elm('.pd-kumaneko-drag-guide'),null);
+								pd.children(this.menus.injectors.contents.elm('.pd-kumaneko-drag-vertical')).each((element,index) => {
+									if (!element.hasclass('pd-kumaneko-drag-guide')) element.parentNode.removeChild(element);
+								});
+							},
+							remodel:() => {
+								this.app.injectors=[];
+								pd.children(this.menus.injectors.contents.elm('.pd-kumaneko-drag-vertical')).each((element,index) => {
+									if (!element.hasclass('pd-kumaneko-drag-guide')) this.app.injectors.push(element.injector);
 								});
 							}
 						}
@@ -6108,6 +6362,46 @@ pd.modules={
 									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
 								);
 								break;
+							case 'injectors':
+								menu.builder=new pd.modules.builder.injector();
+								menu.contents.addclass('pd-container')
+								.append(
+									pd.create('div').css({padding:'0.25em'})
+									.append(
+										pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.app.caption.button.add.injector[pd.lang]).on('click',(e) => {
+											/* show injectorbuilder */
+											pd.request(pd.ui.baseuri()+'/increment.php','PUT',{},{target:'injector'},true)
+											.then((resp) => {
+												menu.builder.show({
+													id:resp.id.toString(),
+													title:'New '+this.app.name+' Injector',
+													description:'',
+													directory:'',
+													operator:'',
+													colors:{
+														body:'#a1cae3',
+														button:'#e08e45'
+													},
+													saving:{
+														action:[]
+													},
+													fields:[]
+												},this.app.fields,this.app,(injector) => {
+													menu.contents.elm('.pd-kumaneko-drag-vertical').append(menu.lib.create(injector));
+													menu.lib.remodel();
+												});
+											})
+											.catch((error) => {
+												pd.alert(error.message);
+											});
+										})
+									)
+								)
+								.append(
+									pd.create('div').addclass('pd-kumaneko-drag-vertical').attr('field-type','form')
+									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
+								);
+								break;
 							case 'deduplications':
 								menu.builder=new pd.modules.builder.deduplication();
 								menu.contents.addclass('pd-container')
@@ -6530,14 +6824,152 @@ pd.modules={
 								return;
 							}
 							/* get views */
-							app.views.push({
-								id:'0',
-								name:'all',
-								type:'list',
-								fields:[],
-								query:'',
-								sort:''
-							});
+							error=(() => {
+								var res=[];
+								app.views.each((view,index) => {
+									switch (view.type)
+									{
+										case 'calendar':
+											if (fieldinfos[view.fields.date].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (fieldinfos[view.fields.title].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											break;
+										case 'crosstab':
+											if (fieldinfos[view.fields.column.field].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (fieldinfos[view.fields.value.field].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (view.fields.rows.some((item) => fieldinfos[item.field].tableid))
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											break;
+										case 'gantt':
+											if (fieldinfos[view.fields.task.start].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (fieldinfos[view.fields.task.end].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (fieldinfos[view.fields.task.title].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (view.fields.rows.some((item) => fieldinfos[item.field].tableid))
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											break;
+										case 'timeseries':
+											if (fieldinfos[view.fields.column.field].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (view.fields.values.some((item) => fieldinfos[item.field].tableid))
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											break;
+										case 'kanban':
+											if (fieldinfos[view.fields.task.title].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (view.fields.task.date)
+												if (fieldinfos[view.fields.task.date].tableid)
+												{
+													res.push('-&nbsp;'+view.name);
+													return PD_BREAK;
+												}
+											break;
+										case 'map':
+											if (fieldinfos[view.fields.lat].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (fieldinfos[view.fields.lng].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (fieldinfos[view.fields.title].tableid)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (view.fields.color)
+												if (fieldinfos[view.fields.color].tableid)
+												{
+													res.push('-&nbsp;'+view.name);
+													return PD_BREAK;
+												}
+											if (view.fields.address)
+												if (fieldinfos[view.fields.address].tableid)
+												{
+													res.push('-&nbsp;'+view.name);
+													return PD_BREAK;
+												}
+											if (view.fields.postalcode)
+												if (fieldinfos[view.fields.postalcode].tableid)
+												{
+													res.push('-&nbsp;'+view.name);
+													return PD_BREAK;
+												}
+											break;
+										default:
+											if (view.fields.some((item) => (item in fieldinfos)?fieldinfos[item].tableid:false))
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											break;
+									}
+								});
+								return (res.length!=0)?pd.constants.app.message.invalid.view[pd.lang]+'<br>'+res.join('<br>'):'';
+							})();
+							if (error)
+							{
+								res.error=true;
+								pd.alert(error,() => {
+									resolve(res);
+								});
+								return;
+							}
+							else
+							{
+								app.views.push({
+									id:'0',
+									name:'all',
+									type:'list',
+									fields:[],
+									query:'',
+									sort:''
+								});
+							}
 							/* get linkages */
 							error=(() => {
 								var res=[];
@@ -6746,6 +7178,59 @@ pd.modules={
 								});
 								return;
 							}
+							/* get injectors */
+							error=(() => {
+								var res=[];
+								((directories) => {
+									app.injectors.each((injector,index) => {
+										if (directories.map((item) => item.directory).includes(injector.directory))
+										{
+											directories.each((directory,index) => {
+												if (directory.directory==injector.directory)
+													res.push('-&nbsp;'+injector.title+'&nbsp;(The directory name already used in '+directory.name+')');
+											});
+											return PD_BREAK;
+										}
+										else
+										{
+											if (!injector.directory)
+											{
+												res.push('-&nbsp;'+injector.title);
+												return PD_BREAK;
+											}
+											else
+											{
+												if (app.injectors.filter((item) => item.id!=injector.id && item.directory==injector.directory).length!=0)
+												{
+													res.push('-&nbsp;'+injector.title+'&nbsp;(The directory name already used in this app)');
+													return PD_BREAK;
+												}
+											}
+										}
+										if (injector.fields.some((item) => (item.id in fieldinfos)?fieldinfos[item.id].tableid:(item.type!='table')))
+										{
+											res.push('-&nbsp;'+injector.title);
+											return PD_BREAK;
+										}
+									});
+								})((() => {
+									var res=[];
+									for (var key in config.apps.user)
+										((app) => {
+											if (app.id!=this.app.id) res=res.concat(app.injectors.map((item) => ({name:app.name,directory:item.directory})))
+										})(config.apps.user[key]);
+									return res;
+								})());
+								return (res.length!=0)?pd.constants.app.message.invalid.injector[pd.lang]+'<br>'+res.join('<br>'):'';
+							})();
+							if (error)
+							{
+								res.error=true;
+								pd.alert(error,() => {
+									resolve(res);
+								});
+								return;
+							}
 							/* get deduplications */
 							error=(() => {
 								var res=[];
@@ -6834,6 +7319,9 @@ pd.modules={
 					/* setup actions */
 					this.app.actions.each((action,index) => this.menus.actions.contents.elm('.pd-kumaneko-drag-vertical').append(this.menus.actions.lib.create(action)));
 					this.menus.actions.lib.remodel();
+					/* setup injectors */
+					this.app.injectors.each((injector,index) => this.menus.injectors.contents.elm('.pd-kumaneko-drag-vertical').append(this.menus.injectors.lib.create(injector)));
+					this.menus.injectors.lib.remodel();
 					/* setup deduplications */
 					this.app.deduplications.each((deduplication,index) => this.menus.deduplications.contents.elm('.pd-kumaneko-drag-vertical').append(this.menus.deduplications.lib.create(deduplication)));
 					this.menus.deduplications.lib.remodel();
@@ -6859,6 +7347,7 @@ pd.modules={
 					this.menus.views.lib.init();
 					this.menus.linkages.lib.init();
 					this.menus.actions.lib.init();
+					this.menus.injectors.lib.init();
 					this.menus.deduplications.lib.init();
 					/* setup properties */
 					if (Object.keys(app).length==0)
@@ -6876,6 +7365,7 @@ pd.modules={
 								permissions:{'owner':[pd.operator.__id.value.toString()],'admin':[],'denied':[]},
 								customize:[],
 								actions:[],
+								injectors:[],
 								deduplications:[]
 							};
 							show();
@@ -11031,6 +11521,553 @@ pd.modules={
 				else pd.alert(pd.constants.common.message.invalid.config.corrupted[pd.lang]);
 			}
 		},
+		injector:class extends panda_dialog{
+			/* constructor */
+			constructor(){
+				super(999995,false,false);
+				/* setup properties */
+				this.app={
+					id:'injectorbuilder',
+					fields:{
+						title:{
+							id:'title',
+							type:'text',
+							caption:pd.constants.injector.caption.title[pd.lang],
+							required:true,
+							nocaption:false,
+							format:'text'
+						},
+						description:{
+							id:'description',
+							type:'textarea',
+							caption:pd.constants.injector.caption.description[pd.lang],
+							required:false,
+							nocaption:false,
+							lines:'5'
+						},
+						directory:{
+							id:'directory',
+							type:'text',
+							caption:pd.constants.injector.caption.directory[pd.lang],
+							required:true,
+							nocaption:false,
+							format:'text'
+						},
+						operator:{
+							id:'operator',
+							type:'dropdown',
+							caption:pd.constants.injector.caption.operator[pd.lang],
+							required:true,
+							nocaption:false,
+							options:[]
+						},
+						bodycolor:{
+							id:'bodycolor',
+							type:'color',
+							caption:pd.constants.injector.caption.colors.body[pd.lang],
+							required:false,
+							nocaption:false
+						},
+						buttoncolor:{
+							id:'buttoncolor',
+							type:'color',
+							caption:pd.constants.injector.caption.colors.button[pd.lang],
+							required:false,
+							nocaption:false
+						},
+						action:{
+							id:'action',
+							type:'checkbox',
+							caption:pd.constants.injector.caption.saving.action[pd.lang],
+							required:false,
+							nocaption:false,
+							options:[]
+						}
+					}
+				};
+				this.keep={
+					app:{},
+					fields:{},
+					injector:{},
+					nav:{}
+				};
+				this.lib={
+					activate:(element,fieldinfo,addtrash=false) => {
+						var handler=(e) => {
+							var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
+							pd.event.call(
+								'injectorbuilder',
+								'pd.drag.start',
+								{
+									element:element,
+									page:{
+										x:pointer.pageX,
+										y:pointer.pageY
+									}
+								}
+							);
+							window.off('touchmove,mousemove',handler);
+						};
+						/* setup properties */
+						element.fieldinfo=fieldinfo;
+						if (addtrash)
+						{
+							/* modify elements */
+							element.append(
+								pd.create('button').addclass('pd-icon pd-icon-trash pd-kumaneko-drag-button')
+								.on('touchstart,mousedown',(e) => {
+									e.stopPropagation();
+								})
+								.on('click',(e) => {
+									pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+										/* delete */
+										element.parentNode.removeChild(element);
+										/* remodel */
+										this.lib.remodel();
+									});
+								})
+							);
+						}
+						/* event */
+						element
+						.on('touchstart,mousedown',(e) => {
+							if (element.hasAttribute('disabled'))
+							{
+								e.stopPropagation();
+								e.preventDefault();
+								return;
+							}
+							window.on('touchmove,mousemove',handler);
+							e.stopPropagation();
+							e.preventDefault();
+						})
+						.on('touchend,mouseup',(e) => {
+							window.off('touchmove,mousemove',handler);
+						});
+						return element;
+					},
+					create:(fieldinfo) => {
+						var res=null;
+						switch (fieldinfo.type)
+						{
+							case 'table':
+								res=pd.ui.table.activate(pd.ui.table.create(fieldinfo,true,false,true),pd.extend({id:this.app.id},this.keep.app));
+								if (!this.keep.app.fields[fieldinfo.id].nocaption)
+									((caption) => {
+										res.insertBefore(caption,res.elm('tbody'))
+									})(pd.create('span').addclass('pd-table-caption').html(this.keep.app.fields[fieldinfo.id].caption));
+								break;
+							default:
+								res=pd.ui.field.create(pd.extend({},fieldinfo));
+								switch (fieldinfo.type)
+								{
+									case 'number':
+										pd.ui.field.activate(res,{
+											id:'injectorbuilder',
+											fields:(() => {
+												var res={};
+												res[fieldinfo.id]=fieldinfo;
+												return res;
+											})()
+										});
+										break;
+								}
+								break;
+						}
+						return this.lib.activate(res.attr('field-type','field'),fieldinfo,true);
+					},
+					init:() => {
+						this.contents.elm('.pd-kumaneko-drag').insertBefore(this.contents.elm('.pd-kumaneko-drag-guide'),null);
+						pd.children(this.contents.elm('.pd-kumaneko-drag')).each((element,index) => {
+							if (!element.hasclass('pd-kumaneko-drag-guide')) element.parentNode.removeChild(element);
+						});
+					},
+					remodel:() => {
+						this.keep.injector.fields=[];
+						for (var key in this.keep.nav) this.keep.nav[key].removeattr('disabled');
+						pd.children(this.contents.elm('.pd-kumaneko-drag')).each((element,index) => {
+							if (!element.hasclass('pd-kumaneko-drag-guide'))
+							{
+								switch (element.fieldinfo.type)
+								{
+									case 'number':
+										element.elm('.pd-field-value').dispatchEvent(new Event('show'));
+										break;
+									case 'table':
+										if (element.tr.length==0) element.addrow();
+										break;
+								}
+								this.keep.nav[element.fieldinfo.id].attr('disabled','disabled');
+								this.keep.injector.fields.push({id:element.fieldinfo.id,type:element.fieldinfo.type});
+							}
+						});
+					}
+				};
+				/* modify elements */
+				this.header.addclass('pd-kumaneko-builder-header')
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-title').html('Injector Settings'))
+				.append(pd.create('span').addclass('pd-kumaneko-builder-header-id'));
+				this.container.css({
+					height:'calc(100% - 1em)',
+					width:'calc(100% - 1em)'
+				});
+				this.contents.addclass('pd-kumaneko-injectorbuilder').css({
+					padding:'0'
+				})
+				.append(
+					pd.create('main').addclass('pd-kumaneko-main')
+					.append(
+						((contents) => {
+							contents
+							.append(
+								pd.create('nav').addclass('pd-kumaneko-nav')
+								.append(pd.create('div').addclass('pd-kumaneko-nav-main'))
+							)
+							.append(
+								pd.create('div').addclass('pd-kumaneko-block')
+								.append(
+									pd.create('div').addclass('pd-container pd-kumaneko-border-vertical')
+									.append(
+										pd.create('div').addclass('pd-kumaneko-injector')
+										.append(
+											pd.create('div').addclass('pd-kumaneko-injector-main')
+											.append(
+												pd.create('header').addclass('pd-kumaneko-injector-header')
+												.append(pd.create('div').addclass('pd-kumaneko-injector-header-title'))
+												.append(pd.create('div').addclass('pd-kumaneko-injector-header-description'))
+											)
+											.append(
+												pd.create('main').addclass('pd-kumaneko-injector-body')
+												.append(
+													pd.create('div').addclass('pd-kumaneko-drag').attr('field-type','form')
+													.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
+												)
+											)
+											.append(
+												pd.create('footer').addclass('pd-kumaneko-injector-footer')
+												.append(pd.create('button').addclass('pd-button pd-kumaneko-injector-button').html(pd.constants.injector.caption.button.submit[pd.lang]))
+											)
+										)
+									)
+								)
+							)
+							.append(
+								pd.create('nav').addclass('pd-kumaneko-nav')
+								.append(
+									pd.create('div').addclass('pd-kumaneko-nav-main')
+									.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.title).css({width:'100%'}),this.app))
+									.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.description).css({width:'100%'}),this.app))
+									.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.directory).css({width:'100%'}),this.app))
+									.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.operator).css({width:'100%'}),this.app))
+									.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.bodycolor).css({width:'100%'}),this.app))
+									.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.buttoncolor).css({width:'100%'}),this.app))
+									.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields.action).css({width:'100%'}),this.app))
+								)
+							);
+							/* event */
+							pd.event.on(this.app.id,'pd.change.title',(e) => {
+								e.container.elm('.pd-kumaneko-injector-header-title').html((e.record.title.value)?e.record.title.value:'');
+								return e;
+							});
+							pd.event.on(this.app.id,'pd.change.description',(e) => {
+								e.container.elm('.pd-kumaneko-injector-header-description').html((e.record.description.value)?e.record.description.value.replace(/\n/g,'<br>'):'');
+								return e;
+							});
+							pd.event.on(this.app.id,'pd.change.directory',(e) => {
+								if (e.record.directory.value)
+									pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
+									.then((resp) => {
+										var config=resp.file;
+										((directories) => {
+											if (directories.includes(e.record.directory.value))
+											{
+												pd.alert(pd.constants.injector.message.invalid.used[pd.lang]);
+												pd.record.set(this.contents,this.app,((res) => {
+													res.directory.value='';
+													return res;
+												})(e.record));
+											}
+										})((() => {
+											var res=[];
+											for (var key in config.apps.user)
+												((app) => {
+													if (app.id!=this.keep.app.id) res=res.concat(app.injectors.map((item) => item.directory))
+												})(config.apps.user[key]);
+											res=res.concat(this.keep.app.injectors.reduce((result,current) => {
+												if (current.id!=this.keep.injector.id) result.push(current.directory);
+												return result;
+											},[]));
+											return res;
+										})());
+									})
+									.catch((error) => pd.alert(error.message));
+								return e;
+							});
+							pd.event.on(this.app.id,'pd.change.bodycolor',(e) => {
+								e.container.elm('.pd-kumaneko-injector').css({backgroundColor:(e.record.bodycolor.value)?e.record.bodycolor.value:''});
+								return e;
+							});
+							pd.event.on(this.app.id,'pd.change.buttoncolor',(e) => {
+								e.container.elm('.pd-kumaneko-injector-button').css({backgroundColor:(e.record.buttoncolor.value)?e.record.buttoncolor.value:''});
+								return e;
+							});
+							/* drag event */
+							pd.event.on('injectorbuilder','pd.drag.start',(e) => {
+								var keep={
+									element:(e.element.parentNode.hasclass('pd-kumaneko-drag'))?e.element:null,
+									fieldinfo:pd.extend({},e.element.fieldinfo),
+									guide:this.contents.elm('.pd-kumaneko-drag-guide')
+								};
+								var handler={
+									move:(e) => {
+										var element=document.elementFromPoint(e.pageX,e.pageY);
+										if (element)
+											if (element!=keep.guide)
+												((rect) => {
+													var guide={
+														setup:(parent,reference) => {
+															parent.insertBefore(keep.guide.removeclass('pd-hidden'),reference);
+														}
+													};
+													switch (element.attr('field-type'))
+													{
+														case 'field':
+															if (e.pageY<rect.top+rect.height*0.5) guide.setup(element.parentNode,element);
+															else guide.setup(element.parentNode,element.nextElementSibling);
+															break;
+														case 'form':
+															if (!keep.element) guide.setup(element,null);
+															break;
+														default:
+															if (!keep.element) keep.guide.addclass('pd-hidden');
+															break;
+													}
+												})(element.getBoundingClientRect());
+									},
+									end:(e) => {
+										if (keep.guide.visible())
+										{
+											keep.guide.parentNode.insertBefore((() => {
+												return (keep.element)?keep.element.removeclass('pd-hidden'):this.lib.create(keep.fieldinfo);
+											})(),keep.guide.nextElementSibling);
+											this.contents.elm('.pd-kumaneko-drag').insertBefore(keep.guide.addclass('pd-hidden'),null);
+											this.lib.remodel();
+										}
+										else
+										{
+											if (keep.element) keep.element.removeclass('pd-hidden');
+											this.contents.elm('.pd-kumaneko-drag').insertBefore(keep.guide.addclass('pd-hidden'),null);
+										}
+										window.off('mousemove,touchmove',handler.move);
+										window.off('mouseup,touchend',handler.end);
+										e.stopPropagation();
+										e.preventDefault();
+									}
+								};
+								if (keep.element)
+								{
+									((rect) => {
+										keep.guide.css({height:rect.height.toString()+'px'});
+										keep.element.addclass('pd-hidden').parentNode.insertBefore(keep.guide.removeclass('pd-hidden'),keep.element.nextElementSibling);
+									})(keep.element.getBoundingClientRect());
+								}
+								else keep.guide.css({height:''});
+								/* event */
+								window.on('mousemove,touchmove',handler.move);
+								window.on('mouseup,touchend',handler.end);
+							});
+							return contents;
+						})(pd.create('div').addclass('pd-scope pd-kumaneko-block').attr('form-id','form_injectorbuilder'))
+					)
+				);
+				this.contents.elms('input,select,textarea').each((element,index) => element.initialize());
+			}
+			/* get configuration */
+			get(){
+				return new Promise((resolve,reject) => {
+					var res={
+						error:false,
+						injector:this.keep.injector
+					};
+					res.error=((res,injector) => {
+						if (!res.error)
+						{
+							if (injector.fields.length==0)
+							{
+								res.error=true;
+								pd.alert(pd.constants.injector.message.invalid.field[pd.lang]);
+							}
+							else
+							{
+								if (injector.fields.some((item) => !(item.id in this.keep.fields)))
+								{
+									res.error=true;
+									pd.alert(pd.constants.injector.message.invalid.unknown[pd.lang]);
+								}
+							}
+							if (!res.error)
+							{
+								if (!res.record.directory.value.match(/^[0-9a-z-_.!\']+$/g))
+								{
+									res.error=true;
+									pd.alert(pd.constants.injector.message.invalid.characters[pd.lang]);
+								}
+								else
+								{
+									if (['api','static'].includes(res.record.directory.value))
+									{
+										res.error=true;
+										pd.alert(pd.constants.injector.message.invalid.reserved[pd.lang]);
+									}
+									else
+									{
+										injector.title=res.record.title.value;
+										injector.description=res.record.description.value;
+										injector.directory=res.record.directory.value;
+										injector.operator=res.record.operator.value;
+										injector.colors.body=res.record.bodycolor.value;
+										injector.colors.button=res.record.buttoncolor.value;
+										injector.saving.action=res.record.action.value;
+									}
+								}
+							}
+						}
+						return res.error;
+					})(pd.record.get(this.contents,this.app),res.injector);
+					resolve(res);
+				});
+			}
+			/* set configuration */
+			set(){
+				return new Promise((resolve,reject) => {
+					this.header.elm('.pd-kumaneko-builder-header-id').html('id&nbsp;'+this.keep.injector.id.toString()).off('click').on('click',(e) => {
+						navigator.clipboard.writeText(this.keep.injector.id.toString()).then(() => {
+							pd.alert(pd.constants.common.message.clipboard[pd.lang]);
+						})
+					});
+					pd.record.set(this.contents,this.app,(() => {
+						var res={
+							title:{value:this.keep.injector.title},
+							description:{value:this.keep.injector.description},
+							directory:{value:this.keep.injector.directory},
+							operator:{value:this.keep.injector.operator},
+							bodycolor:{value:this.keep.injector.colors.body},
+							buttoncolor:{value:this.keep.injector.colors.button},
+							action:{value:this.keep.injector.saving.action}
+						};
+						((elements) => {
+							elements.options.action.elms('label').each((label,index) => label.parentNode.removeChild(label));
+							this.keep.app.actions.each((action,index) => {
+								if (action.trigger=='button')
+									elements.options.action
+									.append(
+										pd.create('label')
+										.append(pd.create('input').attr('type','checkbox').attr('data-type','checkbox').val(action.id))
+										.append(pd.create('span').html(action.name))
+									);
+							});
+							elements.options.operator.empty().append(pd.create('option'));
+							pd.filter.record.user.each((user,index) => {
+								if (!this.keep.app.permissions.denied.includes(user.__id.value.toString()))
+									elements.options.operator.append(pd.create('option').attr('value',user.__id.value).html(user.name.value));
+							});
+							elements.guides.title.html((res.title.value)?res.title.value:'')
+							elements.guides.description.html((res.description.value)?res.description.value.replace(/\n/g,'<br>'):'')
+							elements.guides.colors.body.css({backgroundColor:(res.bodycolor.value)?res.bodycolor.value:''})
+							elements.guides.colors.button.css({backgroundColor:(res.buttoncolor.value)?res.buttoncolor.value:''})
+						})({
+							guides:{
+								title:this.contents.elm('.pd-kumaneko-injector-header-title'),
+								description:this.contents.elm('.pd-kumaneko-injector-header-description'),
+								colors:{
+									body:this.contents.elm('.pd-kumaneko-injector'),
+									button:this.contents.elm('.pd-kumaneko-injector-button')
+								}
+							},
+							options:{
+								action:this.contents.elm('[field-id=action]').elm('.pd-field-value'),
+								operator:this.contents.elm('[field-id=operator]').elm('select')
+							}
+						});
+						((nav) => {
+							for (var key in this.keep.fields)
+								((fieldinfo) => {
+									switch (fieldinfo.type)
+									{
+										case 'id':
+										case 'autonumber':
+										case 'creator':
+										case 'createdtime':
+										case 'modifier':
+										case 'modifiedtime':
+											break;
+										default:
+											nav.append(
+												pd.create('div').addclass('pd-kumaneko-nav-button pd-kumaneko-border-bottom')
+												.append(
+													((res) => {
+														this.keep.nav[fieldinfo.id]=res;
+														return this.lib.activate(res,fieldinfo).append(pd.create('span').addclass('pd-kumaneko-nav-button-item-label').html(fieldinfo.caption));
+													})(pd.create('span').addclass('pd-kumaneko-nav-button-item'))
+												)
+											);
+											break;
+									}
+								})(this.keep.fields[key]);
+							return nav;
+						})(this.contents.elm('.pd-kumaneko-nav-main').empty());
+						((fields) => {
+							fields.each((field,index) => {
+								if (field.id in this.keep.fields) this.contents.elm('.pd-kumaneko-drag').append(this.lib.create(this.keep.fields[field.id]));
+							});
+							this.lib.remodel();
+						})(this.keep.injector.fields);
+						return res;
+					})());
+					resolve();
+				});
+			}
+			/* show */
+			show(injector,fields,app,callback){
+				if (injector instanceof Object)
+				{
+					/* initialize elements */
+					this.lib.init();
+					/* setup properties */
+					this.keep.app=app;
+					this.keep.fields=fields;
+					this.keep.injector=pd.extend({},injector);
+					this.keep.nav={};
+					/* modify elements */
+					this.contents.elms('input,select,textarea').each((element,index) => {
+						if (element.alert) element.alert.hide();
+					});
+					/* setup handler */
+					if (this.handler)
+					{
+						this.ok.off('click',this.handler);
+						this.cancel.off('click');
+					}
+					this.handler=(e) => {
+						this.get().then((resp) => {
+							if (!resp.error)
+							{
+								callback(this.keep.injector);
+								this.hide();
+							}
+						});
+					};
+					this.ok.on('click',this.handler);
+					this.cancel.on('click',(e) => this.hide());
+					/* set configuration */
+					this.set().then(() => {
+						/* show */
+						super.show();
+					});
+				}
+				else pd.alert(pd.constants.common.message.invalid.config.corrupted[pd.lang]);
+			}
+		},
 		linkage:class extends panda_dialog{
 			/* constructor */
 			constructor(){
@@ -11841,6 +12878,7 @@ pd.modules={
 											{},
 											pd.extend({
 												app:this.keep.app,
+												fields:this.keep.fields,
 												query:this.keep.view.query,
 												limit:10
 											},view.fields)
@@ -11916,6 +12954,7 @@ pd.modules={
 											{},
 											pd.extend({
 												app:this.keep.app,
+												fields:this.keep.fields,
 												query:this.keep.view.query,
 												sort:this.keep.view.sort,
 												column:{
@@ -12006,6 +13045,7 @@ pd.modules={
 											{},
 											pd.extend({
 												app:this.keep.app,
+												fields:this.keep.fields,
 												query:this.keep.view.query,
 												column:{
 													starting:((view.fields.column.period=='month')?new Date().format('Y-01-01'):new Date().format('Y-m-01'))
@@ -14378,6 +15418,178 @@ pd.modules={
 			this.ui.tab.deactivate();
 		}
 	},
+	injector:class extends panda_kumaneko_app{
+		/* constructor */
+		constructor(app,setting){
+			super(app);
+			/* setup properties */
+			this.setting=setting;
+			this.record={
+				clear:() => {
+					this.record.id=((body) => {
+						pd.record.clear(body,this.app);
+						body.focus();
+						return '';
+					})(this.record.ui.body.removeattr('unsaved'));
+				},
+				save:() => {
+					var res=pd.record.get(this.record.ui.body,this.app);
+					if (!res.error)
+						pd.event.call(this.app.id,'pd.create.submit',{
+							container:this.record.ui.body,
+							record:res.record
+						})
+						.then((param) => {
+							if (!param.error)
+							{
+								((actions) => {
+									pd.confirm(pd.constants.common.message.confirm.submit[pd.lang],() => {
+										this.actions.saving([param.record])
+										.then((confirmed) => {
+											pd.loadstart();
+											pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:this.app.id,records:[param.record],notify:true},true)
+											.then((resp) => {
+												pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:this.app.id,id:resp.id},true)
+												.then((resp) => {
+													((record,update) => {
+														var action=(index,callback) => {
+															this.actions.button(actions[index],record).then((param) => {
+																if ('record' in param)
+																{
+																	record=this.actions.value(param.record,'backend');
+																	update=true;
+																}
+																index++;
+																if (index<actions.length) action(index,callback);
+																else callback();
+															}).catch(() => pd.loadend());
+														};
+														var finish=() => {
+															pd.loadend();
+															pd.event.call(this.app.id,'pd.create.submit.success',{
+																container:this.record.ui.body,
+																record:record
+															})
+															.then((param) => {
+																if (!param.error)
+																	pd.alert(pd.constants.common.message.finished.submit[pd.lang],() => {
+																		pd.event.call(this.app.id,'pd.create.call',{});
+																	});
+															});
+														};
+														if (actions.length!=0)
+														{
+															action(0,() => {
+																if (update)
+																{
+																	pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:this.app.id,records:[record],notify:true},true)
+																	.then((resp) => {
+																		pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:this.app.id,id:record['__id'].value},true)
+																		.then((resp) => finish())
+																		.catch((error) => pd.alert(error.message));
+																	})
+																	.catch((error) => pd.alert(error.message));
+																}
+																else finish();
+															});
+														}
+														else finish();
+													})(((resp.total!=0)?resp.record:param.record),false);
+												})
+												.catch((error) => pd.alert(error.message));
+											})
+											.catch((error) => pd.alert(error.message));
+										})
+										.catch(() => {})
+									});
+								})(this.app.actions.filter((item) => item.trigger=='button' && this.setting.saving.action.includes(item.id)));
+							}
+						});
+				},
+				ui:((this.setting)?this.setting.ui:{})
+			};
+			if (this.setting)
+			{
+				/* modify elements */
+				pd.ui.form.create(this.record.ui.body,((app) => {
+					var fields=this.setting.fields.reduce((result,current) => {
+						if (current.id in app.fields)
+							switch (current.type)
+							{
+								case 'table':
+									result.push({type:'table',id:current.id});
+									break;
+								default:
+									result.push({type:'row',fields:[current.id]});
+									break;
+							}
+						return result;
+					},[]);
+					var unuses=Object.values(app.fields).reduce((result,current) => {
+						if (!this.setting.fields.some((item) => item.id==current.id))
+							switch (current.type)
+							{
+								case 'table':
+									result.push({type:'table',id:current.id,unuse:true});
+									break;
+								default:
+									result.push({type:'row',fields:[current.id],unuse:true});
+									break;
+							}
+						return result;
+					},[]);
+					app.layout=fields.concat(unuses);
+					return app;
+				})(pd.extend({},this.app)),true);
+				/* event */
+				this.record.ui.buttons.ok.on('click',(e) => this.record.save());
+				/* call event */
+				pd.event.call(this.app.id,'pd.record.build',{
+					header:this.record.ui.header.elm('.pd-kumaneko-injector-header-space'),
+					body:this.record.ui.body
+				});
+			}
+			/* event */
+			pd.event.on(this.app.id,'pd.action.call',(e) => {
+				return new Promise((resolve,reject) => {
+					this.actions.value(e.record,e.workplace);
+					resolve(e);
+				});
+			});
+			pd.event.on(this.app.id,'pd.create.call',(e) => {
+				return new Promise((resolve,reject) => {
+					pd.event.call(this.app.id,'pd.create.load',{
+						container:this.record.ui.body,
+						record:(() => {
+							this.record.clear();
+							return pd.record.get(this.record.ui.body,this.app,true).record;
+						})()
+					})
+					.then((param) => {
+						if (!param.error)
+						{
+							pd.record.set(this.record.ui.body.removeattr('unsaved'),this.app,this.actions.value(param.record)).then(() => {
+								pd.event.call(this.app.id,'pd.create.load.complete',{container:this.record.ui.body});
+							});
+						}
+					});
+				});
+			});
+			pd.event.on(this.app.id,'pd.fields.call',(e) => {
+				e.fields=this.app.fields;
+				return e;
+			});
+			pd.event.on(this.app.id,'pd.permit.call',(e) => {
+				e.permit=(pd.kumaneko.permit(this.app.permissions)!='denied');
+				return e;
+			});
+			pd.event.on(this.app.id,'pd.saving.call',(e) => {
+				return new Promise((resolve,reject) => {
+					this.actions.saving(e.records).then((confirmed) => resolve(e)).catch(() => reject(e));
+				});
+			});
+		}
+	},
 	manager:{
 		app:class extends panda_dialog{
 			/* constructor */
@@ -15865,6 +17077,10 @@ pd.constants=pd.extend({
 				cleanup:{
 					en:'Storage cleanup is complete',
 					ja:'ストレージのクリーンアップが完了しました'
+				},
+				submit:{
+					en:'Complete!',
+					ja:'送信完了'
 				}
 			},
 			invalid:{
@@ -16351,6 +17567,10 @@ pd.constants=pd.extend({
 						en:'Add new deduplication',
 						ja:'追加'
 					},
+					injector:{
+						en:'Add new injector',
+						ja:'追加'
+					},
 					linkage:{
 						en:'Add new linkage view',
 						ja:'追加'
@@ -16388,6 +17608,10 @@ pd.constants=pd.extend({
 			delete:{
 				en:'You cannot cancel the deletion.<br>By deleting the app, all data in the app also becomes unavailable.',
 				ja:'削除をキャンセルすることは出来ません。<br>アプリを削除すると、アプリ内のすべてのデータも利用出来なくなります。'
+			},
+			injector:{
+				en:'Injector',
+				ja:'インジェクター'
 			},
 			linkage:{
 				en:'Linkage view',
@@ -16431,6 +17655,10 @@ pd.constants=pd.extend({
 				actions:{
 					en:'actions',
 					ja:'アクション'
+				},
+				injectors:{
+					en:'injectors',
+					ja:'インジェクター'
 				},
 				deduplications:{
 					en:'deduplication',
@@ -16558,7 +17786,11 @@ pd.constants=pd.extend({
 			invalid:{
 				action:{
 					en:'There is a defect in some actions',
-					ja:'設定に不備があるアクションがあります'
+					ja:'設定に不備があるアクションがあります',
+					delete:{
+						en:'The action could not be deleted because a referencing injector was found',
+						ja:'参照しているインジェクターが見つかったため、アクションを削除出来ませんでした'
+					}
 				},
 				dashboard:{
 					view:{
@@ -16576,7 +17808,7 @@ pd.constants=pd.extend({
 				},
 				field:{
 					delete:{
-						en:'The field could not be deleted because the app or field you are referencing was found',
+						en:'The field could not be deleted because a referencing app or field was found',
 						ja:'参照しているアプリまたはフィールドが見つかったため、フィールドを削除出来ませんでした'
 					},
 					missing:{
@@ -16588,6 +17820,10 @@ pd.constants=pd.extend({
 						ja:'このアプリの編集不可能なフィールドに対して、コピーまたは更新の設定をしているアクションがあります'
 					}
 				},
+				injector:{
+					en:'There is a defect in some injectors',
+					ja:'設定に不備があるインジェクターがあります'
+				},
 				linkage:{
 					en:'There is a defect in some linkages',
 					ja:'設定に不備があるリンクビューがあります'
@@ -16595,6 +17831,10 @@ pd.constants=pd.extend({
 				name:{
 					en:'Please enter the application name',
 					ja:'アプリ名を入力して下さい'
+				},
+				view:{
+					en:'There is a defect in some views',
+					ja:'設定に不備があるビューがあります'
 				}
 			}
 		},
@@ -16999,6 +18239,72 @@ pd.constants=pd.extend({
 				field:{
 					en:'Column for mapping required',
 					ja:'読み込むフィールドが指定されていません'
+				}
+			}
+		}
+	},
+	injector:{
+		caption:{
+			button:{
+				submit:{
+					en:'Submit',
+					ja:'送信'
+				}
+			},
+			colors:{
+				body:{
+					en:'Background Color',
+					ja:'ページ背景色'
+				},
+				button:{
+					en:'Button Color',
+					ja:'ボタン背景色'
+				}
+			},
+			directory:{
+				en:'Directory Name',
+				ja:'ディレクトリ名'
+			},
+			description:{
+				en:'Description',
+				ja:'説明'
+			},
+			saving:{
+				action:{
+					en:'Action after saving',
+					ja:'保存後のアクション'
+				}
+			},
+			title:{
+				en:'Title',
+				ja:'タイトル'
+			},
+			operator:{
+				en:'Registered User',
+				ja:'登録ユーザー'
+			}
+		},
+		message:{
+			invalid:{
+				characters:{
+					en:'The directory name contains characters that cannot be used',
+					ja:'ディレクトリ名に使用出来ない文字が含まれています'
+				},
+				field:{
+					en:'Please place one or more fields',
+					ja:'フィールドを配置して下さい'
+				},
+				reserved:{
+					en:'The directory name entered cannot be used',
+					ja:'入力されたディレクトリ名は使用出来ません'
+				},
+				unknown:{
+					en:'Unknown field found in this view',
+					ja:'不明なフィールドが配置されています'
+				},
+				used:{
+					en:'The directory name you entered is already in use',
+					ja:'入力したディレクトリ名は既にに使用されています'
 				}
 			}
 		}

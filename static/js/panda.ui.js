@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.2.8
+* Version: 1.3.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1538,6 +1538,40 @@ class panda_formula{
 class panda_record{
 	/* constructor */
 	constructor(){}
+	/* clear record */
+	clear(container,app){
+		for (var key in app.fields)
+		{
+			((field,fieldinfo) => {
+				if (field)
+				{
+					if (fieldinfo.type!='table') field=field.elm('.pd-field-value');
+					switch (fieldinfo.type)
+					{
+						case 'checkbox':
+							field.elms('input').each((element,index) => element.checked=false);
+							break;
+						case 'radio':
+							field.elms('[data-name='+key+']').each((element,index) => element.checked=(index==0));
+							break;
+						case 'table':
+							field.clearrows();
+							field.addrow();
+							break;
+						default:
+							field.elms('input,select,textarea').each((element,index) => element.val(''));
+							break;
+					}
+				}
+			})(container.elm('[field-id="'+CSS.escape(key)+'"]'),app.fields[key]);
+		}
+		if (container.elm('[data-type=id]')) container.elm('[data-type=id]').val('');
+		if (container.elm('[data-type=autonumber]')) container.elm('[data-type=autonumber]').val('');
+		if (container.elm('[data-type=creator]')) container.elm('[data-type=creator]').val('');
+		if (container.elm('[data-type=createdtime]')) container.elm('[data-type=createdtime]').val('');
+		if (container.elm('[data-type=modifier]')) container.elm('[data-type=modifier]').val('');
+		if (container.elm('[data-type=modifiedtime]')) container.elm('[data-type=modifiedtime]').val('');
+	}
 	/* create record */
 	create(app,isrecord=true){
 		var res={};
@@ -2743,7 +2777,7 @@ class panda_user_interface{
 												span++;
 												if (field.subcaption)
 												{
-													head.first().elms('th').last().attr('colspan',span.toString());
+													if (head.first().elm('th')) head.first().elms('th').last().attr('colspan',span.toString());
 													head.first().append(
 														pd.create('th').addclass('pd-matrix-head-cell').css({textAlign:'left'})
 														.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.subcaption))
@@ -4399,7 +4433,7 @@ class panda_user_interface{
 			}
 		};
 		this.form={
-			create:(container,app) => {
+			create:(container,app,isstacked) => {
 				var createrow=(fields) => {
 					return ((res) => {
 						fields.each((field,index) => {
@@ -4436,17 +4470,19 @@ class panda_user_interface{
 							}
 							container.append(
 								pd.create('div').addclass('pd-row').append(
-									this.table.activate(this.table.create(app.fields[layout.id],true),app)
+									this.table.activate(this.table.create(app.fields[layout.id],true,false,isstacked),app)
 								)
 							);
-							for (var key in app.fields[layout.id].fields)
-								if (key in app.styles)
-									((table,css) => {
-										table.elm('thead tr [sort-id="'+CSS.escape(key)+'"]').css(css);
-										table.template.elm('[field-id="'+CSS.escape(key)+'"]').css(css);
-									})(container.elm('[field-id="'+CSS.escape(layout.id)+'"]'),{maxWidth:app.styles[key].width,width:app.styles[key].width});
+							if (!isstacked)
+								for (var key in app.fields[layout.id].fields)
+									if (key in app.styles)
+										((table,css) => {
+											table.elm('thead tr [sort-id="'+CSS.escape(key)+'"]').css(css);
+											table.template.elm('[field-id="'+CSS.escape(key)+'"]').css(css);
+										})(container.elm('[field-id="'+CSS.escape(layout.id)+'"]'),{maxWidth:app.styles[key].width,width:app.styles[key].width});
 							break;
 					}
+					if (layout.unuse) pd.children(container).last().addclass('pd-unuse');
 				});
 				/* setup to readonly field */
 				for (var key in app.fields)
@@ -4700,7 +4736,7 @@ class panda_user_interface{
 									span++;
 									if (field.subcaption)
 									{
-										head.first().elms('th').last().attr('colspan',span.toString());
+										if (head.first().elm('th')) head.first().elms('th').last().attr('colspan',span.toString());
 										head.first().append(
 											pd.create('th').addclass('pd-matrix-head-cell').css({textAlign:'left'})
 											.append(pd.create('span').addclass('pd-matrix-head-caption').html(field.subcaption))
@@ -4998,13 +5034,13 @@ class panda_user_interface{
 					}
 				},false);
 			},
-			create:(table,isform,isview) => {
+			create:(table,isform,isview,isstacked) => {
 				return ((res) => {
-					if (!isview) res.append(pd.create('thead').append(pd.create('tr')));
+					if (!isview && !isstacked) res.append(pd.create('thead').append(pd.create('tr')));
 					res.append(pd.create('tbody').append(pd.create('tr').addclass('pd-scope').attr('row-idx','').attr('row-rel','').attr('row-uid','')));
 					for (var key in table.fields)
 						((fieldinfo) => {
-							if (!isview)
+							if (!isview && !isstacked)
 							{
 								res.elm('thead tr').append(((cell) => {
 									if (isform) cell.css({cursor:'pointer'}).attr('sort-id',fieldinfo.id).attr('sort-order','');
@@ -5012,15 +5048,15 @@ class panda_user_interface{
 								})(pd.create('th').append(pd.create('span').html(fieldinfo.caption))));
 							}
 							res.elm('tbody tr').append(pd.create('td').append(this.field.create(((fieldinfo) => {
-								fieldinfo.nocaption=true;
+								if (!isstacked) fieldinfo.nocaption=true;
 								return fieldinfo;
 							})(pd.extend({},fieldinfo)))));
 						})(table.fields[key]);
-					if (!isview) res.elm('thead tr').append(pd.create('th').addclass('pd-table-button'+((!isform)?'':' pd-table-button-extension')));
+					if (!isview && !isstacked) res.elm('thead tr').append(pd.create('th').addclass('pd-table-button'+((isform)?' pd-table-button-extension':'')));
 					res.elm('tbody tr').append(
-						pd.create('td').addclass('pd-table-button'+((!isform)?'':' pd-table-button-extension'))
+						pd.create('td').addclass('pd-table-button'+((isform)?' pd-table-button-extension':''))
 						.append(pd.create('button').addclass('pd-icon pd-icon-add pd-table-row-add'))
-						.append(pd.create('button').addclass('pd-icon pd-icon-copy pd-table-row-copy').css({display:((!isform)?'none':'inline-block')}))
+						.append(pd.create('button').addclass('pd-icon pd-icon-copy pd-table-row-copy').css({display:((isform)?'inline-block':'none')}))
 						.append(pd.create('button').addclass('pd-icon pd-icon-del pd-table-row-del'))
 					);
 					/* setup to readonly field */
@@ -5062,8 +5098,8 @@ class panda_user_interface{
 										})();
 										if (!initialize)
 										{
-											if (pd.elm('.pdstyle_'+key))
-												if (pd.elm('.pdstyle_'+key).text().match(new RegExp('\\\[column-id="'+CSS.escape(id)+'"\\\]','g'))) res=cell.outerwidth(false);
+											if (pd.elm('.pdstyle_'+CSS.escape(key)))
+												if (pd.elm('.pdstyle_'+CSS.escape(key)).text().match(new RegExp('\\\[column-id="'+CSS.escape(id)+'"\\\]','g'))) res=cell.outerwidth(false);
 										}
 										return res;
 									})();
@@ -5072,8 +5108,8 @@ class panda_user_interface{
 								})(cell.attr('column-id'));
 						});
 						/* embed stylesheet */
-						if (pd.elm('.pdstyle_'+key))
-							pd.elm('head').removeChild(pd.elm('.pdstyle_'+key));
+						if (pd.elm('.pdstyle_'+CSS.escape(key)))
+							pd.elm('head').removeChild(pd.elm('.pdstyle_'+CSS.escape(key)));
 						pd.elm('head').append(
 							pd.create('style')
 							.addclass('pdstyle_'+key)
@@ -5349,7 +5385,7 @@ class panda_user_interface{
 				)
 				.on('show',(e) => {
 					var key=style.key();
-					if (!pd.elm('.pdstyle_'+key))
+					if (!pd.elm('.pdstyle_'+CSS.escape(key)))
 					{
 						if (localStorage.getItem(key))
 						{
