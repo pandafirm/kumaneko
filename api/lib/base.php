@@ -1,11 +1,12 @@
 <?php
 /*
 * PandaFirm-PHP-Module "base.php"
-* Version: 1.2.8
+* Version: 1.3.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
 */
+session_start();
 class RequestError extends Exception{
 	public $response="";
 	public function __construct($arg_message,$arg_code=0)
@@ -74,10 +75,10 @@ abstract class clsBase
 	{
 		if ($_SERVER["REQUEST_METHOD"]!="OPTIONS")
 		{
-			if (!isset($_SERVER['HTTP_X_AUTHORIZATION'])) $this->callrequesterror(500,"Authorization failed");
+			if (!isset($_SERVER['HTTP_X_AUTHORIZATION']) && !isset($_SESSION['PD_AUTH_TOKEN'])) $this->callrequesterror(500,"Authorization failed");
 			else
 			{
-				$token=explode(":",base64_decode($_SERVER['HTTP_X_AUTHORIZATION']));
+				$token=explode(":",base64_decode(isset($_SERVER['HTTP_X_AUTHORIZATION'])?$_SERVER['HTTP_X_AUTHORIZATION']:$_SESSION['PD_AUTH_TOKEN']));
 				if (count($token)==2)
 				{
 					if (file_exists(dirname(__DIR__)."/storage/json/users.json"))
@@ -128,6 +129,7 @@ abstract class clsBase
 					$pattern=preg_quote("<!-- [@{$key}] -->");
 					$res=preg_replace("/{$pattern}/s",$value,$res);
 				}
+			return $res;
 		}
 		else return "";
 	}
