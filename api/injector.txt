@@ -1,0 +1,101 @@
+<?php
+/*
+* FileName "<!-- [@directory] -->.php"
+* Copyright (c) 2020 Pandafirm LLC
+* Distributed under the terms of the GNU Lesser General Public License.
+* https://opensource.org/licenses/LGPL-2.1
+*/
+session_start();
+require_once(dirname(__DIR__)."/api/lib/base.php");
+require_once(dirname(__DIR__)."/api/lib/driver.php");
+$config=json_decode(mb_convert_encoding(file_get_contents(dirname(__DIR__)."/api/storage/json/config.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
+$driver=new clsDriver(dirname(__DIR__)."/api/storage/json/",date_default_timezone_get());
+$assigns=[
+	"lang"=>(in_array((isset($_GET["lang"])?$_GET["lang"]:""),["en","ja"])?$_GET["lang"]:"en"),
+	"uri"=>(empty($_SERVER['HTTPS'])?'http://':'https://').$_SERVER['HTTP_HOST'].dirname(preg_replace("/\/[^\/]*$/s","",$_SERVER['REQUEST_URI'])),
+	"styles"=>[
+		"body"=>"",
+		"button"=>""
+	],
+	"setting"=>[
+		"app"=>"<!-- [@app] -->",
+		"id"=>"<!-- [@id] -->",
+		"operator"=>[
+			"id"=>"",
+			"department"=>"",
+			"group"=>""
+		]
+	],
+	"title"=>""
+];
+foreach ($config["apps"]["user"] as $key=>$value)
+	if ($value["id"]=="<!-- [@app] -->")
+	{
+		foreach ($value["injectors"] as $value)
+			if ($value["id"]=="<!-- [@id] -->")
+			{
+				$assigns["title"]=$value["title"];
+				if ($value["colors"]["body"]!="")
+					$assigns["styles"]["body"]=<<<EOF
+body .pd-kumaneko-injector{
+	background-color:{$value["colors"]["body"]};
+}
+EOF;
+				if ($value["colors"]["button"]!="")
+					$assigns["styles"]["button"]=<<<EOF
+body .pd-kumaneko-injector .pd-kumaneko-injector-button{
+	background-color:{$value["colors"]["button"]};
+}
+EOF;
+				$user=$driver->records("users","__id=".$value["operator"]." and available = 'available'");
+				if ($driver->recordcount()!=0)
+				{
+					$user=array_shift($user);
+					$assigns["setting"]["operator"]["id"]=$user["__id"]["value"];
+					$assigns["setting"]["operator"]["department"]=$user["department"]["value"];
+					$assigns["setting"]["operator"]["group"]=$user["group"]["value"];
+					$assigns["setting"]=json_encode($assigns["setting"],JSON_UNESCAPED_UNICODE);
+					$_SESSION["PD_AUTH_TOKEN"]=base64_encode($user["account"]["value"].":".$user["pwd"]["value"]);
+					break;
+				}
+				else
+				{
+					print "The specified user does not exist.";
+					exit(0);
+				}
+			}
+		if ($assigns["title"]!="") break;
+	}
+if ($assigns["title"]=="") exit(0);
+print<<<EOF
+<!DOCTYPE html>
+<html lang="{$assigns["lang"]}">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<script src="../static/js/panda.js?v1.3.0" type="text/javascript"></script>
+<script src="../static/js/panda.freepei.js?v1.3.0" type="text/javascript"></script>
+<script src="../static/js/panda.ui.js?v1.3.0" type="text/javascript"></script>
+<script src="../static/js/panda.kumaneko.js?v1.3.0" type="text/javascript"></script>
+<link href="../static/css/panda.ui.css?v1.3.0" rel="stylesheet" type="text/css" />
+<link href="../static/css/panda.kumaneko.css?v1.3.0" rel="stylesheet" type="text/css" />
+<link rel="icon" href="https://kumaneko.pandafirm.jp/static/image/favicon.svg" type="image/svg+xml">
+<title>{$assigns["title"]}</title>
+</head>
+<style type="text/css">
+{$assigns["styles"]["body"]}
+{$assigns["styles"]["button"]}
+</style>
+<script type="text/javascript">
+	"use strict";
+	pd.lang='{$assigns["lang"]}';
+	pd.theme='light';
+	pd.ready((pd) => {
+		pd.kumaneko.build('{$assigns["uri"]}/api/',{$assigns["setting"]});
+	});
+</script>
+<body>
+</body>
+</html>
+EOF;
+?>

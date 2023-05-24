@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "timeseries.php"
-* Version: 1.2.8
+* Version: 1.3.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -53,7 +53,7 @@ class clsRequest extends clsBase
 		}
 		if (intval((new DateTime($this->body["column"]["starting"],new DateTimeZone(isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get())))->format("d"))<29)
 		{
-			$this->fields=$this->driver->fields($this->body["app"]);
+			$this->fields=(!isset($this->body["fields"]))?$this->driver->fields($this->body["app"]):$this->body["fields"];
 			$this->queries=[
 				"columns"=>[],
 				"record"=>(function($column,$fields,$previous,$timezone){

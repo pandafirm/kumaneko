@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "crosstab.php"
-* Version: 1.2.8
+* Version: 1.3.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -51,7 +51,7 @@ class clsRequest extends clsBase
 		{
 			if (!is_array($this->body["value"])) $this->callrequesterror(400);
 		}
-		$this->fields=$this->driver->fields($this->body["app"]);
+		$this->fields=(!isset($this->body["fields"]))?$this->driver->fields($this->body["app"]):$this->body["fields"];
 		$this->queries=[
 			"columns"=>[],
 			"rows"=>[]

@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.2.8
+* Version: 1.3.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -101,6 +101,19 @@ class clsRequest extends clsBase
 								}
 								return $item;
 							},$value->linkages);
+							if (!property_exists($value,"injectors"))
+							{
+								$value->injectors=[];
+								$update=true;
+							}
+						}
+						foreach ($this->response["file"]->apps->system as $key=>$value)
+						{
+							if (!property_exists($value,"injectors"))
+							{
+								$value->injectors=[];
+								$update=true;
+							}
 						}
 						if (!property_exists($this->response["file"]->apps->system->project->fields,"cli_path"))
 						{
@@ -118,6 +131,11 @@ class clsRequest extends clsBase
 								$project["1"]["cli_path"]=["value"=>""];
 								return $project;
 							})(json_decode(mb_convert_encoding(file_get_contents(dirname(__FILE__)."/storage/json/project.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true))));
+						}
+						if (!property_exists($this->response["file"]->increments,"injector"))
+						{
+							$this->response["file"]->increments->injector=0;
+							$update=true;
 						}
 						if ($update) file_put_contents($file,json_encode($this->response["file"],JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
 						file_put_contents(dirname(__FILE__)."/modified.txt",$version);
@@ -173,6 +191,47 @@ class clsRequest extends clsBase
 		else
 		{
 			$file=dirname(__FILE__)."/storage/json/config.json";
+			if ($this->body->{"type"}!="mgt")
+				if (file_exists($file))
+				{
+					$config=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'));
+					$before=[];
+					$after=[];
+					foreach ($config->apps->user as $key=>$value)
+						if (property_exists($value,"injectors"))
+							foreach ($value->injectors as $injector) $before[]=["app"=>$value->id,"id"=>$injector->id,"directory"=>$injector->directory];
+					foreach ($config->apps->system as $key=>$value)
+						if (property_exists($value,"injectors"))
+							foreach ($value->injectors as $injector) $before[]=["app"=>$value->id,"id"=>$injector->id,"directory"=>$injector->directory];
+					foreach ($this->body->{"config"}->apps->user as $key=>$value)
+						if (property_exists($value,"injectors"))
+							foreach ($value->injectors as $injector) $after[]=["app"=>$value->id,"id"=>$injector->id,"directory"=>$injector->directory];
+					foreach ($this->body->{"config"}->apps->system as $key=>$value)
+						if (property_exists($value,"injectors"))
+							foreach ($value->injectors as $injector) $after[]=["app"=>$value->id,"id"=>$injector->id,"directory"=>$injector->directory];
+					$deletes=array_udiff($before,$after,function($a,$b){
+						return strcmp(serialize($a),serialize($b));
+					});
+					$creates=array_udiff($after,$before,function($a,$b){
+						return strcmp(serialize($a),serialize($b));
+					});
+					foreach ($deletes as $value)
+						if (!in_array($value["directory"],["api","static"]))
+							if ($value["directory"]!="")
+							{
+								$directory=dirname(__DIR__)."/".$value["directory"];
+								if (is_dir($directory) && !is_link($directory)) $this->cleanup($directory);
+							}
+					foreach ($creates as $value)
+						if (!in_array($value["directory"],["api","static"]))
+							if ($value["directory"]!="")
+							{
+								$directory=dirname(__DIR__)."/".$value["directory"];
+								mkdir($directory);
+								chmod($directory,0755);
+								file_put_contents($directory."/index.php",$this->assign(dirname(__FILE__)."/injector.txt",$value,true));
+							}
+				}
 			file_put_contents($file,json_encode($this->body->{"config"},JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
 			if ($this->body->{"type"}!="mgt")
 				if ($this->body->{"app"}!="")
@@ -200,6 +259,14 @@ class clsRequest extends clsBase
 	protected function DELETE()
 	{
 		$this->callrequesterror(400);
+	}
+	public function cleanup($arg_dir) {
+		if (is_dir($arg_dir) && !is_link($arg_dir))
+		{
+			array_map(array($this,"cleanup"),glob("{$arg_dir}/*",GLOB_ONLYDIR));
+			array_map("unlink",glob("{$arg_dir}/*"));
+			rmdir($arg_dir);
+		}
 	}
 }
 $cls_request=new clsRequest();
