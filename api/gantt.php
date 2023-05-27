@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "gantt.php"
-* Version: 1.3.0
+* Version: 1.3.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -453,7 +453,7 @@ class clsRequest extends clsBase
 				foreach ($source as $value)
 				{
 					$taskstart=new DateTime($value[$this->body["task"]["start"]]["value"],$timezone);
-					$taskend=new DateTime($value[$this->body["task"]["end"]]["value"],$timezone);
+					$taskend=($value[$this->body["task"]["end"]]["value"]!="")?new DateTime($value[$this->body["task"]["end"]]["value"],$timezone):clone $end;
 					switch ($this->fields[$this->body["task"]["start"]]["type"])
 					{
 						case "createdtime":
@@ -484,7 +484,11 @@ class clsRequest extends clsBase
 								break;
 						}
 					}
-					else $value["__taskspan"]=["value"=>1];
+					else
+					{
+						if ($taskstart->format("Y-m-d")==$taskend->format("Y-m-d")) $value["__taskspan"]=["value"=>1];
+						else $value["__taskspan"]=["value"=>1,"misaligned"=>true];
+					}
 					$res[$key][]=$value;
 				}
 			}
