@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.0
+* Version: 1.3.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -6847,7 +6847,7 @@ pd.modules={
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (fieldinfos[view.fields.value.field].tableid)
+											if ((view.fields.value.field in fieldinfos)?fieldinfos[view.fields.value.field].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
@@ -6886,7 +6886,7 @@ pd.modules={
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (view.fields.values.some((item) => fieldinfos[item.field].tableid))
+											if (view.fields.values.some((item) => (item.field in fieldinfos)?fieldinfos[item.field].tableid:false))
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
@@ -15482,13 +15482,18 @@ pd.modules={
 															action(0,() => {
 																if (update)
 																{
-																	pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:this.app.id,records:[record],notify:true},true)
-																	.then((resp) => {
-																		pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:this.app.id,id:record['__id'].value},true)
-																		.then((resp) => finish())
+																	this.actions.saving([record])
+																	.then((confirmed) => {
+																		if (confirmed) pd.loadstart();
+																		pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:this.app.id,records:[record],notify:true},true)
+																		.then((resp) => {
+																			pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:this.app.id,id:record['__id'].value},true)
+																			.then((resp) => finish())
+																			.catch((error) => pd.alert(error.message));
+																		})
 																		.catch((error) => pd.alert(error.message));
 																	})
-																	.catch((error) => pd.alert(error.message));
+																	.catch(() => pd.loadend());
 																}
 																else finish();
 															});

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.3.0
+* Version: 1.3.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -4721,7 +4721,7 @@ class panda_user_interface{
 													cell.append(task.css({width:(parseInt(view.fields.column.width)*task.taskspan).toString()+'px'}));
 													resizeObserver.observe(task);
 													callback(task,record);
-												})(pd.create('div').attr('taskspan',record.__taskspan.value))
+												})(pd.create('div').css({opacity:((record.__taskspan.misaligned)?0.5:'unset')}).attr('taskspan',record.__taskspan.value))
 											});
 										})(row.elm('.'+key),records[key]);
 									pd.record.set(row,{fields:fields},parsed);
