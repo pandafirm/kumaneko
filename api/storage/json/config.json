@@ -266,6 +266,11 @@
                                 "option": {
                                     "value": "Staff"
                                 }
+                            },
+                            {
+                                "option": {
+                                    "value": "Guest"
+                                }
                             }
                         ]
                     },

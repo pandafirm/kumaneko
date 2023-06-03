@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.3.1
+* Version: 1.3.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -109,28 +109,40 @@ class clsRequest extends clsBase
 						}
 						foreach ($this->response["file"]->apps->system as $key=>$value)
 						{
+							switch ($key)
+							{
+								case "project":
+									if (!property_exists($value->fields,"cli_path"))
+									{
+										$value->fields->cli_path=[
+											"id"=>"cli_path",
+											"type"=>"text",
+											"caption"=>"The path to your PHP CLI binary",
+											"required"=>false,
+											"nocaption"=>false,
+											"format"=>"text"
+										];
+										$value->layout[0]->rows[0]->fields[]="cli_path";
+										$update=true;
+										file_put_contents(dirname(__FILE__)."/storage/json/project.json",json_encode((function($project){
+											$project["1"]["cli_path"]=["value"=>""];
+											return $project;
+										})(json_decode(mb_convert_encoding(file_get_contents(dirname(__FILE__)."/storage/json/project.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true))));
+									}
+									break;
+								case "users":
+									if (!in_array("Guest",array_column(array_column($value->fields->authority->options,"option"),"value")))
+									{
+										$value->fields->authority->options[]=["option"=>["value"=>"Guest"]];
+										$update=true;
+									}
+									break;
+							}
 							if (!property_exists($value,"injectors"))
 							{
 								$value->injectors=[];
 								$update=true;
 							}
-						}
-						if (!property_exists($this->response["file"]->apps->system->project->fields,"cli_path"))
-						{
-							$this->response["file"]->apps->system->project->fields->cli_path=[
-								"id"=>"cli_path",
-								"type"=>"text",
-								"caption"=>"The path to your PHP CLI binary",
-								"required"=>false,
-								"nocaption"=>false,
-								"format"=>"text"
-							];
-							$this->response["file"]->apps->system->project->layout[0]->rows[0]->fields[]="cli_path";
-							$update=true;
-							file_put_contents(dirname(__FILE__)."/storage/json/project.json",json_encode((function($project){
-								$project["1"]["cli_path"]=["value"=>""];
-								return $project;
-							})(json_decode(mb_convert_encoding(file_get_contents(dirname(__FILE__)."/storage/json/project.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true))));
 						}
 						if (!property_exists($this->response["file"]->increments,"injector"))
 						{
