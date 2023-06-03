@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.3.1
+* Version: 1.3.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -2698,21 +2698,12 @@ class panda_user_interface{
 									if (element.cellIndex>rows-1)
 									{
 										element.elm('.pd-field-value').addclass('pd-activate');
-										[element.previousElementSibling,element.nextElementSibling].each((element,index) => {
-											if (element) element.elm('.pd-field-value').removeclass('pd-activate');
-										});
 										((element) => {
 											element.elm('.pd-matrix-head-caption').addclass('pd-activate');
-											[element.previousElementSibling,element.nextElementSibling].each((element,index) => {
-												if (element) element.elm('.pd-matrix-head-caption').removeclass('pd-activate');
-											});
 										})(table.elms('thead tr').last().elms('.pd-matrix-head-cell')[element.cellIndex]);
 										if (rows!=0)
 											((element) => {
 												element.elms('.pd-matrix-row-cell-head').last().elm('.pd-field-value').addclass('pd-activate');
-												[element.previousElementSibling,element.nextElementSibling].each((element,index) => {
-													if (element) element.elms('.pd-matrix-row-cell-head').last().elm('.pd-field-value').removeclass('pd-activate');
-												});
 											})(element.parentNode);
 									}
 									else table.elms('.pd-activate').each((element,index) => element.removeclass('pd-activate'));
@@ -2968,8 +2959,12 @@ class panda_user_interface{
 												type:view.chart.type
 											});
 										};
-										chart.off('show').on('show',(e) => build());
-										build();
+										if (!Array.isArray(source.records))
+										{
+											chart.off('show').on('show',(e) => build());
+											build();
+										}
+										else chart.empty().hide();
 									})(source.fields.slice(source.rows.length).map((item) => ({id:item.id,caption:((type=='timeseries')?item.id:item.caption)})));
 								}
 								else pd.alert(pd.constants.common.message.invalid.chart[pd.lang]);
@@ -4658,16 +4653,10 @@ class panda_user_interface{
 									{
 										((elements) => {
 											elements.each((element,index) => element.elm('.pd-matrix-head-caption').addclass('pd-activate'));
-											[elements.first().previousElementSibling,elements.last().nextElementSibling].each((element,index) => {
-												if (element) element.elm('.pd-matrix-head-caption').removeclass('pd-activate');
-											});
 										})(table.elms('thead tr').last().elms('.pd-matrix-head-cell').slice(element.cellIndex,element.cellIndex+span));
 										if (rows!=0)
 											((element) => {
 												element.elms('.pd-matrix-row-cell-head').last().elm('.pd-field-value').addclass('pd-activate');
-												[element.previousElementSibling,element.nextElementSibling].each((element,index) => {
-													if (element) element.elms('.pd-matrix-row-cell-head').last().elm('.pd-field-value').removeclass('pd-activate');
-												});
 											})(element.parentNode);
 									}
 									else table.elms('.pd-activate').each((element,index) => element.removeclass('pd-activate'));

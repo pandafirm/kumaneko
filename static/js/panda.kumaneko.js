@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.1
+* Version: 1.3.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -139,10 +139,10 @@ class panda_kumaneko{
 				var res='';
 				if (app in this.apps)
 				{
-					if (this.hasOwnProperty('setting')) res=this.apps[app].app.views.reduce((result,current) => (current.id==view)?current.query:result,'');
+					if (this.hasOwnProperty('setting')) res=this.apps[app].app.views.reduce((result,current) => (current.id==view)?(current.query??''):result,'');
 					else
 					{
-						if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].query;
+						if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].query??'';
 					}
 				}
 				return res;
@@ -151,10 +151,10 @@ class panda_kumaneko{
 				var res='';
 				if (app in this.apps)
 				{
-					if (this.hasOwnProperty('setting')) res=this.apps[app].app.views.reduce((result,current) => (current.id==view)?current.sort:result,'');
+					if (this.hasOwnProperty('setting')) res=this.apps[app].app.views.reduce((result,current) => (current.id==view)?(current.sort??''):result,'');
 					else
 					{
-						if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].sort;
+						if (view in this.apps[app].view.ui) res=this.apps[app].view.ui[view].sort??'';
 					}
 				}
 				return res;
@@ -800,6 +800,11 @@ class panda_kumaneko{
 							this.sort(this.config.apps.user,this.config.apps.sort).each((app,index) => {
 								this.apps[app.id]=new pd.modules.app(app,contents,tab,nav);
 								if (this.permit(app.permissions)=='denied') pd.elm('[nav-id=nav_'+app.id+']').hide();
+								/* event */
+								pd.event.on(app.id,'pd.view.query.add',(e) => {
+									if (pd.operator.authority.value=='Guest') e.query=((e.query)?'('+e.query+') and ':'')+'__creator in ("'+pd.operator.__id.value+'")';
+									return e;
+								});
 							});
 							for (var key in this.config.apps.system)
 								((app) => {
@@ -5795,8 +5800,14 @@ pd.modules={
 									.append(
 										pd.create('div').addclass('pd-container')
 										.append(
-											pd.create('div').addclass('pd-contents pd-kumaneko-drag').attr('field-type','form')
-											.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
+											((container,guide) => {
+												let observer=new MutationObserver(() => {
+													if (guide.visible()) container.addclass('pd-dragging');
+													else container.removeclass('pd-dragging');
+												});
+												observer.observe(guide,{attributes:true});
+												return container.append(guide);
+											})(pd.create('div').addclass('pd-contents pd-kumaneko-drag').attr('field-type','form'),pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
 										)
 									)
 								);
@@ -5843,9 +5854,6 @@ pd.modules={
 																else guide.setup(parent,references.first());
 															},
 															setup:(parent,reference) => {
-																if (!reference)
-																	if (!containers.includes(keep.fieldinfo.type))
-																		reference=(keep.element)?((element==keep.element.parentNode)?keep.element.nextElementSibling:null):null;
 																switch (parent.attr('field-type'))
 																{
 																	case 'box':
@@ -5916,7 +5924,10 @@ pd.modules={
 																{
 																	if (keep.scope && keep.scope!=element.fieldinfo.id) return;
 																}
-																if (!containers.concat(uniques).includes(keep.fieldinfo.type)) guide.setup(element,null);
+																if (!containers.concat(uniques).includes(keep.fieldinfo.type))
+																{
+																	if (element!=keep.guide.parentNode || !keep.guide.visible()) guide.setup(element,null);
+																}
 																else guide.setup(element.parentNode,element.nextElementSibling);
 																break;
 															default:
@@ -6830,19 +6841,19 @@ pd.modules={
 									switch (view.type)
 									{
 										case 'calendar':
-											if (fieldinfos[view.fields.date].tableid)
+											if ((view.fields.date in fieldinfos)?fieldinfos[view.fields.date].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (fieldinfos[view.fields.title].tableid)
+											if ((view.fields.title in fieldinfos)?fieldinfos[view.fields.title].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
 											break;
 										case 'crosstab':
-											if (fieldinfos[view.fields.column.field].tableid)
+											if ((view.fields.column.field in fieldinfos)?fieldinfos[view.fields.column.field].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
@@ -6852,36 +6863,36 @@ pd.modules={
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (view.fields.rows.some((item) => fieldinfos[item.field].tableid))
+											if (view.fields.rows.some((item) => (item.field in fieldinfos)?fieldinfos[item.field].tableid:false))
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
 											break;
 										case 'gantt':
-											if (fieldinfos[view.fields.task.start].tableid)
+											if ((view.fields.task.start in fieldinfos)?fieldinfos[view.fields.task.start].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (fieldinfos[view.fields.task.end].tableid)
+											if ((view.fields.task.end in fieldinfos)?fieldinfos[view.fields.task.end].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (fieldinfos[view.fields.task.title].tableid)
+											if ((view.fields.task.title in fieldinfos)?fieldinfos[view.fields.task.title].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (view.fields.rows.some((item) => fieldinfos[item.field].tableid))
+											if (view.fields.rows.some((item) => (item.field in fieldinfos)?fieldinfos[item.field].tableid:false))
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
 											break;
 										case 'timeseries':
-											if (fieldinfos[view.fields.column.field].tableid)
+											if ((view.fields.column.field in fieldinfos)?fieldinfos[view.fields.column.field].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
@@ -6893,52 +6904,48 @@ pd.modules={
 											}
 											break;
 										case 'kanban':
-											if (fieldinfos[view.fields.task.title].tableid)
+											if ((view.fields.task.title in fieldinfos)?fieldinfos[view.fields.task.title].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (view.fields.task.date)
-												if (fieldinfos[view.fields.task.date].tableid)
-												{
-													res.push('-&nbsp;'+view.name);
-													return PD_BREAK;
-												}
+											if ((view.fields.task.date in fieldinfos)?fieldinfos[view.fields.task.date].tableid:false)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
 											break;
 										case 'map':
-											if (fieldinfos[view.fields.lat].tableid)
+											if ((view.fields.lat in fieldinfos)?fieldinfos[view.fields.lat].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (fieldinfos[view.fields.lng].tableid)
+											if ((view.fields.lng in fieldinfos)?fieldinfos[view.fields.lng].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (fieldinfos[view.fields.title].tableid)
+											if ((view.fields.title in fieldinfos)?fieldinfos[view.fields.title].tableid:false)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if (view.fields.color)
-												if (fieldinfos[view.fields.color].tableid)
-												{
-													res.push('-&nbsp;'+view.name);
-													return PD_BREAK;
-												}
-											if (view.fields.address)
-												if (fieldinfos[view.fields.address].tableid)
-												{
-													res.push('-&nbsp;'+view.name);
-													return PD_BREAK;
-												}
-											if (view.fields.postalcode)
-												if (fieldinfos[view.fields.postalcode].tableid)
-												{
-													res.push('-&nbsp;'+view.name);
-													return PD_BREAK;
-												}
+											if ((view.fields.color in fieldinfos)?fieldinfos[view.fields.color].tableid:false)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if ((view.fields.address in fieldinfos)?fieldinfos[view.fields.address].tableid:false)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if ((view.fields.postalcode in fieldinfos)?fieldinfos[view.fields.postalcode].tableid:false)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
 											break;
 										default:
 											if (view.fields.some((item) => (item in fieldinfos)?fieldinfos[item].tableid:false))
@@ -11739,8 +11746,14 @@ pd.modules={
 											.append(
 												pd.create('main').addclass('pd-kumaneko-injector-body')
 												.append(
-													pd.create('div').addclass('pd-kumaneko-drag').attr('field-type','form')
-													.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
+													((container,guide) => {
+														let observer=new MutationObserver(() => {
+															if (guide.visible()) container.addclass('pd-dragging');
+															else container.removeclass('pd-dragging');
+														});
+														observer.observe(guide,{attributes:true});
+														return container.append(guide);
+													})(pd.create('div').addclass('pd-kumaneko-drag').attr('field-type','form'),pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
 												)
 											)
 											.append(
@@ -12830,7 +12843,7 @@ pd.modules={
 								return this.menus.list.lib.activate(res.css({width:'235px'}).attr('field-type','field'),fieldinfo,true);
 							},
 							init:() => {
-								this.menus.list.contents.elm('.pd-box').insertBefore(this.menus.list.contents.elm('.pd-kumaneko-drag-guide'),null);
+								this.menus.list.contents.elm('.pd-box').parentNode.insertBefore(this.menus.list.contents.elm('.pd-kumaneko-drag-guide'),null);
 								pd.children(this.menus.list.contents.elm('.pd-box')).each((element,index) => {
 									if (!element.hasclass('pd-kumaneko-drag-guide')) element.parentNode.removeChild(element);
 								});
@@ -13289,9 +13302,18 @@ pd.modules={
 											]
 										}).css({width:'100%'})))
 										.append(
-											pd.create('div').addclass('pd-contents pd-kumaneko-drag pd-kumaneko-'+menu.id).attr('field-type','form')
-											.append(pd.create('div').addclass('pd-box pd-flex').attr('field-type','table'))
-											.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
+											((container,contents,guide) => {
+												let observer=new MutationObserver(() => {
+													if (guide.visible()) container.addclass('pd-dragging');
+													else container.removeclass('pd-dragging');
+												});
+												observer.observe(guide,{attributes:true});
+												return container.append(contents).append(guide);
+											})(
+												pd.create('div').addclass('pd-contents pd-kumaneko-drag pd-kumaneko-'+menu.id).attr('field-type','form'),
+												pd.create('div').addclass('pd-box pd-flex').attr('field-type','table'),
+												pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide')
+											)
 										)
 									)
 								);
@@ -13310,8 +13332,6 @@ pd.modules={
 													((rect) => {
 														var guide={
 															setup:(parent,reference) => {
-																if (!reference)
-																	reference=(keep.element)?((element==keep.element.parentNode)?keep.element.nextElementSibling:null):null;
 																switch (parent.attr('field-type'))
 																{
 																	case 'table':
@@ -13327,11 +13347,8 @@ pd.modules={
 																if (e.pageX<rect.left+rect.width*0.5) guide.setup(element.parentNode,element);
 																else guide.setup(element.parentNode,element.nextElementSibling);
 																break;
-															case 'form':
-																guide.setup(element.elm('.pd-box'),null);
-																break;
 															case 'table':
-																guide.setup(element,null);
+																if (!keep.element) guide.setup(element,null);
 																break;
 															default:
 																if (!keep.element) keep.guide.addclass('pd-hidden');
@@ -15593,6 +15610,13 @@ pd.modules={
 					this.actions.saving(e.records).then((confirmed) => resolve(e)).catch(() => reject(e));
 				});
 			});
+			if (this.setting)
+			{
+				/* beforeunload event */
+				window.on('beforeunload',(e) => {
+					if (this.record.ui.body.hasAttribute('unsaved')) e.returnValue=pd.constants.common.message.confirm.changed[pd.lang];
+				});
+			}
 		}
 	},
 	manager:{
@@ -16050,8 +16074,14 @@ pd.modules={
 							.append(
 								pd.create('div').addclass('pd-container')
 								.append(
-									pd.create('div').addclass('pd-contents pd-kumaneko-drag').attr('field-type','form')
-									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
+									((container,guide) => {
+										let observer=new MutationObserver(() => {
+											if (guide.visible()) container.addclass('pd-dragging');
+											else container.removeclass('pd-dragging');
+										});
+										observer.observe(guide,{attributes:true});
+										return container.append(guide);
+									})(pd.create('div').addclass('pd-contents pd-kumaneko-drag').attr('field-type','form'),pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
 								)
 							)
 						);
@@ -16113,9 +16143,6 @@ pd.modules={
 														else guide.setup(parent,references.first());
 													},
 													setup:(parent,reference) => {
-														if (!reference)
-															if (keep.panelinfo.type=='panel')
-																reference=(keep.element)?((element==keep.element.parentNode)?keep.element.nextElementSibling:null):null;
 														switch (parent.attr('field-type'))
 														{
 															case 'form':
@@ -16142,7 +16169,10 @@ pd.modules={
 														else guide.setup(element.parentNode.parentNode,element.parentNode.nextElementSibling);
 														break;
 													case 'row':
-														if (keep.panelinfo.type=='panel') guide.setup(element,null);
+														if (keep.panelinfo.type=='panel')
+														{
+															if (element!=keep.guide.parentNode || !keep.guide.visible()) guide.setup(element,null);
+														}
 														else guide.setup(element.parentNode,element.nextElementSibling);
 														break;
 													default:
