@@ -5842,6 +5842,7 @@ pd.modules={
 										move:(e) => {
 											var element=document.elementFromPoint(e.pageX,e.pageY);
 											if (element)
+											{
 												if (element!=keep.guide)
 													((rect,containers,uniques) => {
 														var guide={
@@ -5935,6 +5936,11 @@ pd.modules={
 																break;
 														}
 													})(element.getBoundingClientRect(),['box','row','table'],['id','autonumber','creator','createdtime','modifier','modifiedtime','spacer']);
+											}
+											else
+											{
+												if (!keep.element) keep.guide.addclass('pd-hidden');
+											}
 										},
 										end:(e) => {
 											if (keep.guide.visible())
@@ -11835,6 +11841,7 @@ pd.modules={
 									move:(e) => {
 										var element=document.elementFromPoint(e.pageX,e.pageY);
 										if (element)
+										{
 											if (element!=keep.guide)
 												((rect) => {
 													var guide={
@@ -11856,6 +11863,11 @@ pd.modules={
 															break;
 													}
 												})(element.getBoundingClientRect());
+										}
+										else
+										{
+											if (!keep.element) keep.guide.addclass('pd-hidden');
+										}
 									},
 									end:(e) => {
 										if (keep.guide.visible())
@@ -13328,6 +13340,7 @@ pd.modules={
 										move:(e) => {
 											var element=document.elementFromPoint(e.pageX,e.pageY);
 											if (element)
+											{
 												if (element!=keep.guide)
 													((rect) => {
 														var guide={
@@ -13355,6 +13368,11 @@ pd.modules={
 																break;
 														}
 													})(element.getBoundingClientRect());
+											}
+											else
+											{
+												if (!keep.element) keep.guide.addclass('pd-hidden');
+											}
 										},
 										end:(e) => {
 											if (keep.guide.visible())
@@ -16125,6 +16143,7 @@ pd.modules={
 								move:(e) => {
 									var element=document.elementFromPoint(e.pageX,e.pageY);
 									if (element)
+									{
 										if (element!=keep.guide)
 											((rect) => {
 												var guide={
@@ -16180,6 +16199,11 @@ pd.modules={
 														break;
 												}
 											})(element.getBoundingClientRect());
+									}
+									else
+									{
+										if (!keep.element) keep.guide.addclass('pd-hidden');
+									}
 								},
 								end:(e) => {
 									if (keep.guide.visible())
