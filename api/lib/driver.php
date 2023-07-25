@@ -552,7 +552,7 @@ class clsDriver
 	/* filter */
 	public function filter($arg_source,$arg_fields,$arg_query,$arg_operator)
 	{
-		set_error_handler(function($arg_errno,$arg_errstr,$arg_errfile,$arg_errline,$arg_errcontext){throw new \ParseError();});
+		set_error_handler(function($arg_errno,$arg_errstr,$arg_errfile,$arg_errline){throw new \ParseError();});
 		$fields=$arg_fields;
 		$query=$arg_query;
 		$me=$this;

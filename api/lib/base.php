@@ -31,7 +31,7 @@ set_exception_handler(function($arg_exception){
 	}
 	exit(0);
 });
-set_error_handler(function($arg_errno,$arg_errstr,$arg_errfile,$arg_errline,$arg_errcontext){
+set_error_handler(function($arg_errno,$arg_errstr,$arg_errfile,$arg_errline){
 	header("HTTP/1.1 {$arg_errno} Fatal Error");
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode(["message"=>$arg_errstr,"error"=>["message"=>$arg_errstr]],JSON_UNESCAPED_UNICODE);
