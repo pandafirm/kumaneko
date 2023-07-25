@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.2
+* Version: 1.3.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -5560,18 +5560,33 @@ pd.modules={
 						this.get().then((resp) => {
 							if (!resp.error)
 								((app) => {
-									pd.request(pd.ui.baseuri()+'/config.php','GET',{},{verify:'verify'},true)
-									.then((resp) => {
-										if (resp.result=='ok')
-										{
-											pd.kumaneko.task('delete',this.queues).then(() => {
-												pd.event.call('0','pd.app.altered',{app:app});
-												this.hide();
-											});
-										}
-										else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
+									pd.event.call(app.id,'pd.settings.edit.submit',{
+										app:((app) => {
+											delete app.permissions;
+											delete app.customize;
+											delete app.actions;
+											delete app.injectors;
+											delete app.deduplications;
+											return app;
+										})(pd.extend({},app))
 									})
-									.catch((error) => pd.alert(error.message));
+									.then((param) => {
+										if (!param.error)
+										{
+											pd.request(pd.ui.baseuri()+'/config.php','GET',{},{verify:'verify'},true)
+											.then((resp) => {
+												if (resp.result=='ok')
+												{
+													pd.kumaneko.task('delete',this.queues).then(() => {
+														pd.event.call('0','pd.app.altered',{app:app});
+														this.hide();
+													});
+												}
+												else pd.alert(pd.constants.common.message.invalid.config.updating[pd.lang]);
+											})
+											.catch((error) => pd.alert(error.message));
+										}
+									});
 								})(resp.app);
 						});
 					})
