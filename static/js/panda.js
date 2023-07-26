@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.3.3
+* Version: 1.3.4
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3424,10 +3424,10 @@ HTMLElement.prototype.initialize=function(){
 		switch (this.attr('data-type'))
 		{
 			case 'alphabet':
-				this.attr('pattern','^[A-Za-z!"#$%&\'()*,\\-.\\/:;<>?@\\[\\\\\\]\\^_`{|}~ ]+$');
+				this.attr('pattern','^[A-Za-z!"#$%&\'\\(\\)*,\\-.\\/:;<>?@\\[\\]\\^_`\\{\\|\\}~ \\\\]+$');
 				break;
 			case 'alphanum':
-				this.attr('pattern','^[0-9A-Za-z!"#$%&\'()*,\\-.\\/:;<>?@\\[\\\\\\]\\^_`{|}~ ]+$');
+				this.attr('pattern','^[0-9A-Za-z!"#$%&\'\\(\\)*,\\-.\\/:;<>?@\\[\\]\\^_`\\{\\|\\}~ \\\\]+$');
 				break;
 			case 'color':
 				this.attr('pattern','^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$');
@@ -3444,7 +3444,7 @@ HTMLElement.prototype.initialize=function(){
 				this.attr('pattern','^[1-9][0-9]{3}[\\-.\\/]+([1-9]{1}|0[1-9]{1}|1[0-2]{1})[\\-.\\/]+([1-9]{1}|[0-2]{1}[0-9]{1}|3[01]{1}) [0-9]{1,2}:[0-9]{1,2}$');
 				break;
 			case 'mail':
-				this.attr('pattern','^[0-9A-Za-z]+[0-9A-Za-z.!#$%&\'*+\\-\\/?\\\\\\^_`{|}~]*@[0-9A-Za-z]+[0-9A-Za-z._-]*\\.[a-z]+$');
+				this.attr('pattern','^[0-9A-Za-z]+[0-9A-Za-z.!#$%&\'*+\\-\\/?\\^_`\\{\\|\\}~\\\\]*@[0-9A-Za-z]+[0-9A-Za-z._\\-]*\\.[a-z]+$');
 				break;
 			case 'number':
 				this.attr('pattern','^[0-9,\\-.]+$')
@@ -3473,7 +3473,7 @@ HTMLElement.prototype.initialize=function(){
 				this.attr('pattern','^[0-9]{1,2}:[0-9]{1,2}$');
 				break;
 			case 'url':
-				this.attr('pattern','^https?:\\/\\/[0-9A-Za-z!"#$%&\'()*,\\-.\\/:;<>?@\\[\\\\\\]\\^_`{|}~=]+$');
+				this.attr('pattern','^https?:\\/\\/[0-9A-Za-z!"#$%&\'\\(\\)*,\\-.\\/:;<>?@\\[\\]\\^_`\\{\\|\\}~=\\\\]+$');
 				break;
 			case 'urldirectory':
 				this.attr('pattern','^[0-9a-z\\-_.!\']+$');
