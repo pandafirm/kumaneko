@@ -1,12 +1,12 @@
 <?php
 /*
 * PandaFirm-PHP-Module "base.php"
-* Version: 1.3.4
+* Version: 1.3.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
 */
-session_start();
+if(session_status()!==PHP_SESSION_ACTIVE) session_start();
 class RequestError extends Exception{
 	public $response="";
 	public function __construct($arg_message,$arg_code=0)
