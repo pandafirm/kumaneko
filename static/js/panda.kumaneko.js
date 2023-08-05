@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.4
+* Version: 1.3.5
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3345,6 +3345,7 @@ pd.modules={
 										((cell) => {
 											cell.append(pd.create('span').addclass('pd-kumaneko-calendar-cell-guide').css(style).html(date.getDate().toString()));
 											if (view.fields.title in app.fields)
+											{
 												((fieldinfo,records) => {
 													fieldinfo.nocaption=true;
 													records.each((record,index) => {
@@ -3356,7 +3357,7 @@ pd.modules={
 																	.on('click',(e) => {
 																		pd.event.call(this.app.id,'pd.edit.call',{recordid:record['__id'].value});
 																	});
-																	pd.record.set(cell,app,this.actions.value(record,'view'));
+																	pd.record.set(cell,app,record);
 																	return cell;
 																})(pd.create('div').addclass('pd-scope pd-kumaneko-calendar-cell-item'))
 															);
@@ -3369,7 +3370,9 @@ pd.modules={
 															})()
 														});
 													});
+													if (fieldinfo.tableid) option.readonly=true;
 												})(pd.extend({},app.fields[view.fields.title]),records.filter((item) => new Date(item[view.fields.date].value).getDate()==date.getDate()));
+											}
 											if (!option.readonly)
 												cell.append(
 													pd.create('button').addclass('pd-icon pd-icon-add pd-kumaneko-calendar-cell-button').on('click',(e) => {
@@ -3421,7 +3424,15 @@ pd.modules={
 											.on('click',(e) => {
 												pd.event.call(this.app.id,'pd.edit.call',{recordid:record['__id'].value});
 											});
-											pd.record.set(task,app,this.actions.value(record,'view'));
+											switch (view.type)
+											{
+												case 'gantt':
+													pd.record.set(task,app,this.actions.value(record,'view'));
+													break;
+												case 'kanban':
+													pd.record.set(task,app,record);
+													break;
+											}
 										})({
 											id:app.id,
 											fields:(() => {
@@ -3448,7 +3459,7 @@ pd.modules={
 												.on('click',(e) => {
 													pd.event.call(this.app.id,'pd.edit.call',{recordid:item['__id'].value});
 												});
-												pd.record.set(balloon,app,this.actions.value(item,'view'));
+												pd.record.set(balloon,app,item);
 												return balloon;
 											})(pd.create('div').addclass('pd-scope pd-kumaneko-map-item'))
 										};
@@ -3522,10 +3533,36 @@ pd.modules={
 											.then((param) => {
 												if (!param.error)
 												{
-													this.view.build(this.app,view,param.records,{readonly:false,date:view.monitor.text()+'-01'});
-													if (typeof query==='string') view.query=query;
-													if (typeof sort==='string') view.sort=sort;
-													finish(param);
+													((fieldinfos) => {
+														param.records=param.records.reduce((result,current) => {
+															var res=this.actions.value(current,'view');
+															if (fieldinfos[view.fields.title].tableid)
+															{
+																result=result.concat(res[fieldinfos[view.fields.title].tableid].value.reduce((result,current) => {
+																	if (current[view.fields.date].value)
+																		if (new Date(current[view.fields.date].value).format('Y-m')==view.monitor.text())
+																		{
+																			current['__id']={value:res['__id'].value};
+																			result.push(current);
+																		}
+																	return result;
+																},[]));
+															}
+															else result.push(res);
+															return result;
+														},[])
+														this.view.build(
+															((tableid) => {
+																return ((tableid)?pd.extend({fields:pd.extend({},this.app.fields[tableid].fields)},this.app):this.app);
+															})(fieldinfos[view.fields.title].tableid),
+															view,
+															param.records,
+															{readonly:false,date:view.monitor.text()+'-01'}
+														);
+														if (typeof query==='string') view.query=query;
+														if (typeof sort==='string') view.sort=sort;
+														finish(param);
+													})(pd.ui.field.parallelize(this.app.fields));
 												}
 												else reject({});
 											});
@@ -3579,11 +3616,11 @@ pd.modules={
 										if (!deactivate) pd.loadstart();
 										this.fetch({
 											app:this.app.id,
-											query:((date,query) => {
+											query:((date,query,fieldinfos) => {
 												var res=(query)?['('+query+')']:[];
 												if (date)
 												{
-													switch (this.app.fields[view.fields.task.date].type)
+													switch (fieldinfos[view.fields.task.date].type)
 													{
 														case 'createdtime':
 														case 'datetime':
@@ -3597,7 +3634,7 @@ pd.modules={
 													}
 												}
 												return res.join(' and ');
-											})((view.fields.task.date)?view.monitor.text():null,overwrite),
+											})((view.fields.task.date)?view.monitor.text():null,overwrite,pd.ui.field.parallelize(this.app.fields)),
 											sort:(typeof sort==='string')?sort:view.sort,
 											offset:0,
 											limit:500
@@ -3608,6 +3645,7 @@ pd.modules={
 												records:view.fields.groups.reduce((result,current) => {
 													result.push({
 														caption:current.caption,
+														query:current.query,
 														width:view.fields.task.width,
 														records:records.filter((item) => pd.filter.scan(this.app,item,current.query))
 													});
@@ -3619,10 +3657,49 @@ pd.modules={
 											.then((param) => {
 												if (!param.error)
 												{
-													this.view.build(this.app,view,param.records);
-													if (typeof query==='string') view.query=query;
-													if (typeof sort==='string') view.sort=sort;
-													finish(param);
+													((fieldinfos) => {
+														param.records=param.records.reduce((result,current) => {
+															result.push(((date,group) => {
+																group.records=group.records.reduce((result,current) => {
+																	var res=this.actions.value(current,'view');
+																	if (fieldinfos[view.fields.task.title].tableid)
+																	{
+																		result=result.concat(pd.filter.scan(this.app,res,group.query)[fieldinfos[view.fields.task.title].tableid].value.reduce((result,current) => {
+																			if (date)
+																			{
+																				if (current[view.fields.task.date].value)
+																					if (new Date(current[view.fields.task.date].value).format('Y-m-d')==date)
+																					{
+																						current['__id']={value:res['__id'].value};
+																						result.push(current);
+																					}
+																			}
+																			else
+																			{
+																				current['__id']={value:res['__id'].value};
+																				result.push(current);
+																			}
+																			return result;
+																		},[]));
+																	}
+																	else result.push(res);
+																	return result;
+																},[]);
+																return group;
+															})((view.fields.task.date)?view.monitor.text():null,current));
+															return result;
+														},[])
+														this.view.build(
+															((tableid) => {
+																return ((tableid)?pd.extend({fields:pd.extend({},this.app.fields[tableid].fields)},this.app):this.app);
+															})(fieldinfos[view.fields.task.title].tableid),
+															view,
+															param.records
+														);
+														if (typeof query==='string') view.query=query;
+														if (typeof sort==='string') view.sort=sort;
+														finish(param);
+													})(pd.ui.field.parallelize(this.app.fields));
 												}
 												else reject({});
 											});
@@ -3650,10 +3727,35 @@ pd.modules={
 											.then((param) => {
 												if (!param.error)
 												{
-													this.view.build(this.app,view,param.records,{center:!view.tab.active});
-													if (typeof query==='string') view.query=query;
-													if (typeof sort==='string') view.sort=sort;
-													finish(param);
+													((fieldinfos) => {
+														param.records=param.records.reduce((result,current) => {
+															var res=this.actions.value(current,'view');
+															if (fieldinfos[view.fields.title].tableid)
+															{
+																result=result.concat(res[fieldinfos[view.fields.title].tableid].value.reduce((result,current) => {
+																	if (current[view.fields.lat].value && current[view.fields.lng].value)
+																	{
+																		current['__id']={value:res['__id'].value};
+																		result.push(current);
+																	}
+																	return result;
+																},[]));
+															}
+															else result.push(res);
+															return result;
+														},[])
+														this.view.build(
+															((tableid) => {
+																return ((tableid)?pd.extend({fields:pd.extend({},this.app.fields[tableid].fields)},this.app):this.app);
+															})(fieldinfos[view.fields.title].tableid),
+															view,
+															param.records,
+															{center:!view.tab.active}
+														);
+														if (typeof query==='string') view.query=query;
+														if (typeof sort==='string') view.sort=sort;
+														finish(param);
+													})(pd.ui.field.parallelize(this.app.fields));
 												}
 												else reject({});
 											});
@@ -6862,12 +6964,13 @@ pd.modules={
 									switch (view.type)
 									{
 										case 'calendar':
-											if ((view.fields.date in fieldinfos)?fieldinfos[view.fields.date].tableid:false)
-											{
-												res.push('-&nbsp;'+view.name);
-												return PD_BREAK;
-											}
-											if ((view.fields.title in fieldinfos)?fieldinfos[view.fields.title].tableid:false)
+											var tables=Array.from(new Set((() => {
+												var res=[];
+												if (view.fields.date) res.push(fieldinfos[view.fields.date].tableid);
+												if (view.fields.title) res.push(fieldinfos[view.fields.title].tableid);
+												return res;
+											})()));
+											if (tables.length>1)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
@@ -6925,47 +7028,41 @@ pd.modules={
 											}
 											break;
 										case 'kanban':
-											if ((view.fields.task.title in fieldinfos)?fieldinfos[view.fields.task.title].tableid:false)
-											{
-												res.push('-&nbsp;'+view.name);
-												return PD_BREAK;
-											}
-											if ((view.fields.task.date in fieldinfos)?fieldinfos[view.fields.task.date].tableid:false)
+											var tables=Array.from(new Set((() => {
+												var res=[];
+												if (view.fields.task.title) res.push(fieldinfos[view.fields.task.title].tableid);
+												if (view.fields.task.date) res.push(fieldinfos[view.fields.task.date].tableid);
+												return res;
+											})()));
+											if (tables.length>1)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
 											break;
 										case 'map':
-											if ((view.fields.lat in fieldinfos)?fieldinfos[view.fields.lat].tableid:false)
+											var tables=Array.from(new Set((() => {
+												var res=[];
+												if (view.fields.lat) res.push(fieldinfos[view.fields.lat].tableid);
+												if (view.fields.lng) res.push(fieldinfos[view.fields.lng].tableid);
+												if (view.fields.title) res.push(fieldinfos[view.fields.title].tableid);
+												if (view.fields.color) res.push(fieldinfos[view.fields.color].tableid);
+												if (view.fields.address) res.push(fieldinfos[view.fields.address].tableid);
+												if (view.fields.postalcode) res.push(fieldinfos[view.fields.postalcode].tableid);
+												return res;
+											})()));
+											if (tables.length>1)
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
 											}
-											if ((view.fields.lng in fieldinfos)?fieldinfos[view.fields.lng].tableid:false)
+											else
 											{
-												res.push('-&nbsp;'+view.name);
-												return PD_BREAK;
-											}
-											if ((view.fields.title in fieldinfos)?fieldinfos[view.fields.title].tableid:false)
-											{
-												res.push('-&nbsp;'+view.name);
-												return PD_BREAK;
-											}
-											if ((view.fields.color in fieldinfos)?fieldinfos[view.fields.color].tableid:false)
-											{
-												res.push('-&nbsp;'+view.name);
-												return PD_BREAK;
-											}
-											if ((view.fields.address in fieldinfos)?fieldinfos[view.fields.address].tableid:false)
-											{
-												res.push('-&nbsp;'+view.name);
-												return PD_BREAK;
-											}
-											if ((view.fields.postalcode in fieldinfos)?fieldinfos[view.fields.postalcode].tableid:false)
-											{
-												res.push('-&nbsp;'+view.name);
-												return PD_BREAK;
+												if (view.fields.handover && tables.flat())
+												{
+													res.push('-&nbsp;'+view.name);
+													return PD_BREAK;
+												}
 											}
 											break;
 										default:
@@ -12734,6 +12831,7 @@ pd.modules={
 				this.keep={
 					app:'',
 					fields:{},
+					parallelize:{},
 					nav:{},
 					view:{},
 					filter:{
@@ -13170,7 +13268,7 @@ pd.modules={
 													var res=(query)?['('+query+')']:[];
 													if (date)
 													{
-														switch (this.keep.fields[view.fields.task.date].type)
+														switch (this.keep.parallelize[view.fields.task.date].type)
 														{
 															case 'createdtime':
 															case 'datetime':
@@ -13195,7 +13293,37 @@ pd.modules={
 												result.push({
 													caption:current.caption,
 													width:view.fields.task.width,
-													records:resp.records.filter((item) => pd.filter.scan({fields:this.keep.fields},item,current.query))
+													records:((date,query) => {
+														return resp.records.reduce((result,current) => {
+															var res=pd.filter.scan({fields:this.keep.fields},pd.kumaneko.app.action(this.keep.app,current,'view'),query);
+															if (res)
+															{
+																if (this.keep.parallelize[view.fields.task.title].tableid)
+																{
+																	result=result.concat(res[this.keep.parallelize[view.fields.task.title].tableid].value.reduce((result,current) => {
+																		if (date)
+																		{
+																			if (view.fields.task.date in current)
+																				if (current[view.fields.task.date].value)
+																					if (new Date(current[view.fields.task.date].value).format('Y-m-d')==date)
+																					{
+																						current['__id']={value:res['__id'].value};
+																						result.push(current);
+																					}
+																		}
+																		else
+																		{
+																			current['__id']={value:res['__id'].value};
+																			result.push(current);
+																		}
+																		return result;
+																	},[]));
+																}
+																else result.push(res);
+															}
+															return result;
+														},[]);
+													})((view.fields.task.date)?new Date().format('Y-m-d'):null,current.query)
 												});
 												return result;
 											},[]),(task,record) => {
@@ -13203,7 +13331,7 @@ pd.modules={
 													fieldinfo.nocaption=true;
 													((app) => {
 														task.addclass('pd-scope').append(pd.ui.field.activate(pd.ui.field.create(fieldinfo).addclass('pd-picker pd-readonly').css({width:'100%'}),app));
-														pd.record.set(task,app,pd.kumaneko.app.action(app.id,record,'view'));
+														pd.record.set(task,app,record);
 													})({
 														id:this.keep.app,
 														fields:(() => {
@@ -13212,7 +13340,7 @@ pd.modules={
 															return res;
 														})()
 													});
-												})(pd.extend({},this.keep.fields[view.fields.task.title]));
+												})(pd.extend({},this.keep.parallelize[view.fields.task.title]));
 											});
 										})
 										.catch((error) => {
@@ -14706,8 +14834,24 @@ pd.modules={
 							res.error=((res,view) => {
 								if (!res.error)
 								{
-									view.fields.date=res.record.date.value;
-									view.fields.title=res.record.title.value;
+									var tables=((record) => {
+										return Array.from(new Set((() => {
+											var res=[];
+											if (record.date.value) res.push(this.keep.parallelize[record.date.value].tableid);
+											if (record.title.value) res.push(this.keep.parallelize[record.title.value].tableid);
+											return res;
+										})()));
+									})(res.record);
+									if (tables.length>1)
+									{
+										res.error=true;
+										pd.alert(pd.constants.view.message.invalid.calendar.table[pd.lang]);
+									}
+									else
+									{
+										view.fields.date=res.record.date.value;
+										view.fields.title=res.record.title.value;
+									}
 								}
 								return res.error;
 							})(pd.record.get(this.menus.calendar.contents,this.menus.calendar.app),res.view);
@@ -14778,7 +14922,21 @@ pd.modules={
 										res.error=true;
 										pd.alert(pd.constants.view.message.invalid.kanban.group[pd.lang]);
 									}
-									else view.fields=config.fields;
+									else
+									{
+										var tables=Array.from(new Set((() => {
+											var res=[];
+											if (config.fields.task.title) res.push(this.keep.parallelize[config.fields.task.title].tableid);
+											if (config.fields.task.date) res.push(this.keep.parallelize[config.fields.task.date].tableid);
+											return res;
+										})()));
+										if (tables.length>1)
+										{
+											res.error=true;
+											pd.alert(pd.constants.view.message.invalid.kanban.table[pd.lang]);
+										}
+										else view.fields=config.fields;
+									}
 								}
 								return res.error;
 							})(pd.record.get(this.menus.kanban.contents,this.menus.kanban.app),res.view);
@@ -14787,13 +14945,41 @@ pd.modules={
 							res.error=((res,view) => {
 								if (!res.error)
 								{
-									view.fields.lat=res.record.lat.value;
-									view.fields.lng=res.record.lng.value;
-									view.fields.title=res.record.title.value;
-									view.fields.color=res.record.color.value;
-									view.fields.address=res.record.address.value;
-									view.fields.postalcode=res.record.postalcode.value;
-									view.fields.handover=(res.record.handover.value.length!=0);
+									var tables=((record) => {
+										return Array.from(new Set((() => {
+											var res=[];
+											if (record.lat.value) res.push(this.keep.parallelize[record.lat.value].tableid);
+											if (record.lng.value) res.push(this.keep.parallelize[record.lng.value].tableid);
+											if (record.title.value) res.push(this.keep.parallelize[record.title.value].tableid);
+											if (record.color.value) res.push(this.keep.parallelize[record.color.value].tableid);
+											if (record.address.value) res.push(this.keep.parallelize[record.address.value].tableid);
+											if (record.postalcode.value) res.push(this.keep.parallelize[record.postalcode.value].tableid);
+											return res;
+										})()));
+									})(res.record);
+									if (tables.length>1)
+									{
+										res.error=true;
+										pd.alert(pd.constants.view.message.invalid.map.table[pd.lang]);
+									}
+									else
+									{
+										if (res.record.handover.value.length!=0 && tables.flat())
+										{
+											res.error=true;
+											pd.alert(pd.constants.view.message.invalid.map.handover[pd.lang]);
+										}
+										else
+										{
+											view.fields.lat=res.record.lat.value;
+											view.fields.lng=res.record.lng.value;
+											view.fields.title=res.record.title.value;
+											view.fields.color=res.record.color.value;
+											view.fields.address=res.record.address.value;
+											view.fields.postalcode=res.record.postalcode.value;
+											view.fields.handover=(res.record.handover.value.length!=0);
+										}
+									}
 								}
 								return res.error;
 							})(pd.record.get(this.menus.map.contents,this.menus.map.app),res.view);
@@ -14844,23 +15030,22 @@ pd.modules={
 								((elements) => {
 									elements.date.empty().append(pd.create('option'));
 									elements.title.empty().append(pd.create('option'));
-									for (var key in this.keep.fields)
+									for (var key in this.keep.parallelize)
 									{
-										switch (this.keep.fields[key].type)
+										switch (this.keep.parallelize[key].type)
 										{
 											case 'box':
 											case 'spacer':
-											case 'table':
 												break;
 											case 'date':
 											case 'datetime':
 											case 'createdtime':
 											case 'modifiedtime':
-												elements.date.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
-												elements.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+												elements.date.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
+												elements.title.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
 												break;
 											default:
-												elements.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+												elements.title.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
 												break;
 										}
 									}
@@ -15092,23 +15277,22 @@ pd.modules={
 							pd.record.set(this.menus.kanban.contents,this.menus.kanban.app,((elements) => {
 								elements.task.title.empty().append(pd.create('option'));
 								elements.task.date.empty().append(pd.create('option'));
-								for (var key in this.keep.fields)
+								for (var key in this.keep.parallelize)
 								{
-									switch (this.keep.fields[key].type)
+									switch (this.keep.parallelize[key].type)
 									{
 										case 'box':
 										case 'spacer':
-										case 'table':
 											break;
 										case 'createdtime':
 										case 'date':
 										case 'datetime':
 										case 'modifiedtime':
-											elements.task.date.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
-											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											elements.task.date.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
+											elements.task.title.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
 											break;
 										default:
-											elements.task.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											elements.task.title.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
 											break;
 									}
 								}
@@ -15164,34 +15348,34 @@ pd.modules={
 									elements.color.empty().append(pd.create('option'));
 									elements.address.empty().append(pd.create('option'));
 									elements.postalcode.empty().append(pd.create('option'));
-									for (var key in this.keep.fields)
+									for (var key in this.keep.parallelize)
 									{
-										switch (this.keep.fields[key].type)
+										switch (this.keep.parallelize[key].type)
 										{
 											case 'box':
 											case 'spacer':
-											case 'table':
 												break;
 											case 'color':
-												elements.color.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+												elements.color.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
 												break;
 											case 'number':
-												elements.lat.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
-												elements.lng.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
-												elements.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+												elements.lat.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
+												elements.lng.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
+												elements.title.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
 												break;
 											default:
-												elements.title.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
-												switch (this.keep.fields[key].type)
+												elements.title.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
+												switch (this.keep.parallelize[key].type)
 												{
 													case 'address':
-														elements.address.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+														elements.address.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
 														break;
 													case 'postalcode':
-														elements.postalcode.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+														elements.postalcode.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
 														break;
 													case 'text':
-														if (this.keep.fields[key].format=='text') elements.address.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+														if (this.keep.parallelize[key].format=='text')
+															elements.address.append(pd.create('option').attr('value',this.keep.parallelize[key].id).html(this.keep.parallelize[key].caption));
 														break;
 												}
 												break;
@@ -15271,6 +15455,7 @@ pd.modules={
 					/* setup properties */
 					this.keep.app=app;
 					this.keep.fields=fields;
+					this.keep.parallelize=pd.ui.field.parallelize(fields);
 					this.keep.nav={};
 					this.keep.view=pd.extend({},view);
 					/* modify elements */
@@ -18712,6 +18897,12 @@ pd.constants=pd.extend({
 		},
 		message:{
 			invalid:{
+				calendar:{
+					table:{
+						en:'If any field is designated as a field within a certain table, all other fields must also be within that same table',
+						ja:'いずれかのフィールドにテーブル内フィールドを指定した場合は、他の全てのフィールドを同じテーブル内フィールドにする必要があります'
+					}
+				},
 				gantt:{
 					width:{
 						en:'Column width must be at least 64px',
@@ -18722,6 +18913,10 @@ pd.constants=pd.extend({
 					group:{
 						en:'Please specify one or more groups',
 						ja:'グループを指定して下さい'
+					},
+					table:{
+						en:'If any field is designated as a field within a certain table, all other fields must also be within that same table',
+						ja:'いずれかのフィールドにテーブル内フィールドを指定した場合は、他の全てのフィールドを同じテーブル内フィールドにする必要があります'
 					},
 					width:{
 						en:'Column width must be at least 200px',
@@ -18736,6 +18931,16 @@ pd.constants=pd.extend({
 					unknown:{
 						en:'Unknown field found in this view',
 						ja:'不明なフィールドが配置されています'
+					}
+				},
+				map:{
+					handover:{
+						en:'If "Register the click location" is checked, you cannot specify fields in the table',
+						ja:'「クリック位置を登録する」にチェックが付いている場合は、テーブル内フィールドを指定出来ません'
+					},
+					table:{
+						en:'If any field is designated as a field within a certain table, all other fields must also be within that same table',
+						ja:'いずれかのフィールドにテーブル内フィールドを指定した場合は、他の全てのフィールドを同じテーブル内フィールドにする必要があります'
 					}
 				},
 				name:{
