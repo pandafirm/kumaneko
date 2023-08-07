@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.5
+* Version: 1.3.6
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -7058,7 +7058,7 @@ pd.modules={
 											}
 											else
 											{
-												if (view.fields.handover && tables.flat())
+												if (view.fields.handover && tables.join(''))
 												{
 													res.push('-&nbsp;'+view.name);
 													return PD_BREAK;
@@ -14964,7 +14964,7 @@ pd.modules={
 									}
 									else
 									{
-										if (res.record.handover.value.length!=0 && tables.flat())
+										if (res.record.handover.value.length!=0 && tables.join(''))
 										{
 											res.error=true;
 											pd.alert(pd.constants.view.message.invalid.map.handover[pd.lang]);
