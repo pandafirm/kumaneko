@@ -3550,7 +3550,7 @@ pd.modules={
 															}
 															else result.push(res);
 															return result;
-														},[])
+														},[]);
 														this.view.build(
 															((tableid) => {
 																return ((tableid)?pd.extend({fields:pd.extend({},this.app.fields[tableid].fields)},this.app):this.app);
@@ -3688,7 +3688,7 @@ pd.modules={
 																return group;
 															})((view.fields.task.date)?view.monitor.text():null,current));
 															return result;
-														},[])
+														},[]);
 														this.view.build(
 															((tableid) => {
 																return ((tableid)?pd.extend({fields:pd.extend({},this.app.fields[tableid].fields)},this.app):this.app);
@@ -3743,7 +3743,7 @@ pd.modules={
 															}
 															else result.push(res);
 															return result;
-														},[])
+														},[]);
 														this.view.build(
 															((tableid) => {
 																return ((tableid)?pd.extend({fields:pd.extend({},this.app.fields[tableid].fields)},this.app):this.app);
