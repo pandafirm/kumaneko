@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.6
+* Version: 1.3.7
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3345,7 +3345,6 @@ pd.modules={
 										((cell) => {
 											cell.append(pd.create('span').addclass('pd-kumaneko-calendar-cell-guide').css(style).html(date.getDate().toString()));
 											if (view.fields.title in app.fields)
-											{
 												((fieldinfo,records) => {
 													fieldinfo.nocaption=true;
 													records.each((record,index) => {
@@ -3370,9 +3369,7 @@ pd.modules={
 															})()
 														});
 													});
-													if (fieldinfo.tableid) option.readonly=true;
 												})(pd.extend({},app.fields[view.fields.title]),records.filter((item) => new Date(item[view.fields.date].value).getDate()==date.getDate()));
-											}
 											if (!option.readonly)
 												cell.append(
 													pd.create('button').addclass('pd-icon pd-icon-add pd-kumaneko-calendar-cell-button').on('click',(e) => {
@@ -3557,7 +3554,7 @@ pd.modules={
 															})(fieldinfos[view.fields.title].tableid),
 															view,
 															param.records,
-															{readonly:false,date:view.monitor.text()+'-01'}
+															{readonly:fieldinfos[view.fields.title].tableid,date:view.monitor.text()+'-01'}
 														);
 														if (typeof query==='string') view.query=query;
 														if (typeof sort==='string') view.sort=sort;
@@ -4347,7 +4344,24 @@ pd.modules={
 				});
 			});
 			pd.event.on(this.app.id,'pd.view.call',(e) => {
-				this.view.build(e.app,e.view,e.records,('option' in e)?e.option:{});
+				switch (e.view.type)
+				{
+					case 'calendar':
+					case 'kanban':
+					case 'map':
+						this.view.build(
+							((tableid) => {
+								return ((tableid)?pd.extend({fields:pd.extend({},e.app.fields[tableid].fields)},e.app):e.app);
+							})(pd.ui.field.parallelize(e.app.fields)[('task' in e.view.fields)?e.view.fields.task.title:e.view.fields.title].tableid),
+							e.view,
+							e.records,
+							('option' in e)?e.option:{}
+						);
+						break;
+					default:
+						this.view.build(e.app,e.view,e.records,('option' in e)?e.option:{});
+						break;
+				}
 				return e;
 			});
 		}

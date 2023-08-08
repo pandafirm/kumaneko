@@ -1,6 +1,6 @@
 /*
 * FileName "sw.js"
-* Version: 1.3.6
+* Version: 1.3.7
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
