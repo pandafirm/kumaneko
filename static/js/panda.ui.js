@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.3.7
+* Version: 1.3.8
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -936,19 +936,6 @@ class panda_filter extends panda_dialog{
 					rhs=rhs.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim().replace(/LOGIN_USER/g,pd.operator.__id.value.toString())).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
 					formula='CONTAIN_USER()';
 					break;
-				case 'dropdown':
-				case 'radio':
-					rhs=rhs.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim()).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
-					switch (operator)
-					{
-						case 'not in':
-							formula='!rhs.includes(lhs.value)';
-							break;
-						case 'in':
-							formula='rhs.includes(lhs.value)';
-							break;
-					}
-					break;
 				case 'createdtime':
 				case 'datetime':
 				case 'modifiedtime':
@@ -1004,6 +991,19 @@ class panda_filter extends panda_dialog{
 							}
 						}
 						else formula='lhs.value '+((operator=='=')?'==':operator)+' '+rhs;
+					}
+					break;
+				case 'dropdown':
+				case 'radio':
+					rhs=rhs.replace(/(^\(|\)$)/g,'').split(',').map((item) => item.trim()).shape((item) => (item)?item.replace(/(^["']{1}|["']{1}$)/g,''):PD_THROW);
+					switch (operator)
+					{
+						case 'not in':
+							formula='!rhs.includes(lhs.value)';
+							break;
+						case 'in':
+							formula='rhs.includes(lhs.value)';
+							break;
 					}
 					break;
 				case 'file':

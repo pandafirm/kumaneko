@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.3.7
+* Version: 1.3.8
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3256,17 +3256,6 @@ HTMLElement.prototype.clone=function(){
 	if (this.tagName.toLowerCase()=='select') clone.value=this.value;
 	else clone.elms('select').each((element,index) => element.value=this.elms('select')[index].value);
 	return clone;
-}
-HTMLElement.prototype.closest=function(selectors){
-	var search=(element) => {
-		if (!(element.parentNode instanceof HTMLDocument))
-		{
-			if (element.parentNode.matches(selectors)) return element.parentNode;
-			else return search(element.parentNode);
-		}
-		else return null;
-	};
-	return search(this);
 }
 HTMLElement.prototype.css=function(properties){
 	if (typeof properties!=='string')

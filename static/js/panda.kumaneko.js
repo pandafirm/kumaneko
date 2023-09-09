@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.7
+* Version: 1.3.8
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -62,7 +62,7 @@ class panda_kumaneko{
 				return (app in this.apps)?pd.record.get(container,this.apps[app].app,true).record:{};
 			},
 			set:(app,container,record) => {
-				if (app in this.apps) pd.record.set(container,this.apps[app].app,this.app.action(app,record,(container.closest('pd-view'))?'view':'record'));
+				if (app in this.apps) pd.record.set(container,this.apps[app].app,this.app.action(app,record,(container.closest('.pd-view'))?'view':'record'));
 			}
 		};
 		this.tab={
