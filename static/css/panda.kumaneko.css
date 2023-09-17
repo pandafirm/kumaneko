@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.3.8
+* Version: 1.3.9
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1706,6 +1706,7 @@ body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body .pd-field{
 	display:block;
+	padding-bottom:1em;
 	width:100% !important;
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body .pd-field .pd-field-value.pd-lookup input{
@@ -1727,6 +1728,9 @@ body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body .pd-table td:before{
 	border-top:none;
 	box-shadow:none;
+}
+body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body .pd-table .pd-table-button{
+	padding-bottom:1em;
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-header{
 	background-color:var(--injector-bg-color);

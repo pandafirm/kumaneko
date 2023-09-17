@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.8
+* Version: 1.3.9
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1197,7 +1197,7 @@ class panda_kumaneko_app{
 													user:[]
 												}
 												var assign=(target,record,row) => {
-													target=target.replace(/\r/g,'').replace(/\n/g,'<br>');
+													if (action.mail.format=='html') target=target.replace(/\r/g,'').replace(/\n/g,'<br>');
 													((handler) => {
 														for (var key in record) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],record[key]));
 														for (var key in row) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],row[key]));
@@ -1340,7 +1340,8 @@ class panda_kumaneko_app{
 																						});
 																					})(((fieldinfos[action.mail.attachment].tableid)?record:result));
 																			return res;
-																		})()
+																		})(),
+																		html:(action.mail.format=='html')
 																	});
 																});
 																return res;
@@ -6463,7 +6464,8 @@ pd.modules={
 																		bcc:'',
 																		attachment:'',
 																		subject:'',
-																		body:''
+																		body:'',
+																		format:'html'
 																	}
 																},res);
 																break;
@@ -7730,6 +7732,17 @@ pd.modules={
 							required:false,
 							nocaption:false
 						},
+						format:{
+							id:'format',
+							type:'radio',
+							caption:pd.constants.action.caption.mail.format[pd.lang],
+							required:true,
+							nocaption:false,
+							options:[
+								{option:{value:'html'}},
+								{option:{value:'text'}}
+							]
+						},
 						style:{
 							id:'style',
 							type:'table',
@@ -8583,7 +8596,13 @@ pd.modules={
 										res.elm('.pd-field-value').css({height:'15em'});
 										return res;
 									})(pd.ui.field.activate(pd.ui.field.create(this.app.fields.body).css({width:'100%'}),this.app))
-								);
+								)
+								.append(pd.ui.field.activate(((res) => {
+									res.elms('[data-name='+this.app.fields.format.id+']').each((element,index) => {
+										element.closest('label').elm('span').html(pd.constants.action.caption.mail.format[element.val()][pd.lang]);
+									});
+									return res;
+								})(pd.ui.field.create(this.app.fields.format).css({width:'100%'})),this.app));
 								return container;
 							})(pd.ui.box.create('',pd.constants.action.caption.mail[pd.lang]).addclass('pd-kumaneko-section'))
 						)
@@ -9040,6 +9059,7 @@ pd.modules={
 														res.action.mail.attachment=record.attachment.value;
 														res.action.mail.subject=record.subject.value;
 														res.action.mail.body=record.body.value;
+														res.action.mail.format=record.format.value;
 													}
 												}
 												else
@@ -9051,6 +9071,7 @@ pd.modules={
 													res.action.mail.attachment='';
 													res.action.mail.subject='';
 													res.action.mail.body='';
+													res.action.mail.format='html';
 												}
 											}
 											break;
@@ -9323,6 +9344,7 @@ pd.modules={
 									res['attachment']={value:this.keep.action.mail.attachment};
 									res['subject']={value:this.keep.action.mail.subject};
 									res['body']={value:this.keep.action.mail.body};
+									res['format']={value:this.keep.action.mail.format};
 									((elements) => {
 										elements.spreadsheet.val(this.keep.action.report.spreadsheet).closest('.pd-spreadsheet').elm('button').rebuild().then((sheets) => {
 											elements.tables.template.clearrows();
@@ -17460,6 +17482,18 @@ pd.constants=pd.extend({
 				from:{
 					en:'Sender EMail Address',
 					ja:'送信元メールアドレス'
+				},
+				format:{
+					en:'Content Type',
+					ja:'コンテンツ形式',
+					html:{
+						en:'HTML',
+						ja:'HTML形式'
+					},
+					text:{
+						en:'Plain Text',
+						ja:'テキスト形式'
+					}
 				},
 				subject:{
 					en:'Subject',

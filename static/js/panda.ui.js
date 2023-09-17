@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.3.8
+* Version: 1.3.9
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -2018,17 +2018,17 @@ class panda_record{
 									switch (fieldinfo.format)
 									{
 										case 'mail':
-											field.elm('.pd-guide').append(
+											field.elm('.pd-guide').empty().append(
 												pd.create('a').attr('href','mailto:'+value.value).html(value.value)
 											);
 											break;
 										case 'tel':
-											field.elm('.pd-guide').append(
+											field.elm('.pd-guide').empty().append(
 												pd.create('a').attr('href','tel:'+value.value).html(value.value)
 											);
 											break;
 										case 'url':
-											field.elm('.pd-guide').append(
+											field.elm('.pd-guide').empty().append(
 												pd.create('a').attr('href',value.value).attr('target','_blank').html(value.value)
 											);
 											break;
