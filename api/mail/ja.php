@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "mail/ja.php"
-* Version: 1.3.8
+* Version: 1.3.9
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -45,6 +45,7 @@ class clsRequest extends clsBase
 		if (!isset($this->body["subject"])) $this->callrequesterror(400);
 		if (!isset($this->body["body"])) $this->callrequesterror(400);
 		if (!isset($this->body["attachment"])) $this->callrequesterror(400);
+		if (!isset($this->body["html"])) $this->callrequesterror(400);
 		foreach ($this->project["smtp"]["value"] as $value)
 			if ($value["smtp_mail"]["value"]==$this->body["from"])
 			{
@@ -117,7 +118,7 @@ class clsRequest extends clsBase
 				foreach ($this->body["attachment"] as $attachment)
 					$mailer->AddStringAttachment(base64_decode($attachment["data"]),mb_encode_mimeheader(mb_convert_encoding($attachment["name"],"JIS","UTF-8")),"base64",$attachment["type"]);
 			}
-			$mailer->isHTML(true);
+			$mailer->isHTML($this->body["html"]);
 			$mailer->Subject=mb_encode_mimeheader($this->body["subject"]);
 			$mailer->Body=mb_convert_encoding($this->body["body"],"JIS","UTF-8");
 			$mailer->send();
