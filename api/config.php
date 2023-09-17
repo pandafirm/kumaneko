@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.3.8
+* Version: 1.3.9
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -75,6 +75,11 @@ class clsRequest extends clsBase
 										if (!property_exists($item,"rows"))
 										{
 											$item->rows=["del"=>[],"fill"=>[]];
+											$update=true;
+										}
+										if (!property_exists($item->mail,"format"))
+										{
+											$item->mail->format="html";
 											$update=true;
 										}
 										break;
