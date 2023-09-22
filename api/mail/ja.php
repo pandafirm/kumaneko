@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "mail/ja.php"
-* Version: 1.3.9
+* Version: 1.3.10
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -119,7 +119,7 @@ class clsRequest extends clsBase
 					$mailer->AddStringAttachment(base64_decode($attachment["data"]),mb_encode_mimeheader(mb_convert_encoding($attachment["name"],"JIS","UTF-8")),"base64",$attachment["type"]);
 			}
 			$mailer->isHTML($this->body["html"]);
-			$mailer->Subject=mb_encode_mimeheader($this->body["subject"]);
+			$mailer->Subject=mb_encode_mimeheader(mb_convert_encoding($this->body["subject"],"JIS","UTF-8"));
 			$mailer->Body=mb_convert_encoding($this->body["body"],"JIS","UTF-8");
 			$mailer->send();
 			header("HTTP/1.1 200 OK");
