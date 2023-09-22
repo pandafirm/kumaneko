@@ -1,6 +1,6 @@
 /*
 * PandaFirm Photo Editor "panda.freepei.js"
-* Version: 1.3.9
+* Version: 1.3.10
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -274,7 +274,7 @@ class freepei{
 				top:'0',
 				transform:'translate(-50%,-50%)',
 				width:this.properties.brush.brushweight.toString()+'px'
-			})
+			});
 			window.on('mousemove,touchmove',(e) => {
 				var pointer=(e.changedTouches)?e.changedTouches[0]:e;
 				this.brushcursor.css({left:pointer.clientX.toString()+'px',top:pointer.clientY.toString()+'px'});
@@ -292,7 +292,7 @@ class freepei{
 						})
 						.on('click',(e) => close());
 						return button.button;
-					})(new fp_button({type:'image',src:'https://freepei.net/image/del.svg'}))
+					})(new fp_button({type:'image',src:'https://freepei.net/image/del.svg'}));
 				}
 				else
 				{
@@ -304,7 +304,7 @@ class freepei{
 						top:'0',
 						width:'3em'
 					})
-					.attr('src','https://freepei.net/image/logo.svg')
+					.attr('src','https://freepei.net/image/logo.svg');
 				}
 			})()
 		)
@@ -544,7 +544,7 @@ class freepei{
 							}
 						).centering().focus();
 						this.operate(this.operations.move);
-					}
+					};
 					break;
 				}
 		});
@@ -577,7 +577,7 @@ class freepei{
 							}
 						}
 					).centering();
-				})(images[i])
+				})(images[i]);
 			this.operate(this.operations.move);
 		}
 		if (!pd.elm('.fpstyle_container'))
@@ -671,7 +671,7 @@ class freepei{
 									).centering().focus();
 									document.body.removeChild(file);
 									this.operate(this.operations.move);
-								}
+								};
 							});
 							reader.readAsDataURL(e.currentTarget.files[0]);
 						}
@@ -696,7 +696,7 @@ class freepei{
 					if (pointer.clientY<rect.top) return false;
 					if (pointer.clientY>rect.bottom) return false;
 					return true;
-				}
+				};
 				this.canvas.panel.parentNode.css({cursor:'none'})
 				.off('mousedown,touchstart').on('mousedown,touchstart',(e) => {
 					var pointer=(e.changedTouches)?e.changedTouches[0]:e;
@@ -808,7 +808,7 @@ class freepei{
 			})(parseInt(pd.elm('[name=fp_operation]:checked').attr('id').replace(/[^0-9]+/g,'')));
 		}
 	}
-};
+}
 class fp_button{
 	/* constructor */
 	constructor(args){
@@ -882,7 +882,7 @@ class fp_button{
 		if (this.isDisabled) this.button.addclass('disabled');
 		else this.button.removeclass('disabled');
 	}
-};
+}
 class fp_checkbox{
 	/* constructor */
 	constructor(args){
@@ -950,7 +950,7 @@ class fp_checkbox{
 			);
 		}
 	}
-};
+}
 class fp_input{
 	/* constructor */
 	constructor(label){
@@ -981,7 +981,7 @@ class fp_input{
 			);
 		}
 	}
-};
+}
 class fp_radio{
 	/* constructor */
 	constructor(args){
@@ -1050,7 +1050,7 @@ class fp_radio{
 			);
 		}
 	}
-};
+}
 class fp_range{
 	/* constructor */
 	constructor(min,max,step){
@@ -1093,7 +1093,7 @@ class fp_range{
 			);
 		}
 	}
-};
+}
 class fp_select{
 	/* constructor */
 	constructor(label){
@@ -1127,7 +1127,7 @@ class fp_select{
 			);
 		}
 	}
-};
+}
 class fp_panel{
 	/* constructor */
 	constructor(isDraggable,isResizable,isRotatable){
@@ -1551,7 +1551,7 @@ class fp_panel{
 			}
 			if ('radian' in args) this.properties.radian=args.radian;
 			this.move({left:0,top:0},{left:0,top:0});
-			this.resize(this.properties.bounds.width,this.properties.bounds.height)
+			this.resize(this.properties.bounds.width,this.properties.bounds.height);
 			this.panel.css({
 				transform:'rotate('+(this.properties.radian*180/Math.PI).toString()+'deg)',
 				transformOrigin:'left top'
@@ -1593,7 +1593,7 @@ class fp_panel{
 		var vec={
 			left:point.left-base.left,
 			top:point.top-base.top
-		}
+		};
 		return {left:matrix[0]*vec.left+matrix[1]*vec.top+matrix[2]+base.left,top:matrix[3]*vec.left+matrix[4]*vec.top+matrix[5]+base.top};
 	}
 	/* get the bounds on screen */
@@ -1676,7 +1676,7 @@ class fp_panel{
 		}
 		return this;
 	}
-};
+}
 class fp_layer extends fp_panel{
 	/* constructor */
 	constructor(type,name,visible){
@@ -1804,7 +1804,7 @@ class fp_layer extends fp_panel{
 						})
 						.on('mousedown,touchstart',(e) => {
 							if (e.currentTarget.css('user-select')=='text') e.stopPropagation();
-							else e.currentTarget.off('dblclick').on('dblclick',(e) => e.currentTarget.css({cursor:'text',userSelect:'text'}).focus())
+							else e.currentTarget.off('dblclick').on('dblclick',(e) => e.currentTarget.css({cursor:'text',userSelect:'text'}).focus());
 						})
 						.on('keydown',(e) => e.stopPropagation())
 						.on('keyup',(e) => this.resize());
@@ -1882,7 +1882,7 @@ class fp_layer extends fp_panel{
 				{left:point.left-offset.left-this.properties.bounds.left,top:point.top-offset.top-this.properties.bounds.top},
 				{left:0,top:0},
 				this.properties.radian*-1
-			)
+			);
 			if (!('drawing' in this.listeners)) this.listeners['drawing']=null;
 			if (!('drawend' in this.listeners)) this.listeners['drawend']=null;
 			if (this.listeners.drawing) window.off('mousemove,touchmove',this.listeners.drawing);
@@ -1893,7 +1893,7 @@ class fp_layer extends fp_panel{
 					{left:pointer.clientX-offset.left-this.properties.bounds.left,top:pointer.clientY-offset.top-this.properties.bounds.top},
 					{left:0,top:0},
 					this.properties.radian*-1
-				)
+				);
 				this.properties.draw[this.properties.draw.length-1].path.push({type:'l',x:point.left,y:point.top});
 				this.redraw(this.context);
 				this.callevent('fp.drawing',{sender:this,datas:this.screenbounds()});
@@ -1934,7 +1934,7 @@ class fp_layer extends fp_panel{
 			{left:point.left-offset.left-this.properties.bounds.left,top:point.top-offset.top-this.properties.bounds.top},
 			{left:0,top:0},
 			this.properties.radian*-1
-		)
+		);
 		switch (this.type)
 		{
 			case 'draw':
@@ -2268,7 +2268,7 @@ class fp_layer extends fp_panel{
 	}
 	/* convert to rgba string */
 	rgbastringify(args){
-		return 'rgba('+args.r+','+args.g+','+args.b+','+args.a+')'
+		return 'rgba('+args.r+','+args.g+','+args.b+','+args.a+')';
 	}
 	/* show */
 	show(){
@@ -2282,7 +2282,7 @@ class fp_layer extends fp_panel{
 		this.panel.hide();
 		return this;
 	}
-};
+}
 class fp_dialog extends fp_panel{
 	/* constructor */
 	constructor(title,width,disusebuttons){
@@ -2412,7 +2412,7 @@ class fp_dialog extends fp_panel{
 					e.stopPropagation();
 					e.preventDefault();
 				}))
-			)
+			);
 		}
 		else this.panel.css({padding:'2.25em 0 0 0'});
 		/* resize event */
@@ -2441,7 +2441,7 @@ class fp_dialog extends fp_panel{
 		this.panel.hide();
 		return this;
 	}
-};
+}
 class fp_colorpicker extends fp_dialog{
 	/* constructor */
 	constructor(){
@@ -2465,7 +2465,7 @@ class fp_colorpicker extends fp_dialog{
 			res.b=this.b.val();
 			res.a=this.a.val();
 			return res;
-		}
+		};
 		/* append elements */
 		this.contents
 		.append(
@@ -2506,7 +2506,7 @@ class fp_colorpicker extends fp_dialog{
 		this.panel.show();
 		this.r.focus();
 	}
-};
+}
 class fp_brushoption extends fp_dialog{
 	/* constructor */
 	constructor(){
@@ -2547,7 +2547,7 @@ class fp_brushoption extends fp_dialog{
 			res.brushweight=this.brushweight.val();
 			res.brushblur=this.brushblur.val();
 			return res;
-		}
+		};
 		/* append elements */
 		this.contents
 		.append(
@@ -2627,7 +2627,7 @@ class fp_brushoption extends fp_dialog{
 		this.redraw();
 		this.panel.show();
 	}
-};
+}
 class fp_effectoption extends fp_dialog{
 	/* constructor */
 	constructor(){
@@ -2751,7 +2751,7 @@ class fp_effectoption extends fp_dialog{
 			res.saturate=this.saturate.val();
 			res.sepia=this.sepia.val();
 			return res;
-		}
+		};
 		/* append elements */
 		this.contents
 		.append(this.parts.span.clone().css({width:'8em'}).html('blend mode'))
@@ -2931,7 +2931,7 @@ class fp_effectoption extends fp_dialog{
 		this.resetguide();
 		this.panel.show();
 	}
-};
+}
 class fp_figureoption extends fp_dialog{
 	/* constructor */
 	constructor(){
@@ -3026,7 +3026,7 @@ class fp_figureoption extends fp_dialog{
 			res.borderradius=(isNaN(this.borderradius.val()))?0:parseInt(this.borderradius.val());
 			res.borderweight=(isNaN(this.borderweight.val()))?0:parseInt(this.borderweight.val());
 			return res;
-		}
+		};
 		/* append elements */
 		this.contents
 		.append(
@@ -3129,7 +3129,7 @@ class fp_figureoption extends fp_dialog{
 		this.resetcolor('border',this.keep.bordercolor);
 		this.panel.show();
 	}
-};
+}
 class fp_fontoption extends fp_dialog{
 	/* constructor */
 	constructor(){
@@ -3408,7 +3408,7 @@ class fp_fontoption extends fp_dialog{
 			res.fontsize=(isNaN(this.fontsize.val()))?defaultstyle.fontSize:parseInt(this.fontsize.val());
 			res.lineheight=(isNaN(this.lineheight.val()))?defaultstyle.lineHeight:parseInt(this.lineheight.val());
 			return res;
-		}
+		};
 		/* append elements */
 		this.contents
 		.append(this.parts.span.clone().css({width:'8em'}).html('font family'))
@@ -3498,7 +3498,7 @@ class fp_fontoption extends fp_dialog{
 		this.resetcolor(this.keep.color);
 		this.panel.show();
 	}
-};
+}
 class fp_layeroption extends fp_dialog{
 	/* constructor */
 	constructor(){
@@ -3550,7 +3550,7 @@ class fp_layeroption extends fp_dialog{
 			.attr('src',src)
 			.on('mousedown,touchstart',(e) => e.stopPropagation());
 			return res;
-		}
+		};
 		this.layers[uuid]={
 			guide:this.parts.div.clone().addclass('fp_layerguide').css({
 				cursor:'grab',
@@ -3601,14 +3601,14 @@ class fp_layeroption extends fp_dialog{
 					if (layer.visible)
 					{
 						layer.leave().hide();
-						e.currentTarget.attr('src','https://freepei.net/image/unvisible.svg')
+						e.currentTarget.attr('src','https://freepei.net/image/unvisible.svg');
 						this.callevent('fp.unvisible',{sender:this,datas:{layer:layer}});
 					}
 					else
 					{
 						layer.show();
 						if (this.layers[uuid].guide.hasclass('active')) layer.focus();
-						e.currentTarget.attr('src','https://freepei.net/image/visible.svg')
+						e.currentTarget.attr('src','https://freepei.net/image/visible.svg');
 					}
 					e.stopPropagation();
 					e.preventDefault();
@@ -3709,7 +3709,7 @@ class fp_layeroption extends fp_dialog{
 		}
 		this.initialized=true;
 	}
-};
+}
 class fp_sizeoption extends fp_dialog{
 	/* constructor */
 	constructor(){
@@ -3758,7 +3758,7 @@ class fp_sizeoption extends fp_dialog{
 				else res.h=this.height.val();
 			}
 			return res;
-		}
+		};
 		/* append elements */
 		this.contents
 		.append(this.parts.span.clone().css({width:'5em'}).html('width'))
@@ -3777,5 +3777,5 @@ class fp_sizeoption extends fp_dialog{
 		this.panel.show();
 		this.width.focus();
 	}
-};
+}
 var fp=new freepei();

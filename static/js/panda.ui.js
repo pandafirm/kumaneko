@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.3.9
+* Version: 1.3.10
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -72,7 +72,7 @@ class panda_event{
 			else resolve(param);
 		});
 	}
-};
+}
 class panda_filter extends panda_dialog{
 	/* constructor */
 	constructor(){
@@ -214,7 +214,7 @@ class panda_filter extends panda_dialog{
 							field:query[1].trim(),
 							operator:query[2].trim(),
 							value:query[3].trim()
-						})
+						});
 					}
 				});
 				return res;
@@ -275,7 +275,7 @@ class panda_filter extends panda_dialog{
 						res.push({
 							field:sort[0],
 							order:(sort.length>1)?sort[1]:'asc'
-						})
+						});
 				});
 				return res;
 			}
@@ -528,7 +528,7 @@ class panda_filter extends panda_dialog{
 														break;
 												}
 											}
-										}
+										};
 										field.elms('input,select,textarea').each((element,index) => element.initialize());
 										cells.values.append(field);
 									})(((fieldinfo) => {
@@ -620,7 +620,7 @@ class panda_filter extends panda_dialog{
 														return pd.ui.field.activate(pd.ui.field.create(fieldinfo),((app) => {
 															app.fields[fieldinfo.id]=fieldinfo;
 															return app;
-														})({id:'filterbuilder',fields:{}})).addclass('pd-filterbuilder-date').hide()
+														})({id:'filterbuilder',fields:{}})).addclass('pd-filterbuilder-date').hide();
 													})(pd.extend({},fieldinfo))
 												)
 												.append(
@@ -888,7 +888,7 @@ class panda_filter extends panda_dialog{
 						})(this.record.user.filter((item) => item['__id'].value==value));
 					});
 					return res;
-				}
+				};
 				switch (operator)
 				{
 					case 'not in':
@@ -1091,7 +1091,7 @@ class panda_filter extends panda_dialog{
 		})(pd.ui.field.embed((parallelize)?pd.ui.field.parallelize(app.fields):pd.extend({},app.fields)));
 		return (queries.length==matches)?this.result:false;
 	}
-};
+}
 class panda_formula{
 	/* constructor */
 	constructor(){}
@@ -1534,7 +1534,7 @@ class panda_formula{
 		}
 		else return null;
 	}
-};
+}
 class panda_record{
 	/* constructor */
 	constructor(){}
@@ -2139,7 +2139,7 @@ class panda_record{
 			});
 		});
 	}
-};
+}
 class panda_recordpicker extends panda_dialog{
 	/* constructor */
 	constructor(multiselect){
@@ -2205,7 +2205,7 @@ class panda_recordpicker extends panda_dialog{
 		.append(this.input)
 		.append(this.next)
 		.append(this.prev)
-		.append(this.submit)
+		.append(this.submit);
 	}
 	/* search records */
 	search(callback){
@@ -2356,7 +2356,7 @@ class panda_recordpicker extends panda_dialog{
 				/* activation */
 				((app) => {
 					row.addclass('pd-scope').elms('.pd-field').each((element,index) => pd.ui.field.activate(element,app));
-				})({id:'recordpicker',fields:pd.extend({},this.fieldinfo.picker)})
+				})({id:'recordpicker',fields:pd.extend({},this.fieldinfo.picker)});
 			})
 		);
 		if (this.multiselect)
@@ -2373,7 +2373,7 @@ class panda_recordpicker extends panda_dialog{
 		/* show */
 		this.search(() => super.show());
 	}
-};
+}
 class panda_unifiedpicker extends panda_dialog{
 	/* constructor */
 	constructor(){
@@ -2554,7 +2554,7 @@ class panda_unifiedpicker extends panda_dialog{
 		.append(this.input)
 		.append(this.next)
 		.append(this.prev)
-		.append(this.submit)
+		.append(this.submit);
 	}
 	/* search records */
 	search(callback){
@@ -2629,7 +2629,7 @@ class panda_unifiedpicker extends panda_dialog{
 				menu.prepend=(menu.id==this.menus.users.id)?((Array.isArray(prepend))?prepend:[]):[];
 				menu.records=[];
 				menu.selection=[];
-			})(this.menus[key])
+			})(this.menus[key]);
 		/* setup handler */
 		if (this.handler) this.ok.off('click',this.handler);
 		this.handler=(e) => {
@@ -2645,7 +2645,7 @@ class panda_unifiedpicker extends panda_dialog{
 		/* show */
 		this.menus.users.tab.dispatchEvent(new MouseEvent('click'));
 	}
-};
+}
 class panda_user_interface{
 	/* constructor */
 	constructor(){
@@ -2846,7 +2846,7 @@ class panda_user_interface{
 																case 'pie':
 																	parsed.data.each((data,index) => {
 																		((value) => {
-																			if (value) res[index].push([columns[index]+' '+parsed.name,value])
+																			if (value) res[index].push([columns[index]+' '+parsed.name,value]);
 																		})(pd.isnumeric(data)?data:0);
 																	});
 																	break;
@@ -3291,7 +3291,7 @@ class panda_user_interface{
 												field.elm('.pd-guide').html(resp.record.name.value);
 									})
 									.catch((error) => pd.alert(error.message));
-								}
+								};
 								break;
 							case 'date':
 								field.elm('.pd-search').on('click',(e) => {
@@ -3425,7 +3425,7 @@ class panda_user_interface{
 													}
 													return res;
 												})(pd.create('span').addclass('pd-'+fieldinfo.type+'guide-label'))
-											)
+											);
 											return guide;
 										})(pd.create('span').addclass('pd-'+fieldinfo.type+'guide'))
 									);
@@ -3499,7 +3499,7 @@ class panda_user_interface{
 											)
 											.append(
 												pd.create('span').addclass('pd-fileguide-label').html(file.name).on('click',(e) => field.open(file))
-											)
+											);
 											return guide;
 										})(pd.create('span').addclass('pd-fileguide'))
 									);
@@ -3543,7 +3543,7 @@ class panda_user_interface{
 														.append(
 															((container) => {
 																lines.each((line,index) => container.append(pd.create('code').css({display:'block'}).text(line)));
-																return container
+																return container;
 															})(pd.create('pre'))
 														)
 														.popup('full','full',[{src:src,handler:download}]).show();
@@ -3624,7 +3624,7 @@ class panda_user_interface{
 												default:
 													download();
 													break;
-											};
+											}
 										}
 										catch(e){pd.alert(e.message);}
 									})
@@ -4155,7 +4155,7 @@ class panda_user_interface{
 										((unit) => {
 											if (fieldinfo.unitposition=='prefix') field.insertBefore(unit,field.elm('input'));
 											else field.insertBefore(unit,field.elm('input').nextElementSibling);
-										})(pd.create('span').addclass('pd-unit').html(fieldinfo.unit))
+										})(pd.create('span').addclass('pd-unit').html(fieldinfo.unit));
 									break;
 								case 'postalcode':
 									field
@@ -4710,7 +4710,7 @@ class panda_user_interface{
 													cell.append(task.css({width:(parseInt(view.fields.column.width)*task.taskspan).toString()+'px'}));
 													resizeObserver.observe(task);
 													callback(task,record);
-												})(pd.create('div').css({opacity:((record.__taskspan.misaligned)?0.5:'unset')}).attr('taskspan',record.__taskspan.value))
+												})(pd.create('div').css({opacity:((record.__taskspan.misaligned)?0.5:'unset')}).attr('taskspan',record.__taskspan.value));
 											});
 										})(row.elm('.'+key),records[key]);
 									pd.record.set(row,{fields:fields},parsed);
@@ -4903,7 +4903,7 @@ class panda_user_interface{
 										}
 									});
 								})(pd.record.get(container,app,true).record);
-							})(table.closest('[form-id=form_'+app.id+']'),app.fields[tableid].fields[element.attr('sort-id')],(element.attr('sort-order')=='asc')?'desc':'asc')
+							})(table.closest('[form-id=form_'+app.id+']'),app.fields[tableid].fields[element.attr('sort-id')],(element.attr('sort-order')=='asc')?'desc':'asc');
 						});
 					});
 				})(table.attr('field-id'));
@@ -5358,7 +5358,7 @@ class panda_user_interface{
 											}
 											else res.delrow(row);
 										});
-									})(pd.record.get(row.elm('[form-id=form_'+app.id+']'),app,true).record,res.insertrow(row))
+									})(pd.record.get(row.elm('[form-id=form_'+app.id+']'),app,true).record,res.insertrow(row));
 								});
 							});
 							/* activation */
@@ -5414,7 +5414,7 @@ class panda_user_interface{
 		datas.length.each((index) => buffer[index]=datas.charCodeAt(index));
 		return url.createObjectURL(new Blob([buffer.buffer],{type:type}));
 	}
-};
+}
 pd.event=new panda_event();
 pd.ready((pd) => {
 	pd.filter=new panda_filter();
