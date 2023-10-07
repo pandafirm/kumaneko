@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.10
+* Version: 1.3.11
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -715,6 +715,7 @@ class panda_kumaneko{
 								.catch((error) => pd.alert(error.message));
 							})
 						);
+						e.body.elm('[field-id=smtp]').template.elm('[field-id=smtp_mail]').elm('input').attr('single','single');
 					});
 					pd.event.on(this.config.apps.system.project.id,'pd.edit.submit',(e) => {
 						((smtps) => {
