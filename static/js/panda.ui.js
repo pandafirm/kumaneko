@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.3.11
+* Version: 1.4.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1799,6 +1799,7 @@ class panda_record{
 			if (container.elm('[data-type=createdtime]')) res.record['__createdtime']={value:container.elm('[data-type=createdtime]').val()};
 			if (container.elm('[data-type=modifier]')) res.record['__modifier']={value:((container.elm('[data-type=modifier]').val())?JSON.parse(container.elm('[data-type=modifier]').val()):[])};
 			if (container.elm('[data-type=modifiedtime]')) res.record['__modifiedtime']={value:container.elm('[data-type=modifiedtime]').val()};
+			if (container.hasAttribute('row-cnd')) res.record['__row_cnd']={value:container.attr('row-cnd')};
 			if (container.hasAttribute('row-rel')) res.record['__row_rel']={value:container.attr('row-rel')};
 			if (container.hasAttribute('row-uid')) res.record['__row_uid']={value:container.attr('row-uid')};
 		}
@@ -2061,7 +2062,7 @@ class panda_record{
 									{
 										field.tr.each((element,index) => {
 											if (value.value.length>index)
-												assign(element,fieldinfo,((values) => {
+												assign(element.removeattr('row-cnd'),fieldinfo,((values) => {
 													if (value.disabled)
 														for (var key in values) values[key].disabled=true;
 													return values;
@@ -2075,7 +2076,7 @@ class panda_record{
 											})(value.value[i]),(unassinged) => res=res.concat(unassinged));
 										field.tr.slice(value.value.length).each((element,index) => field.delrow(element));
 									}
-									if (field.tr.length==0)
+									if (field.tr.filter((item) => item.attr('row-cnd')!='skip').length==0)
 										((row) => {
 											if (value.disabled)
 												assign(row,fieldinfo,((values) => {
@@ -2083,6 +2084,7 @@ class panda_record{
 													return values;
 												})(this.get(row,fieldinfo,true).record),(unassinged) => res=res.concat(unassinged));
 										})(field.addrow());
+									field.tr.filter((item) => (item.attr('row-cnd')!='skip')?item.removeattr('row-cnd'):false).last().attr('row-cnd','last');
 									break;
 								default:
 									field.elm('input').val(value.value);
@@ -2104,6 +2106,8 @@ class panda_record{
 					if (container.elm('[data-type=modifier]')) container.elm('[data-type=modifier]').val(JSON.stringify(record['__modifier'].value));
 				if ('__modifiedtime' in record)
 					if (container.elm('[data-type=modifiedtime]')) container.elm('[data-type=modifiedtime]').val(record['__modifiedtime'].value);
+				if ('__row_cnd' in record)
+					container.attr('row-cnd',record['__row_cnd'].value);
 				if ('__row_rel' in record)
 					container.attr('row-rel',record['__row_rel'].value);
 				if ('__row_uid' in record)
@@ -5152,7 +5156,10 @@ class panda_user_interface{
 							e.stopPropagation();
 							e.preventDefault();
 						};
-						res
+						((res) => {
+							if (view.skip) res.addclass('pd-skip');
+							return res;
+						})(res)
 						.append(pd.create('thead').append(pd.create('tr').addclass('pd-view-head')))
 						.append(pd.create('tbody').append(pd.create('tr').addclass('pd-view-row')));
 						res.elm('thead tr').append(pd.create('th').addclass('pd-view-head-cell pd-view-button pd-view-guide'+((['linkage','list'].includes(view.type))?' pd-readonly':'')));

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.3.11
+* Version: 1.4.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -6262,6 +6262,9 @@ pd.modules={
 																	postalcode:'',
 																	handover:false
 																};
+																break;
+															case 'list':
+																res.skip=false;
 																break;
 														}
 														return res;
@@ -13492,7 +13495,20 @@ pd.modules={
 											options:[
 												{option:{value:'readonly'}}
 											]
-										}).css({width:'100%'})))
+										})))
+										.append(((res) => {
+											res.elm('input').closest('label').elm('span').html(pd.constants.view.caption.list.skip[pd.lang]);
+											return res;
+										})(pd.ui.field.create({
+											id:'skip',
+											type:'checkbox',
+											caption:'',
+											required:false,
+											nocaption:true,
+											options:[
+												{option:{value:'skip'}}
+											]
+										})))
 										.append(
 											((container,contents,guide) => {
 												let observer=new MutationObserver(() => {
@@ -15037,7 +15053,11 @@ pd.modules={
 									pd.alert(pd.constants.view.message.invalid.list.unknown[pd.lang]);
 								}
 							}
-							if (!res.error) res.view.type=this.menus.list.contents.elm('[field-id=readonly]').elm('input').checked?'list':'edit';
+							if (!res.error)
+							{
+								res.view.type=this.menus.list.contents.elm('[field-id=readonly]').elm('input').checked?'list':'edit';
+								res.view.skip=this.menus.list.contents.elm('[field-id=skip]').elm('input').checked;
+							}
 							break;
 					}
 					resolve(res);
@@ -15466,6 +15486,7 @@ pd.modules={
 								this.menus.list.lib.remodel();
 							})(this.keep.view.fields);
 							this.menus.list.contents.elm('[field-id=readonly]').elm('input').checked=(this.keep.view.type=='list');
+							this.menus.list.contents.elm('[field-id=skip]').elm('input').checked=this.keep.view.skip;
 							for (var key in this.menus)
 							{
 								if (key=='list') this.menus[key].contents.show();
@@ -18893,6 +18914,10 @@ pd.constants=pd.extend({
 				readonly:{
 					en:'Read-only',
 					ja:'読み取り専用'
+				},
+				skip:{
+					en:'Hide table rows that do not match the display conditions',
+					ja:'表示する条件に一致しないテーブル行は非表示にする'
 				}
 			},
 			map:{
