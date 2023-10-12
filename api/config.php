@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.3.11
+* Version: 1.4.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -106,6 +106,20 @@ class clsRequest extends clsBase
 								}
 								return $item;
 							},$value->linkages);
+							$value->views=array_map(function($item) use (&$update){
+								switch ($item->type)
+								{
+									case "edit":
+									case "list":
+										if (!property_exists($item,"skip"))
+										{
+											$item->skip=false;
+											$update=true;
+										}
+										break;
+								}
+								return $item;
+							},$value->views);
 							if (!property_exists($value,"injectors"))
 							{
 								$value->injectors=[];
