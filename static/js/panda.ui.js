@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.4.0
+* Version: 1.4.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -4043,6 +4043,16 @@ class panda_user_interface{
 									});
 								});
 								break;
+							case 'time':
+								field.elm('.pd-hour').elm('select').on('change',(e) => {
+									if (!e.currentTarget.val()) field.elm('.pd-minute').elm('select').val('');
+									call('pd.change.'+fieldinfo.id);
+								});
+								field.elm('.pd-minute').elm('select').on('change',(e) => {
+									if (!e.currentTarget.val()) field.elm('.pd-hour').elm('select').val('');
+									call('pd.change.'+fieldinfo.id);
+								});
+								break;
 						}
 						field.elms('input,select,textarea').each((element,index) => {
 							switch (fieldinfo.type)
@@ -4056,6 +4066,7 @@ class panda_user_interface{
 								case 'lookup':
 								case 'postalcode':
 								case 'radio':
+								case 'time':
 								case 'user':
 									break;
 								default:
