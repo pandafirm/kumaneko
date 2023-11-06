@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.4.1
+* Version: 1.4.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -999,10 +999,10 @@ class panda_filter extends panda_dialog{
 					switch (operator)
 					{
 						case 'not in':
-							formula='!rhs.includes(lhs.value)';
+							formula='(rhs.length==0 && !lhs.value)?false:!rhs.includes(lhs.value)';
 							break;
 						case 'in':
-							formula='rhs.includes(lhs.value)';
+							formula='(rhs.length==0 && !lhs.value)?true:rhs.includes(lhs.value)';
 							break;
 					}
 					break;
@@ -1479,7 +1479,7 @@ class panda_formula{
 						res=((pd.isnumeric(answer))?parseFloat(answer):'');
 						break;
 					default:
-						res=(answer)?((Array.isArray(answer))?answer.join(','):answer.toString()):'';
+						res=((Array.isArray(answer))?answer.join(','):STR(answer));
 						break;
 				}
 				return res;
@@ -4207,7 +4207,11 @@ class panda_user_interface{
 									break;
 								case 'textarea':
 									field.append(((res) => {
-										if (fieldinfo.lines) res.css({height:'calc('+(parseFloat(fieldinfo.lines)*1.5).toString()+'em + 2px)'});
+										if (fieldinfo.lines)
+											res.css({
+												minHeight:'calc('+(parseFloat(fieldinfo.lines)*1.5).toString()+'em + 2px)',
+												height:'calc('+(parseFloat(fieldinfo.lines)*1.5).toString()+'em + 2px)'
+											});
 										return res;
 									})(pd.create('textarea')));
 									break;

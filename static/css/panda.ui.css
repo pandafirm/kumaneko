@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.ui.css"
-* Version: 1.4.1
+* Version: 1.4.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -145,8 +145,8 @@
 }
 .pd-field .pd-field-value textarea{
 	height:100%;
-	min-height:3em;
-	resize:none;
+	min-height:calc(3em + 2px);
+	resize:vertical;
 }
 .pd-field .pd-field-value .pd-guide{
 	display:none;

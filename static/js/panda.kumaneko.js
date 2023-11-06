@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.4.1
+* Version: 1.4.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1639,7 +1639,7 @@ class panda_kumaneko_app{
 																	res=pd.extend((!('search' in res))?{lookup:true,search:''}:{lookup:true},res);
 																	break;
 															}
-															return res;
+															return pd.extend({type:fieldinfo.type},res);
 														};
 														var finish=() => {
 															increments.progress.record++;
