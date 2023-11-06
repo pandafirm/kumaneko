@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "mail/en.php"
-* Version: 1.4.1
+* Version: 1.4.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -61,6 +61,8 @@ class clsRequest extends clsBase
 		try
 		{
 			$mailer=new PHPMailer(true);
+			$mailer->CharSet="UTF-8";
+			$mailer->Encoding="base64";
 			$mailer->isSMTP();
 			$mailer->Host=$this->smtp["smtp_host"]["value"];
 			$mailer->SMTPAuth=true;
@@ -94,7 +96,7 @@ class clsRequest extends clsBase
 					break;
 			}
 			$mailer->Port=$this->smtp["smtp_port"]["value"];
-			if ($this->smtp["smtp_sender"]["value"]!="") $mailer->setFrom($this->body["from"],mb_encode_mimeheader($this->smtp["smtp_sender"]["value"]));
+			if ($this->smtp["smtp_sender"]["value"]!="") $mailer->setFrom($this->body["from"],$this->smtp["smtp_sender"]["value"]);
 			else $mailer->setFrom($this->body["from"]);
 			$this->body["to"]=explode(",",$this->body["to"]);
 			foreach ($this->body["to"] as $to) if ($to!="") $mailer->addAddress($to);
@@ -111,10 +113,10 @@ class clsRequest extends clsBase
 			if (is_array($this->body["attachment"]))
 			{
 				foreach ($this->body["attachment"] as $attachment)
-					$mailer->AddStringAttachment(base64_decode($attachment["data"]),mb_encode_mimeheader($attachment["name"]),"base64",$attachment["type"]);
+					$mailer->AddStringAttachment(base64_decode($attachment["data"]),$attachment["name"],"base64",$attachment["type"]);
 			}
 			$mailer->isHTML($this->body["html"]);
-			$mailer->Subject=mb_encode_mimeheader($this->body["subject"]);
+			$mailer->Subject=$this->body["subject"];
 			$mailer->Body=$this->body["body"];
 			$mailer->send();
 			header("HTTP/1.1 200 OK");
