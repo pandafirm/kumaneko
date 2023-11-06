@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 1.4.1
+* Version: 1.4.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -652,6 +652,14 @@ class clsDriver
 								else $query=preg_replace("/{$key}/u",'$record["'.$key.'"]["value"]',$query);
 							}
 							break;
+						case "dropdown":
+							$query=preg_replace(
+								"/({$key})[ ]+(not in|in)[ ]+\(\)/u",
+								'$1 $2 ("")',
+								$query
+							);
+							$query=preg_replace("/(^|[ \(]{1}){$key}/u",'$1$record["'.$key.'"]["value"]',$query);
+							break;
 						case "file":
 							$query=preg_replace(
 								"/{$key}[ ]+(not like|like)[ ]+(\"[^\"]*\"|'[^']*')/u",
@@ -824,6 +832,18 @@ class clsDriver
 												);
 											}
 										}
+										break;
+									case "dropdown":
+										$query=preg_replace(
+											"/({$key})[ ]+(not in|in)[ ]+\(\)/u",
+											'$1 $2 ("")',
+											$query
+										);
+										$query=preg_replace(
+											"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
+											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1($2);})',
+											$query
+										);
 										break;
 									case "file":
 										$replacement='$me->FILTER_FILE($row["'.$key.'"]["value"],"$1",$2)';
