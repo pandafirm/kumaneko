@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.4.2
+* Version: 1.5.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -300,6 +300,8 @@ class panda_kumaneko{
 					this.importmanager=new pd.modules.manager.import();
 					/* build notificationmanager */
 					this.notificationmanager=new pd.modules.manager.notification();
+					/* build storagemanager */
+					this.storagemanager=new pd.modules.manager.storage();
 					/* event */
 					apps.map((item) => item.id).each((id,index) => {
 						pd.event.on(id,'pd.app.activate',(e) => {
@@ -650,30 +652,7 @@ class panda_kumaneko{
 						)
 						.append(
 							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.management.storage[pd.lang]).on('click',(e) => {
-								pd.confirm(pd.constants.common.message.confirm.cleanup[pd.lang],() => {
-									pd.request(pd.ui.baseuri()+'/cleanup.php','POST',{},{})
-									.then((resp) => {
-										if (resp.result=='ok')
-										{
-											var verify=() => {
-												pd.request(pd.ui.baseuri()+'/cleanup.php','GET',{},{verify:'verify'},true)
-												.then((resp) => {
-													if (resp.result=='ok')
-													{
-														pd.loadend();
-														pd.alert(pd.constants.common.message.finished.cleanup[pd.lang]);
-													}
-													else setTimeout(() => verify(),1000);
-												})
-												.catch((error) => pd.alert(error.message));
-											};
-											pd.loadstart();
-											setTimeout(() => verify(),1000);
-										}
-										else pd.alert(pd.constants.common.message.invalid.cleanup.processing[pd.lang]);
-									})
-									.catch((error) => pd.alert(error.message));
-								});
+								pd.kumaneko.storagemanager.show();
 							})
 						)
 						.append(
@@ -17109,6 +17088,170 @@ pd.modules={
 					.then((resp) => {})
 					.catch((error) => pd.alert(error.message));
 			}
+		},
+		storage:class extends panda_dialog{
+			/* constructor */
+			constructor(){
+				super(999993,false,true);
+				/* modify elements */
+				this.header.css({paddingLeft:'0.25em',textAlign:'left'}).html('Storage Management');
+				this.container.addclass('pd-kumaneko-main').css({
+					height:'25em',
+					width:'30em'
+				});
+				this.contents.addclass('pd-kumaneko-storagemanager').css({
+					padding:'0'
+				})
+				.append(
+					((res) => {
+						res.elm('.pd-field-value')
+						.append(
+							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.storage.caption.button.backup[pd.lang]).on('click',(e) => {
+								pd.confirm(pd.constants.storage.message.confirm.backup[pd.lang],() => {
+									pd.request(pd.ui.baseuri()+'/backup.php','POST',{},{})
+									.then((resp) => {
+										if (resp.result=='ok')
+										{
+											var verify=() => {
+												pd.request(pd.ui.baseuri()+'/backup.php','GET',{},{verify:'verify'},true)
+												.then((resp) => {
+													if (resp.result=='ok')
+													{
+														pd.loadend();
+														pd.alert(pd.constants.storage.message.finished.backup[pd.lang],() => this.set().then(() => {}));
+													}
+													else setTimeout(() => verify(),1000);
+												})
+												.catch((error) => pd.alert(error.message));
+											};
+											pd.loadstart();
+											setTimeout(() => verify(),1000);
+										}
+										else pd.alert(pd.constants.storage.message.invalid.processing[pd.lang]);
+									})
+									.catch((error) => pd.alert(error.message));
+								});
+							})
+						);
+						return res;
+					})(pd.ui.field.create({
+						id:'backup',
+						type:'spacer',
+						caption:pd.constants.storage.caption.backup[pd.lang],
+						required:false,
+						nocaption:false
+					}).css({width:'100%'}).css({width:'50%'}))
+				)
+				.append(
+					((res) => {
+						res.elm('.pd-field-value')
+						.append(
+							pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.storage.caption.button.cleanup[pd.lang]).on('click',(e) => {
+								pd.confirm(pd.constants.storage.message.confirm.cleanup[pd.lang],() => {
+									pd.request(pd.ui.baseuri()+'/cleanup.php','POST',{},{})
+									.then((resp) => {
+										if (resp.result=='ok')
+										{
+											var verify=() => {
+												pd.request(pd.ui.baseuri()+'/cleanup.php','GET',{},{verify:'verify'},true)
+												.then((resp) => {
+													if (resp.result=='ok')
+													{
+														pd.loadend();
+														pd.alert(pd.constants.storage.message.finished.cleanup[pd.lang]);
+													}
+													else setTimeout(() => verify(),1000);
+												})
+												.catch((error) => pd.alert(error.message));
+											};
+											pd.loadstart();
+											setTimeout(() => verify(),1000);
+										}
+										else pd.alert(pd.constants.storage.message.invalid.processing[pd.lang]);
+									})
+									.catch((error) => pd.alert(error.message));
+								});
+							})
+						);
+						return res;
+					})(pd.ui.field.create({
+						id:'cleanup',
+						type:'spacer',
+						caption:pd.constants.storage.caption.cleanup[pd.lang],
+						required:false,
+						nocaption:false
+					}).css({width:'100%'}).css({width:'50%'}))
+				)
+				.append(
+					pd.ui.field.create({
+						id:'restore',
+						type:'spacer',
+						caption:pd.constants.storage.caption.restore[pd.lang],
+						required:false,
+						nocaption:false
+					}).css({width:'100%'}).css({width:'100%'})
+				);
+			}
+			/* set configuration */
+			set(){
+				return new Promise((resolve,reject) => {
+					pd.request(pd.ui.baseuri()+'/file.php','GET',{},{dir:'../backups'})
+					.then((resp) => {
+						this.contents.elm('[field-id=restore]').elm('.pd-field-value').empty();
+						resp.files.sort().reverse().each((file,index) => {
+							if (file.replace(/[^0-9]+/,'').length==14)
+								this.contents.elm('[field-id=restore]').elm('.pd-field-value')
+								.append(
+									pd.create('div').addclass('pd-row').attr('field-type','row')
+									.append(
+										pd.create('span').html((() => {
+											var res=new Date(file.replace(/[^0-9]+/,'').replace(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/,'$1-$2-$3T$4:$5:$6Z'));
+											return 'at '+res.format('Y-m-d H:i:s');
+										})())
+									)
+									.append(
+										pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.storage.caption.button.restore[pd.lang]).on('click',(e) => {
+											pd.confirm(pd.constants.storage.message.confirm.restore[pd.lang],() => {
+												pd.request(pd.ui.baseuri()+'/restore.php','POST',{},{file:file.replace(/[^0-9]+/,'')})
+												.then((resp) => {
+													if (resp.result=='ok')
+													{
+														var verify=() => {
+															pd.request(pd.ui.baseuri()+'/restore.php','GET',{},{verify:'verify'},true)
+															.then((resp) => {
+																if (resp.result=='ok')
+																{
+																	pd.loadend();
+																	pd.alert(pd.constants.storage.message.finished.restore[pd.lang],() => window.location.reload(true));
+																}
+																else setTimeout(() => verify(),1000);
+															})
+															.catch((error) => pd.alert(error.message));
+														};
+														pd.loadstart();
+														setTimeout(() => verify(),1000);
+													}
+													else pd.alert(pd.constants.storage.message.invalid.processing[pd.lang]);
+												})
+												.catch((error) => pd.alert(error.message));
+											});
+										})
+									)
+								);
+						});
+					})
+					.catch((error) => pd.alert(error.message));
+					resolve();
+				});
+			}
+			/* show */
+			show(){
+				/* set configuration */
+				this.set().then(() => {
+					/* show */
+					super.show();
+				});
+			}
 		}
 	},
 	tab:class{
@@ -17365,10 +17508,6 @@ pd.constants=pd.extend({
 					en:'Your changes have not been saved.<br>Can I continue?',
 					ja:'変更が保存されていません。<br>このまま続行しますか？'
 				},
-				cleanup:{
-					en:'Free up storage space by deleting attachments you no longer need',
-					ja:'不要となった添付ファイルを削除して、ストレージの空き容量を増やします'
-				},
 				copy:{
 					en:'Are you sure you want to copy?',
 					ja:'コピーしてもよろしいですか？'
@@ -17391,10 +17530,6 @@ pd.constants=pd.extend({
 				}
 			},
 			finished:{
-				cleanup:{
-					en:'Storage cleanup is complete',
-					ja:'ストレージのクリーンアップが完了しました'
-				},
 				submit:{
 					en:'Complete!',
 					ja:'送信完了'
@@ -17404,12 +17539,6 @@ pd.constants=pd.extend({
 				auth:{
 					en:'Please check your account or password',
 					ja:'アカウントまたはパスワードを確認して下さい'
-				},
-				cleanup:{
-					processing:{
-						en:'Another user is processing',
-						ja:'他のユーザーが処理中です'
-					}
 				},
 				config:{
 					corrupted:{
@@ -18764,6 +18893,72 @@ pd.constants=pd.extend({
 				secure:{
 					en:'Please specify Connection Security',
 					ja:'Connection Security を指定して下さい'
+				}
+			}
+		}
+	},
+	storage:{
+		caption:{
+			backup:{
+				en:'Backup',
+				ja:'バックアップ'
+			},
+			button:{
+				backup:{
+					en:'Back up',
+					ja:'バックアップする'
+				},
+				cleanup:{
+					en:'Delete unnecessary files',
+					ja:'不要なファイルを削除する'
+				},
+				restore:{
+					en:'Restore',
+					ja:'復元する'
+				}
+			},
+			cleanup:{
+				en:'Cleanup',
+				ja:'クリーンアップ'
+			},
+			restore:{
+				en:'Backup Files',
+				ja:'バックアップファイル一覧'
+			}
+		},
+		message:{
+			confirm:{
+				backup:{
+					en:'Starting backup',
+					ja:'バックアップを開始します'
+				},
+				cleanup:{
+					en:'Free up storage space by deleting attachments you no longer need',
+					ja:'不要となった添付ファイルを削除して、ストレージの空き容量を増やします'
+				},
+				restore:{
+					en:'Starting restore',
+					ja:'復元を開始します'
+				}
+			},
+			finished:{
+				backup:{
+					en:'Backup is complete',
+					ja:'バックアップが完了しました'
+				},
+				cleanup:{
+					en:'Storage cleanup is complete',
+					ja:'ストレージのクリーンアップが完了しました'
+				},
+				restore:{
+					en:'Restore is complete',
+					ja:'復元が完了しました'
+				}
+			},
+			invalid:{
+				processing:{
+					en:'Another user is processing',
+					ja:'他のユーザーが処理中です'
 				}
 			}
 		}

@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.4.2
+* Version: 1.5.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -896,6 +896,27 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 .pd-kumaneko-importmanager .pd-table .pd-table-button{
 	display:none;
 }
+/* Storage Manager definition */
+.pd-kumaneko-storagemanager .pd-button{
+	margin:0.5em 0.25em;
+	width:calc(100% - 0.5em);
+}
+.pd-kumaneko-storagemanager .pd-row{
+	display:flex;
+	margin:0;
+	padding:calc(0.25em + 1px) 0.5em 0.25em 0.5em;
+	width:100%;
+}
+.pd-kumaneko-storagemanager .pd-row span{
+	flex:1 1 0%;
+	padding:0 0.25em;
+	pointer-events:none;
+	word-break:break-all;
+}
+.pd-kumaneko-storagemanager .pd-row .pd-button{
+	margin:0 0.25em;
+	width:auto;
+}
 /* Thema Mode definition */
 :root{
 	--dark-emphasis-color:rgba(230,74,25,0.75);
@@ -1122,6 +1143,17 @@ body.dark .pd-kumaneko-dashboardmanager{
 }
 body.dark .pd-kumaneko-importmanager{
 	background-color:var(--dark-main-bg-color) !important;
+}
+body.dark .pd-kumaneko-storagemanager{
+	background-color:var(--dark-main-bg-color) !important;
+}
+body.dark .pd-kumaneko-storagemanager .pd-field-caption{
+	border-bottom:1px solid var(--dark-main-shadow-color);
+	box-shadow:0 1px 1px -1px var(--dark-main-highlight-thin-color);
+}
+body.dark .pd-kumaneko-storagemanager .pd-row{
+	border-bottom:1px solid var(--dark-main-shadow-color);
+	box-shadow:0 1px 1px -1px var(--dark-main-highlight-thin-color);
 }
 body.dark .pd-activate{
 	background-color:var(--dark-emphasis-color);
@@ -1479,6 +1511,17 @@ body.light .pd-kumaneko-dashboardmanager{
 }
 body.light .pd-kumaneko-importmanager{
 	background-color:var(--light-main-bg-color) !important;
+}
+body.light .pd-kumaneko-storagemanager{
+	background-color:var(--light-main-bg-color) !important;
+}
+body.light .pd-kumaneko-storagemanager .pd-field-caption{
+	border-bottom:1px solid var(--light-main-shadow-color);
+	box-shadow:0 1px 1px -1px var(--light-main-highlight-thin-color);
+}
+body.light .pd-kumaneko-storagemanager .pd-row{
+	border-bottom:1px solid var(--light-main-shadow-color);
+	box-shadow:0 1px 1px -1px var(--light-main-highlight-thin-color);
 }
 body.light .pd-activate{
 	background-color:var(--light-emphasis-color);
