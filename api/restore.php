@@ -1,6 +1,6 @@
 <?php
 /*
-* PandaFirm-PHP-Module "cleanup.php"
+* PandaFirm-PHP-Module "restore.php"
 * Version: 1.5.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
@@ -29,16 +29,16 @@ class clsRequest extends clsBase
 		{
 			if ($this->body["verify"]=="verify")
 			{
-				if (file_exists(dirname(__FILE__)."/cleanup_processing.error"))
+				if (file_exists(dirname(__FILE__)."/restore_processing.error"))
 				{
-					$error=file_get_contents(dirname(__FILE__)."/cleanup_processing.error");
-					if (file_exists(dirname(__FILE__)."/cleanup_processing.error")) unlink(dirname(__FILE__)."/cleanup_processing.error");
-					if (file_exists(dirname(__FILE__)."/cleanup_processing.txt")) unlink(dirname(__FILE__)."/cleanup_processing.txt");
+					$error=file_get_contents(dirname(__FILE__)."/restore_processing.error");
+					if (file_exists(dirname(__FILE__)."/restore_processing.error")) unlink(dirname(__FILE__)."/restore_processing.error");
+					if (file_exists(dirname(__FILE__)."/restore_processing.txt")) unlink(dirname(__FILE__)."/restore_processing.txt");
 					$this->callrequesterror(500,$error);
 				}
 				else
 				{
-					$this->response["result"]=(file_exists(dirname(__FILE__)."/cleanup_processing.txt"))?"ng":"ok";
+					$this->response["result"]=(file_exists(dirname(__FILE__)."/restore_processing.txt"))?"ng":"ok";
 					header("HTTP/1.1 200 OK");
 					header('Content-Type: application/json; charset=utf-8');
 					echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
@@ -53,12 +53,13 @@ class clsRequest extends clsBase
 		$this->body=json_decode(mb_convert_encoding(file_get_contents('php://input'),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
 		$this->driver=new clsDriver(dirname(__FILE__)."/storage/json/",isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
 		$this->project=$this->driver->record("project","1");
-		if (file_exists(dirname(__FILE__)."/cleanup_processing.txt")) $this->response["result"]="ng";
+		if (!isset($this->body["file"])) $this->callrequesterror(400);
+		if (file_exists(dirname(__FILE__)."/restore_processing.txt")) $this->response["result"]="ng";
 		else
 		{
 			(function($php){
-				if (substr(php_uname(),0,7)=="Windows") pclose(popen("start /B {$php} cleanup_processing.php 0","r"));
-				else exec("nohup {$php} cleanup_processing.php 0 > /dev/null &");
+				if (substr(php_uname(),0,7)=="Windows") pclose(popen("start /B {$php} restore_processing.php ".$this->body["file"],"r"));
+				else exec("nohup {$php} restore_processing.php ".$this->body["file"]." > /dev/null &");
 			})(($this->project["cli_path"]["value"]=="")?"php":$this->project["cli_path"]["value"]);
 			$this->response["result"]="ok";
 		}

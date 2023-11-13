@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config_processing.php"
-* Version: 1.4.2
+* Version: 1.5.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
