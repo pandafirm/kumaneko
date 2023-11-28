@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.5.0
+* Version: 1.5.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3561,13 +3561,17 @@ class panda_user_interface{
 													});
 													break;
 												case 'application/pdf':
-													pd.create('iframe').css({
-														border:'none',
-														height:'100%',
-														outline:'none',
-														width:'100%'
-													})
-													.attr('src',this.objecturl(resp.file,file.filetype)).popup('full','full',[{src:src,handler:download}]).show();
+													if (pd.device()!='other') window.open(this.objecturl(resp.file,file.filetype));
+													else
+													{
+														pd.create('iframe').css({
+															border:'none',
+															height:'100%',
+															outline:'none',
+															width:'100%'
+														})
+														.attr('src',this.objecturl(resp.file,file.filetype)+'#toolbar=0&navpanes=0').popup('full','full',[{src:src,handler:download}]).show();
+													}
 													break;
 												case 'audio/mpeg':
 												case 'audio/x-m4a':
