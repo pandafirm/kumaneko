@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.5.1
+* Version: 1.5.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1180,9 +1180,9 @@ class panda_formula{
 				return (Object.values(fieldinfos).some((item) => item.tableid==id))?record[id].value.length:0;
 			};
 			var COUNTIF=(id,query='') => {
-				return ((record,fieldinfo) => {
+				return ((record) => {
 					return (record)?((Object.values(fieldinfos).some((item) => item.tableid==id))?record[id].value.length:0):0;
-				})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
+				})(pd.filter.scan({fields:fieldinfos},origin,query,false));
 			};
 			var CEIL=(value) => {
 				return Math.ceil(NUM(value));
@@ -1235,108 +1235,6 @@ class panda_formula{
 						.replace(/D/g,day.toString());
 					})(new Date(from),(isNaN(Date.parse(to)))?new Date():new Date(to),STR(format));
 				}
-			};
-			var MAX=(id) => {
-				var res=0;
-				if (id in fieldinfos)
-				{
-					var fieldinfo=fieldinfos[id];
-					if (fieldinfo.tableid)
-					{
-						res=((values) => {
-							return (values.length!=0)?values.reduce((a,b) => Math.max(a,b)):0;
-						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
-					}
-					else res=NUM(record[id].value);
-				}
-				return res;
-			};
-			var MAXIF=(id,query='') => {
-				var res=0;
-				if (id in fieldinfos)
-				{
-					((record,fieldinfo) => {
-						if (record)
-						{
-							if (fieldinfo.tableid)
-							{
-								res=((values) => {
-									return (values.length!=0)?values.reduce((a,b) => Math.max(a,b)):0;
-								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
-							}
-							else res=NUM(record[id].value);
-						}
-					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
-				}
-				return res;
-			};
-			var MIN=(id) => {
-				var res=0;
-				if (id in fieldinfos)
-				{
-					var fieldinfo=fieldinfos[id];
-					if (fieldinfo.tableid)
-					{
-						res=((values) => {
-							return (values.length!=0)?values.reduce((a,b) => Math.min(a,b)):0;
-						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
-					}
-					else res=NUM(record[id].value);
-				}
-				return res;
-			};
-			var MINIF=(id,query='') => {
-				var res=0;
-				if (id in fieldinfos)
-				{
-					((record,fieldinfo) => {
-						if (record)
-						{
-							if (fieldinfo.tableid)
-							{
-								res=((values) => {
-									return (values.length!=0)?values.reduce((a,b) => Math.min(a,b)):0;
-								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
-							}
-							else res=NUM(record[id].value);
-						}
-					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
-				}
-				return res;
-			};
-			var SUM=(id) => {
-				var res=0;
-				if (id in fieldinfos)
-				{
-					var fieldinfo=fieldinfos[id];
-					if (fieldinfo.tableid)
-					{
-						res=((values) => {
-							return (values.length!=0)?values.reduce((a,b) => a+b):0;
-						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
-					}
-					else res=NUM(record[id].value);
-				}
-				return res;
-			};
-			var SUMIF=(id,query='') => {
-				var res=0;
-				if (id in fieldinfos)
-				{
-					((record,fieldinfo) => {
-						if (record)
-						{
-							if (fieldinfo.tableid)
-							{
-								res=((values) => {
-									return (values.length!=0)?values.reduce((a,b) => a+b):0;
-								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
-							}
-							else res=NUM(record[id].value);
-						}
-					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
-				}
-				return res;
 			};
 			var FORMAT=(...args) => {
 				return (typeof args[1]==='string')?((!isNaN(Date.parse(args[0])))?new Date(args[0]).calc(STR(args[2])).format(args[1]):''):NUM(args[0]).comma(args[1]);
@@ -1423,14 +1321,130 @@ class panda_formula{
 				}
 				return res;
 			};
+			var LOOP=(id,formula) => {
+				var res=[];
+				if (Object.values(fieldinfos).some((item) => item.tableid==id))
+					res=record[id].value.map((item) => this.calculate({field:param.field,formula:formula},item,record,origin,fieldinfos))
+				return res.join('\n');
+			};
+			var LOOPIF=(id,formula,query='') => {
+				var res=[];
+				if (Object.values(fieldinfos).some((item) => item.tableid==id))
+					res=((record) => {
+						return (record)?record[id].value.map((item) => this.calculate({field:param.field,formula:formula},item,record,origin,fieldinfos)):[];
+					})(pd.filter.scan({fields:fieldinfos},origin,query,false));
+				return res.join('\n');
+			};
 			var LPAD=(value,len,pad) => {
 				return STR(value).padStart(len,pad);
 			};
 			var RPAD=(value,len,pad) => {
 				return STR(value).padEnd(len,pad);
 			};
+			var MAX=(id) => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					var fieldinfo=fieldinfos[id];
+					if (fieldinfo.tableid)
+					{
+						res=((values) => {
+							return (values.length!=0)?values.reduce((a,b) => Math.max(a,b)):0;
+						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+					}
+					else res=NUM(record[id].value);
+				}
+				return res;
+			};
+			var MAXIF=(id,query='') => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					((record,fieldinfo) => {
+						if (record)
+						{
+							if (fieldinfo.tableid)
+							{
+								res=((values) => {
+									return (values.length!=0)?values.reduce((a,b) => Math.max(a,b)):0;
+								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+							}
+							else res=NUM(record[id].value);
+						}
+					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
+				}
+				return res;
+			};
+			var MIN=(id) => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					var fieldinfo=fieldinfos[id];
+					if (fieldinfo.tableid)
+					{
+						res=((values) => {
+							return (values.length!=0)?values.reduce((a,b) => Math.min(a,b)):0;
+						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+					}
+					else res=NUM(record[id].value);
+				}
+				return res;
+			};
+			var MINIF=(id,query='') => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					((record,fieldinfo) => {
+						if (record)
+						{
+							if (fieldinfo.tableid)
+							{
+								res=((values) => {
+									return (values.length!=0)?values.reduce((a,b) => Math.min(a,b)):0;
+								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+							}
+							else res=NUM(record[id].value);
+						}
+					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
+				}
+				return res;
+			};
 			var REPLACE=(value,pattern,replacement) => {
 				return STR(value).replace(new RegExp(STR(pattern),'g'),STR(replacement));
+			};
+			var SUM=(id) => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					var fieldinfo=fieldinfos[id];
+					if (fieldinfo.tableid)
+					{
+						res=((values) => {
+							return (values.length!=0)?values.reduce((a,b) => a+b):0;
+						})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+					}
+					else res=NUM(record[id].value);
+				}
+				return res;
+			};
+			var SUMIF=(id,query='') => {
+				var res=0;
+				if (id in fieldinfos)
+				{
+					((record,fieldinfo) => {
+						if (record)
+						{
+							if (fieldinfo.tableid)
+							{
+								res=((values) => {
+									return (values.length!=0)?values.reduce((a,b) => a+b):0;
+								})(record[fieldinfo.tableid].value.shape((item) => pd.isnumeric(item[id].value)?NUM(item[id].value):PD_THROW));
+							}
+							else res=NUM(record[id].value);
+						}
+					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
+				}
+				return res;
 			};
 			var NUM=(value) => {
 				var res=0;
@@ -1518,6 +1532,14 @@ class panda_formula{
 							})
 							.replace(new RegExp('(COUNTIF)\\([ ]*('+fieldinfo.tableid+')[ ]*,[ ]*("[^\\"]*"|\\\'[^\\\']*\\\')\\)','g'),(match,functions,field,query) => {
 								reserved.push(functions+'("'+field+'",'+query+')');
+								return 'calculate_'+reserved.length.toString();
+							})
+							.replace(new RegExp('(LOOP)\\([ ]*('+fieldinfo.tableid+')[ ]*,[ ]*\\/\\*(.*?)\\*\\/[ ]*\\)','g'),(match,functions,field,formula) => {
+								reserved.push(functions+'("'+field+'","'+formula.replace(/"/g,'\\"')+'")');
+								return 'calculate_'+reserved.length.toString();
+							})
+							.replace(new RegExp('(LOOPIF)\\([ ]*('+fieldinfo.tableid+')[ ]*,[ ]*\\/\\*(.*?)\\*\\/[ ]*,[ ]*("[^\\"]*"|\\\'[^\\\']*\\\')\\)','g'),(match,functions,field,formula,query) => {
+								reserved.push(functions+'("'+field+'","'+formula.replace(/"/g,'\\"')+'",'+query+')');
 								return 'calculate_'+reserved.length.toString();
 							})
 						);
