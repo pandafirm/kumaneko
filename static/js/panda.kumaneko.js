@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.5.2
+* Version: 1.5.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1628,8 +1628,8 @@ class panda_kumaneko_app{
 														if (action.transfer.pattern=='insert')
 														{
 															pd.event.call(action.transfer.app,'pd.saving.call',{records:[create.record(pd.record.create(target))]})
-															.then((e) => {
-																pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:e.records,notify:true},true)
+															.then((param) => {
+																pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:param.records,notify:true},true)
 																.then((resp) => finish())
 																.catch((error) => {
 																	pd.alert(error.message);
@@ -1669,7 +1669,7 @@ class panda_kumaneko_app{
 																	return res;
 																})(records);
 																pd.event.call(action.transfer.app,'pd.saving.call',{records:records})
-																.then((e) => {
+																.then((param) => {
 																	pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:records.filter((item) => !item['__id'].value)},true)
 																	.then((resp) => {
 																		pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:action.transfer.app,records:records.filter((item) => item['__id'].value),notify:true},true)
@@ -1789,6 +1789,55 @@ class panda_kumaneko_app{
 							else resolve({});
 						}
 					})(pd.ui.field.parallelize(this.app.fields));
+				});
+			},
+			deleting:(recordid) => {
+				return new Promise((resolve,reject) => {
+					((actions) => {
+						var execute=(index,record) => {
+							var action=actions[index];
+							var result=pd.filter.scan(this.app,record,action.filter);
+							if (result)
+							{
+								if (action.suspend.continue)
+								{
+									pd.confirm(action.suspend.message,(cancel) => {
+										if (cancel) reject();
+										else
+										{
+											index++;
+											if (index<actions.length) execute(index,record);
+											else resolve();
+										}
+									},true);
+								}
+								else pd.alert(action.suspend.message,() => reject());
+							}
+							else
+							{
+								index++;
+								if (index<actions.length) execute(index,record);
+								else resolve();
+							}
+						};
+						if (actions.length!=0)
+						{
+							if (recordid)
+							{
+								pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:this.app.id,id:recordid},true)
+								.then((resp) => {
+									if (resp.total!=0) execute(0,resp.record);
+									else reject();
+								})
+								.catch((error) => {
+									pd.alert(error.message);
+									reject();
+								});
+							}
+							else resolve();
+						}
+						else resolve();
+					})(this.app.actions.filter((item) => item.trigger=='deleting' && item.suspend.message));
 				});
 			},
 			saving:(records) => {
@@ -3885,20 +3934,24 @@ pd.modules={
 									if (this.record.id)
 									{
 										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
-											pd.event.call(this.app.id,'pd.delete.submit',{
-												container:this.record.ui.body,
-												record:pd.record.get(this.record.ui.body,this.app,true).record
+											this.actions.deleting(this.record.id)
+											.then(() => {
+												pd.event.call(this.app.id,'pd.delete.submit',{
+													container:this.record.ui.body,
+													record:pd.record.get(this.record.ui.body,this.app,true).record
+												})
+												.then((param) => {
+													if (!param.error)
+														this.record.delete(this.record.id).then(() => {
+															this.notify().then(() => {
+																this.record.clear();
+																this.record.ui.tab.close.click();
+																pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
+															});
+														}).catch(() => {});
+												});
 											})
-											.then((param) => {
-												if (!param.error)
-													this.record.delete(this.record.id).then(() => {
-														this.notify().then(() => {
-															this.record.clear();
-															this.record.ui.tab.close.click();
-															pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
-														});
-													}).catch(() => {});
-											});
+											.catch(() => {});
 										});
 									}
 									else
@@ -4283,6 +4336,11 @@ pd.modules={
 					});
 				}).catch(() => {
 					e.error=true;
+				});
+			});
+			pd.event.on(this.app.id,'pd.deleting.call',(e) => {
+				return new Promise((resolve,reject) => {
+					this.actions.deleting(e.recordid).then(() => resolve(e)).catch(() => reject(e));
 				});
 			});
 			pd.event.on(this.app.id,'pd.edit.call',(e) => {
@@ -6386,7 +6444,8 @@ pd.modules={
 											options:[
 												{option:{value:'button'}},
 												{option:{value:'value'}},
-												{option:{value:'saving'}}
+												{option:{value:'saving'}},
+												{option:{value:'deleting'}}
 											]
 										}
 									}
@@ -6452,6 +6511,7 @@ pd.modules={
 																	}
 																},res);
 																break;
+															case 'deleting':
 															case 'saving':
 																res=pd.extend({
 																	suspend:{
@@ -8632,7 +8692,7 @@ pd.modules={
 									return res;
 								})(pd.ui.field.create(this.app.fields.continue)).css({width:'100%'}),this.app));
 								return container;
-							})(pd.ui.box.create('',pd.constants.action.caption.suspend[pd.lang]).addclass('pd-kumaneko-section'))
+							})(pd.ui.box.create('',pd.constants.action.caption.suspend.saving[pd.lang]).addclass('pd-kumaneko-section'))
 						);
 						/* event */
 						pd.event.on(this.app.id,'pd.change.record',(e) => {
@@ -9123,6 +9183,7 @@ pd.modules={
 									res.action.caption=record.caption.value;
 									res.action.message=record.message.value;
 									break;
+								case 'deleting':
 								case 'saving':
 									res.action.suspend={
 										message:record.suspend.value,
@@ -9481,6 +9542,7 @@ pd.modules={
 										tables:pd.extend({template:this.keep.sections.report.table},this.keep.sections.transfer.tables)
 									});
 									break;
+								case 'deleting':
 								case 'saving':
 									res['suspend']={value:this.keep.action.suspend.message};
 									res['continue']={value:(this.keep.action.suspend.continue)?[this.app.fields.continue.options.first().option.value]:[]};
@@ -9609,6 +9671,7 @@ pd.modules={
 								this.keep.sections.option.container.hide();
 								this.keep.sections.suspend.container.hide();
 								break;
+							case 'deleting':
 							case 'saving':
 								if (this.keep.action.suspend.message) this.keep.sections.suspend.container.open();
 								else this.keep.sections.suspend.container.close();
@@ -9625,6 +9688,7 @@ pd.modules={
 								this.keep.sections.hidden.container.hide();
 								this.keep.sections.option.container.hide();
 								this.keep.sections.suspend.container.show();
+								this.keep.sections.suspend.container.elm('.pd-box-caption-label').html(pd.constants.action.caption.suspend[this.keep.action.trigger][pd.lang]);
 								break;
 							case 'value':
 								if (this.keep.action.rows.del.length!=0) this.keep.sections.del.container.open();
@@ -16976,7 +17040,7 @@ pd.modules={
 											{
 												((modifiedtime,records) => {
 													pd.event.call(this.keep.app,'pd.saving.call',{records:records.post.concat(records.put)})
-													.then((e) => {
+													.then((param) => {
 														pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:this.keep.app,records:records.post})
 														.then((resp) => {
 															records.post.each((post,index) => {
@@ -17740,8 +17804,14 @@ pd.constants=pd.extend({
 				ja:'フィールドカラー'
 			},
 			suspend:{
-				en:'Abort Save',
-				ja:'保存の中断',
+				deleting:{
+					en:'Abort Delete',
+					ja:'削除の中断',
+				},
+				saving:{
+					en:'Abort Save',
+					ja:'保存の中断',
+				},
 				message:{
 					en:'Message',
 					ja:'メッセージ',
@@ -17977,6 +18047,10 @@ pd.constants=pd.extend({
 						en:'button',
 						ja:'ボタン'
 					},
+					deleting:{
+						en:'deleting',
+						ja:'削除前'
+					},
 					saving:{
 						en:'saving',
 						ja:'保存前'
@@ -17991,6 +18065,10 @@ pd.constants=pd.extend({
 						en:'Button Action',
 						ja:'ボタンアクション'
 					},
+					deleting:{
+						en:'Record Deleting Action',
+						ja:'削除前アクション'
+					},
 					saving:{
 						en:'Record Saving Action',
 						ja:'保存前アクション'
@@ -18004,6 +18082,10 @@ pd.constants=pd.extend({
 					button:{
 						en:'Action by Button click',
 						ja:'ボタントリガー'
+					},
+					deleting:{
+						en:'Action by Record deleting',
+						ja:'削除トリガー'
 					},
 					saving:{
 						en:'Action by Record saving',

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.5.2
+* Version: 1.5.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -53,7 +53,7 @@ class panda_event{
 					else callback(param);
 				}
 				else callback(param);
-			});
+			}).catch(() => {});
 		};
 		return new Promise((resolve,reject) => {
 			Object.assign(param,{
@@ -5350,21 +5350,25 @@ class panda_user_interface{
 									if (recordid)
 									{
 										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
-											pd.event.call(app.id,'pd.delete.submit',{
-												container:row.elm('[form-id=form_'+app.id+']'),
-												record:pd.record.get(row.elm('[form-id=form_'+app.id+']'),app,true).record,
-												viewid:viewid
-											})
+											pd.event.call(app.id,'pd.deleting.call',{recordid:recordid})
 											.then((param) => {
-												if (!param.error)
-													pd.event.call(app.id,'pd.delete.call',{
-														recordid:recordid,
-														viewid:viewid
-													})
-													.then((param) => {
-														if (!param.error) res.delrow(row);
-													});
-											});
+												pd.event.call(app.id,'pd.delete.submit',{
+													container:row.elm('[form-id=form_'+app.id+']'),
+													record:pd.record.get(row.elm('[form-id=form_'+app.id+']'),app,true).record,
+													viewid:viewid
+												})
+												.then((param) => {
+													if (!param.error)
+														pd.event.call(app.id,'pd.delete.call',{
+															recordid:recordid,
+															viewid:viewid
+														})
+														.then((param) => {
+															if (!param.error) res.delrow(row);
+														});
+												});
+											})
+											.catch(() => {});
 										});
 									}
 									else res.delrow(row);
