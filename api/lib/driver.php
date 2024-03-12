@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 1.5.3
+* Version: 1.6.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1049,7 +1049,7 @@ class clsDriver
 				$query=preg_replace("/(^|[ \(]{1})__id/u",'$1$record["__id"]["value"]',$query);
 				$query=preg_replace("/ and /u"," && ",$query);
 				$query=preg_replace("/ or /u"," || ",$query);
-				$query=preg_replace("/([^!><]{1})=/u","$1==",$query);
+				$query=preg_replace("/([^!><=]{1})=(?!=)/u","$1==",$query);
 				$query=preg_replace("/([^_]{1})TODAY\(/u","$1\$me->TODAY(",$query);
 				$query=preg_replace("/[ ]*FROM_/u"," \$me->FROM_",$query);
 				$query=preg_replace("/([^ \(]+)[ ]+not in[ ]+\(([^\)]*)\)/u","!in_array($1,[$2],true)",$query);
