@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.5.3
+* Version: 1.6.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -55,6 +55,9 @@ class panda_kumaneko{
 			},
 			fields:(app) => {
 				return (app in this.apps)?this.apps[app].app.fields:{};
+			},
+			notify:(app,reload,exclude) => {
+				if (app in this.apps) this.apps[app].notify(reload,exclude);
 			}
 		};
 		this.record={
@@ -3331,7 +3334,9 @@ pd.modules={
 						.then((resp) => {
 							this.notify().then(() => {
 								this.record.clear();
-								for (var key in this.view.ui) this.view.load(key,null,null,true).catch(() => {});
+								for (var key in this.view.ui)
+									if (this.view.ui[key].tab.active) pd.event.call(this.app.id,'pd.app.activate',{viewid:key});
+									else this.view.load(key,null,null,true).catch(() => {});
 								pd.event.call('0','pd.queue.notify',{source:'app',id:this.app.id});
 								resolve({});
 							});
@@ -4416,20 +4421,21 @@ pd.modules={
 			else action(unsaved);
 		}
 		/* reload notification */
-		notify(reload){
+		notify(reload,exclude){
 			return new Promise((resolve,reject) => {
 				for (var key in this.view.ui)
-					if (this.view.ui[key].body.elms('[unsaved=unsaved]').length==0)
-					{
-						this.view.ui[key].loaded=false;
-						if (reload)
-							if (this.view.ui[key].tab.active)
-							{
-								this.view.load(key).catch(() => {});
-								continue;
-							}
-						pd.event.call('0','pd.queue.dashboard',{app:this.app.id,view:key});
-					}
+					if (key!=exclude)
+						if (this.view.ui[key].body.elms('[unsaved=unsaved]').length==0)
+						{
+							this.view.ui[key].loaded=false;
+							if (reload)
+								if (this.view.ui[key].tab.active)
+								{
+									this.view.load(key).catch(() => {});
+									continue;
+								}
+							pd.event.call('0','pd.queue.dashboard',{app:this.app.id,view:key});
+						}
 				pd.event.call('0','pd.queue.linkage',{app:this.app.id});
 				resolve({});
 			});
