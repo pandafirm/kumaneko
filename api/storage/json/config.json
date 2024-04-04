@@ -32,6 +32,14 @@
                         "nocaption": false,
                         "format": "alphanum"
                     },
+                    "mapid": {
+                        "id": "mapid",
+                        "type": "text",
+                        "caption": "Map ID",
+                        "required": false,
+                        "nocaption": false,
+                        "format": "text"
+                    },
                     "service_account_key": {
                         "id": "service_account_key",
                         "type": "file",
@@ -159,6 +167,7 @@
                                 "type": "row",
                                 "fields": [
                                     "apikey",
+                                    "mapid",
                                     "service_account_key"
                                 ]
                             }

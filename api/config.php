@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.6.0
+* Version: 1.6.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -145,6 +145,23 @@ class clsRequest extends clsBase
 										$update=true;
 										file_put_contents(dirname(__FILE__)."/storage/json/project.json",json_encode((function($project){
 											$project["1"]["cli_path"]=["value"=>""];
+											return $project;
+										})(json_decode(mb_convert_encoding(file_get_contents(dirname(__FILE__)."/storage/json/project.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true))));
+									}
+									if (!property_exists($value->fields,"mapid"))
+									{
+										$value->fields->mapid=[
+											"id"=>"mapid",
+											"type"=>"text",
+											"caption"=>"Map ID",
+											"required"=>false,
+											"nocaption"=>false,
+											"format"=>"text"
+										];
+										array_splice($value->layout[1]->rows[0]->fields,1,0,"mapid");
+										$update=true;
+										file_put_contents(dirname(__FILE__)."/storage/json/project.json",json_encode((function($project){
+											$project["1"]["mapid"]=["value"=>""];
 											return $project;
 										})(json_decode(mb_convert_encoding(file_get_contents(dirname(__FILE__)."/storage/json/project.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true))));
 									}
