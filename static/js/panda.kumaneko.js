@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.6.0
+* Version: 1.6.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -920,6 +920,7 @@ class panda_kumaneko{
 				pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'project',id:'1'})
 				.then((resp) => {
 					var apikey='';
+					var mapid='';
 					if (resp.total!=0)
 						for (var key in resp.record)
 							switch(key)
@@ -934,12 +935,22 @@ class panda_kumaneko{
 										.attr('type','text/javascript');
 									});
 									break;
+								case 'mapid':
+									if (resp.record.mapid.value) mapid=resp.record.mapid.value;
+									break;
 								case 'name':
 									this.project.name=resp.record.name.value.replace(/[ 　]/g,'_');
 									break;
 							}
 					pd.chart.ready().then(() => {
-						if (apikey) pd.map.ready(apikey).then((map) => map.init()).then(() => build()).catch((error) => pd.alert(error));
+						if (apikey)
+						{
+							pd.elm('body').on('maploaded',() => {
+								pd.map.init();
+								build();
+							});
+							pd.map.ready(apikey,mapid);
+						}
 						else build();
 					}).catch((error) => pd.alert(error));
 				})
@@ -1034,6 +1045,7 @@ class panda_kumaneko{
 						pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'project',id:'1'})
 						.then((resp) => {
 							var apikey='';
+							var mapid='';
 							if (resp.total!=0)
 								for (var key in resp.record)
 									switch(key)
@@ -1041,9 +1053,19 @@ class panda_kumaneko{
 										case 'apikey':
 											if (resp.record.apikey.value) apikey=resp.record.apikey.value;
 											break;
+										case 'mapid':
+											if (resp.record.mapid.value) mapid=resp.record.mapid.value;
+											break;
 									}
 							pd.chart.ready().then(() => {
-								if (apikey) pd.map.ready(apikey).then((map) => map.init()).then(() => build()).catch((error) => pd.alert(error));
+								if (apikey)
+								{
+									pd.elm('body').on('maploaded',() => {
+										pd.map.init();
+										build();
+									});
+									pd.map.ready(apikey,mapid);
+								}
 								else build();
 							}).catch((error) => pd.alert(error));
 						})
@@ -4056,18 +4078,6 @@ pd.modules={
 											streetViewControlOptions:{
 												position:google.maps.ControlPosition.RIGHT_TOP
 											},
-											styles:[
-												{
-													featureType:'landscape.man_made',
-													elementType:'labels.icon',
-													stylers:[{visibility:'off'}]
-												},
-												{
-													featureType:'poi',
-													elementType:'labels.icon',
-													stylers:[{visibility:'off'}]
-												}
-											],
 											zoomControl:true,
 											zoomControlOptions:{
 												position:google.maps.ControlPosition.RIGHT_TOP
@@ -14854,18 +14864,6 @@ pd.modules={
 																streetViewControlOptions:{
 																	position:google.maps.ControlPosition.RIGHT_TOP
 																},
-																styles:[
-																	{
-																		featureType:'landscape.man_made',
-																		elementType:'labels.icon',
-																		stylers:[{visibility:'off'}]
-																	},
-																	{
-																		featureType:'poi',
-																		elementType:'labels.icon',
-																		stylers:[{visibility:'off'}]
-																	}
-																],
 																zoomControl:true,
 																zoomControlOptions:{
 																	position:google.maps.ControlPosition.RIGHT_TOP
@@ -15702,18 +15700,6 @@ pd.modules={
 														panel.map.init(
 															element,
 															{
-																styles:[
-																	{
-																		featureType:'landscape.man_made',
-																		elementType:'labels.icon',
-																		stylers:[{visibility:'off'}]
-																	},
-																	{
-																		featureType:'poi',
-																		elementType:'labels.icon',
-																		stylers:[{visibility:'off'}]
-																	}
-																],
 																zoom:14
 															}
 														);

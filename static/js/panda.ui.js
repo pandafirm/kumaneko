@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.6.0
+* Version: 1.6.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3099,18 +3099,6 @@ class panda_user_interface{
 											streetViewControlOptions:{
 												position:google.maps.ControlPosition.RIGHT_TOP
 											},
-											styles:[
-												{
-													featureType:'landscape.man_made',
-													elementType:'labels.icon',
-													stylers:[{visibility:'off'}]
-												},
-												{
-													featureType:'poi',
-													elementType:'labels.icon',
-													stylers:[{visibility:'off'}]
-												}
-											],
 											zoomControl:true,
 											zoomControlOptions:{
 												position:google.maps.ControlPosition.RIGHT_TOP

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.6.0
+* Version: 1.6.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -2580,8 +2580,6 @@ class panda_map{
 		this.container=null;
 		this.map=null;
 		this.centerlocation=null;
-		this.directionsRenderer=null;
-		this.directionsService=null;
 		this.geocoder=null;
 		this.watchID=null;
 		this.watchaccuracy=null;
@@ -2595,9 +2593,10 @@ class panda_map{
 		if (container)
 		{
 			this.container=container;
-			this.map=new google.maps.Map(this.container,mapoption);
-			this.directionsRenderer=new google.maps.DirectionsRenderer({suppressMarkers:true});
-			this.directionsService=new google.maps.DirectionsService();
+			this.map=new google.maps.Map(this.container,((option) => {
+				option.mapId=(pd.map.mapid)?pd.map.mapid:'DEMO_MAP_ID';
+				return option;
+			})(mapoption));
 			/* idle event */
 			google.maps.event.addListener(this.map,'idle',() => {
 				this.centerlocation=((latlng) => {
@@ -2649,33 +2648,89 @@ class panda_map{
 		});
 	}
 	/* map script loaded */
-	ready(apikey){
-		return new Promise((resolve,reject) => {
-			if (!apikey) reject(pd.constants.map.message.invalid[pd.lang]);
-			else
+	ready(apikey,mapid){
+		if (!apikey) pd.alert(pd.constants.map.message.invalid[pd.lang]);
+		else
+		{
+			if (!this.loaded)
 			{
-				if (!this.loaded)
-				{
-					/* load api */
-					pd.elm('head').append(
-						pd.create('script')
-						.attr('src','https://maps.googleapis.com/maps/api/js?libraries=geometry&key='+apikey+'&callback=pd.map.init')
-						.attr('type','text/javascript')
-						.on('load',(e) => {
-							this.loaded=true;
-							resolve(this);
-						})
-						.on('error',(e) => {
-							reject('Connect to network');
-						})
-					);
-				}
-				else resolve(this);
+				/* setup properties */
+				this.mapid=(mapid)?mapid:'DEMO_MAP_ID';
+				/* load api */
+				pd.elm('head').append(
+					pd.create('script')
+					.attr('src','https://maps.googleapis.com/maps/api/js?v=beta&libraries=marker,geometry&key='+apikey+'&callback=maploaded')
+					.attr('type','text/javascript')
+					.on('load',(e) => {
+						if (!pd.elm('.pdstyle_map_marker'))
+						{
+							pd.elm('head').append(
+								pd.create('style')
+								.addclass('pdstyle_map_marker')
+								.attr('media','screen')
+								.attr('type','text/css')
+								.text(`
+gmp-advanced-marker{
+	pointer-events:none;
+}
+.pd-map-marker-pin{
+	align-items:center;
+	clip-path:path("M25,12.5C25,19.404,12.5,35,12.5,35S0,19.404,0,12.5S5.596,0,12.5,0C19.403,0,25,5.597,25,12.5z");
+	cursor:pointer;
+	display:flex;
+	height:35px;
+	justify-content:center;
+	margin:auto;
+	padding-bottom:10px;
+	pointer-events:all;
+	width:25px;
+}
+.pd-map-marker-balloon{
+	background-color:#FFFFFF;
+	border-radius:0.5em;
+	box-shadow:5px 5px 3px rgba(0,0,0,0.2);
+	color:#263238;
+	cursor:default;
+	display:none;
+	margin-bottom:15px;
+	padding:0.25em;
+	pointer-events:all;
+}
+.pd-map-marker-balloon::after{
+	background-color:#FFFFFF;
+	bottom:-10px;
+	clip-path:polygon(0 0,100% 0,50% 100%);
+	height:15px;
+	content:"";
+	left:50%;
+	position:absolute;
+	transform:translate(-50%,0);
+	width:25px;
+	z-index:1;
+}
+.pd-map-marker-active .pd-map-marker-balloon{
+	display:block;
+}
+`)
+							);
+						}
+					})
+					.on('error',(e) => {
+						pd.alert('Connect to network');
+					})
+				);
+				/* map libraries loaded */
+				window.maploaded=() => {
+					((event) => {
+						this.loaded=true;
+						pd.elm('body').dispatchEvent(event);
+					})(new Event('maploaded'));
+				};
 			}
-		});
+		}
 	}
 	/* reload map */
-	reloadmap(markers,setupcenter=false,addroute=false,callback){
+	reloadmap(markers,setupcenter=false,callback){
 		/*
 		* parameters
 		* @markeroptions
@@ -2687,53 +2742,89 @@ class panda_map{
 		*	-balloon
 		*/
 		var addmarker=(markeroptions,index) => {
-			var backcolor=(markeroptions.backcolor || '#e60012');
-			var forecolor=(markeroptions.forecolor || '#000000');
-			var fontsize=(markeroptions.fontsize || '11')+'px';
-			var marker=new google.maps.Marker({
+			var marker=new google.maps.marker.AdvancedMarkerView({
+				content:((content,backcolor,forecolor,fontsize) => {
+					if ('balloon' in markeroptions)
+					{
+						content.append(
+							pd.create('div').addclass('pd-map-marker-balloon')
+							.append(
+								pd.create('div').css({lineHeight:'1em',textAlign:'right'})
+								.append(
+									pd.create('img').addclass('pd-map-marker-deactivate')
+									.css({
+										cursor:'pointer',
+										height:'1em',
+										width:'1em'
+									})
+									.attr('src','data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpFMDRERDMwMDJCMkVFQjExOUU4QkIwOThCQ0EyREIwMiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo4MDI4ODc4MzM1NDQxMUVCOTJEMEEzQzJCMDIzRjc0MCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo4MDI4ODc4MjM1NDQxMUVCOTJEMEEzQzJCMDIzRjc0MCIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M2IChXaW5kb3dzKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjcxMEUzMUQ4QzIyRUVCMTE5RThCQjA5OEJDQTJEQjAyIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkUwNEREMzAwMkIyRUVCMTE5RThCQjA5OEJDQTJEQjAyIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+rDFalwAAAodJREFUeNrsmsFPE0EUxrdIIhe84d3SLok3xQOLy4GEv8ArKBTxvwIKEb1xJgGKTSRCAPEkiYoQKOGAntB7+Sb9mjRk3nZhtzCFN8mXtDOzb/rrdGa+N2mmWq1696l0ePesKLACK7ACK7ACK7ACK7ACK7ACK7ACo3SmEaSvP6i/fAr1QN+g84RhH0HPoD/Qnqn48XXDmRnOQBPQd6gMLULZBPGyjFFmzAmO4Qywmdliw/sRaB7qvUasXj470lBX5BjOAD+21IXQeyh3hTg5PhPGHOPWgHegT5b6gAB+jBg++waWtmVo2yXgf9AUtG5pG4DmmkD77DNgaVth7P+uHUsH0KQAHXAd5i1tebYFEbAVV8/hXxHQg9DMpTWdY92gpb9ZIu+gY9eNh4EeFdb0EGfzCVVknQ3WHEVH7eK0zKyMC9BmB/5IhQLseNozexPW0qy7N1BJ2MhsG1SJz1Ra9aFa7aVPoAI3n2ZlhX1P2j15qBCkFNGnxD6VVn+Ym8qWHjQZqwt6eFfSQ3P0fICGI/q8pH/OtTtwPREIY/QNEyQcTgAbB7UQYSo2BHOyIDgyp4H7OFuSNx6jOZG89zxjtAWw38Qbv4VOoUPuzJ8jvLfvOnCe3jgQjp7LicA+v4AvAvRM2j/vNIHNtcyssEGtMak4Frx3QVjTIWNmXQPuhqYF2DKBorzxTyYLmwL0NMdwBviFcM6u0RvHSQQM9Gthpoc5hjPAZ5a6Vc7aVeziPqHXY45xa8B7/NnWyxLX7HW88W+mh6sNdQWOkbh0pgRs/s43B215tYv4Xa92z5XkuugV9Bz669XuplMpGf3roQIrsAIrsAIrsAIrsAIrsAIrsAIr8N0vFwIMAFZzhFccQFk0AAAAAElFTkSuQmCC')
+								)
+							)
+							.append(markeroptions.balloon)
+						);
+					}
+					content.append(
+						pd.create('div').addclass('pd-map-marker-pin').css({backgroundColor:backcolor}).append(
+							pd.create('span').css({
+								color:forecolor,
+								fontSize:fontsize
+							})
+							.html((markeroptions.label)?markeroptions.label:'')
+						)
+					);
+					((handler) => {
+						if ('click' in markeroptions)
+						{
+							content.elm('.pd-map-marker-pin').on('click',(e) => {
+								markeroptions.click(index);
+								handler.propagation(e);
+							});
+						}
+						else
+						{
+							/* append balloons */
+							if ('balloon' in markeroptions)
+							{
+								content.elm('.pd-map-marker-pin').on('click',(e) => {
+									handler.zindex();
+									handler.propagation(e);
+								});
+								content.elm('.pd-map-marker-balloon').on('click',(e) => {
+									handler.zindex();
+									handler.propagation(e);
+								})
+								.elm('.pd-map-marker-deactivate').on('click',(e) => {
+									content.removeclass('pd-map-marker-active').parentNode.css({zIndex:''});
+									handler.propagation(e);
+								});
+							}
+						}
+					})({
+						propagation:(e) => {
+							e.stopPropagation();
+							e.preventDefault();
+						},
+						zindex:() => {
+							this.markers.each((marker,index) => {
+								if (marker.element==content.parentNode)
+								{
+									marker.content.addclass('pd-map-marker-active');
+									marker.element.css({zIndex:1});
+								}
+								else marker.element.css({zIndex:''});
+							})
+						}
+					});
+					return content;
+				})(pd.create('div').addclass('pd-map-marker pd-map-marker-active'),(markeroptions.backcolor || '#e60012'),(markeroptions.forecolor || '#263238'),(markeroptions.fontsize || '11')+'px'),
 				map:this.map,
-				position:new google.maps.LatLng(markeroptions.lat,markeroptions.lng)
+				position:{lat:parseFloat(markeroptions.lat),lng:parseFloat(markeroptions.lng)}
 			});
-			marker.setIcon({
-				anchor:new google.maps.Point(17,34),
-				fillColor:backcolor,
-				fillOpacity:1,
-				labelOrigin:new google.maps.Point(17,11),
-				path:'M26.837,9.837C26.837,17.765,17,19.89,17,34 c0-14.11-9.837-16.235-9.837-24.163C7.163,4.404,11.567,0,17,0C22.432,0,26.837,4.404,26.837,9.837z',
-				scale:1,
-				strokeColor:"#696969"
-			});
-			if ('label' in markeroptions)
-				if (markeroptions.label)
-					marker.setLabel({
-						color:forecolor,
-						fontSize:fontsize,
-						text:markeroptions.label
-					});
-			if ('click' in markeroptions) google.maps.event.addListener(marker,'click',(e) => markeroptions.click(index));
-			else
-			{
-				/* append balloons */
-				if ('balloon' in markeroptions)
-				{
-					var balloon=new google.maps.InfoWindow({content:markeroptions.balloon,disableAutoPan:true});
-					balloon.open(this.map,marker);
-					google.maps.event.addListener(marker,'click',(e) => {
-						if (!balloon.getMap()) balloon.open(this.map,marker);
-					});
-					this.balloons.push(balloon);
-				}
-			}
 			this.markers.push(marker);
 		};
 		/* initialize markers */
-		this.markers.each((marker,index) => marker.setMap(null));
+		this.markers.each((marker,index) => marker.map=null);
 		this.markers=[];
-		/* initialize balloons */
-		this.balloons.each((balloon,index) => balloon.setMap(null));
-		this.balloons=[];
-		/* initialize renderer */
-		this.directionsRenderer.setMap(null);
 		switch (markers.length)
 		{
 			case 0:
@@ -2748,57 +2839,11 @@ class panda_map{
 				if (callback) callback();
 				break;
 			default:
-				if (addroute)
-				{
-					/* setup routes */
-					var origin=null;
-					var destination=null;
-					var waypoints=[];
-					markers.each((marker,index) => {
-						switch (index)
-						{
-							case 0:
-								origin=new google.maps.LatLng(marker.lat,marker.lng);
-								break;
-							case markers.length-1:
-								destination=new google.maps.LatLng(marker.lat,marker.lng);
-								break;
-							default:
-								waypoints.push({
-									location:new google.maps.LatLng(marker.lat,marker.lng),
-									stopover:true
-								});
-								break;
-						}
-					});
-					/* setup center position */
-					if (setupcenter) this.map.setCenter(new google.maps.LatLng(markers.first().lat,markers.first().lng));
-					/* display routes */
-					this.directionsService.route({
-						origin:origin,
-						destination:destination,
-						waypoints:waypoints,
-						travelMode:google.maps.TravelMode.DRIVING
-					},
-					(result,status) => {
-						if (status==google.maps.DirectionsStatus.OK)
-						{
-							/* append markers */
-							markers.each((marker,index) => addmarker(marker,index));
-							this.directionsRenderer.setDirections(result);
-							this.directionsRenderer.setMap(this.map);
-							if (callback) callback();
-						}
-					});
-				}
-				else
-				{
-					/* append markers */
-					markers.each((marker,index) => addmarker(marker,index));
-					/* setup center position */
-					if (setupcenter) this.map.setCenter(new google.maps.LatLng(markers.first().lat,markers.first().lng));
-					if (callback) callback();
-				}
+				/* append markers */
+				markers.each((marker,index) => addmarker(marker,index));
+				/* setup center position */
+				if (setupcenter) this.map.setCenter(new google.maps.LatLng(markers.first().lat,markers.first().lng));
+				if (callback) callback();
 				break;
 		}
 	}
@@ -3238,8 +3283,8 @@ HTMLElement.prototype.addclass=function(classname){
 	});
 	return this;
 };
-HTMLElement.prototype.append=function(element){
-	this.appendChild(element);
+HTMLElement.prototype.append=function(...elements){
+	elements.each((element) => this.appendChild(element));
 	return this;
 };
 HTMLElement.prototype.attr=function(name,value){
