@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.6.1
+* Version: 1.6.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -80,6 +80,11 @@ class clsRequest extends clsBase
 										if (!property_exists($item->mail,"format"))
 										{
 											$item->mail->format="html";
+											$update=true;
+										}
+										if (!property_exists($item->transfer,"formula"))
+										{
+											$item->transfer->formula=[];
 											$update=true;
 										}
 										break;
