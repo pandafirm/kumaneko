@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.6.1
+* Version: 1.6.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -702,7 +702,6 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	width:5em !important;
 }
 .pd-kumaneko-actionbuilder .pd-table{
-	margin-bottom:0.25em;
 	width:100%;
 }
 .pd-kumaneko-actionbuilder .pd-table thead{
@@ -710,6 +709,9 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 }
 .pd-kumaneko-actionbuilder .pd-table tr td .pd-field{
 	width:100%;
+}
+.pd-kumaneko-actionbuilder .pd-table:not(.pd-tight){
+	margin-bottom:0.25em;
 }
 /* Deduplication Builder definition */
 .pd-kumaneko-deduplicationbuilder :is(.pd-field-caption,.pd-table-caption){

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.6.1
+* Version: 1.6.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1631,6 +1631,23 @@ class panda_kumaneko_app{
 																			else origin[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,increments.progress.record));
 																		});
 																	}
+																});
+																action.transfer.formula.each((formula,index) => {
+																	if (formula.field in fields.external)
+																		((fieldinfo) => {
+																			if (fieldinfo.tableid)
+																			{
+																				origin[fieldinfo.tableid].value.each((row,index) => {
+																					row[fieldinfo.id].value=pd.formula.calculate(formula,row,origin,origin,fields.external);
+																					if (fieldinfo.type=='lookup') row[fieldinfo.id].lookup=true;
+																				});
+																			}
+																			else
+																			{
+																				origin[fieldinfo.id].value=pd.formula.calculate(formula,origin,origin,origin,fields.external);
+																				if (fieldinfo.type=='lookup') origin[fieldinfo.id].lookup=true;
+																			}
+																		})(fields.external[formula.field]);
 																});
 																return pd.kumaneko.app.action(action.transfer.app,origin,'backend');
 															}
@@ -4682,6 +4699,7 @@ pd.modules={
 																	{
 																		if (action.transfer.criteria.some((item) => item.external==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																		if (action.transfer.mapping.some((item) => item.external==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
+																		if (action.transfer.formula.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	}
 																	if (action.mail.to) res.push({id:action.mail.to,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
 																	if (action.mail.attachment) res.push({id:action.mail.attachment,message:'-&nbsp;'+action.name+'&nbsp;(This app)'});
@@ -4746,6 +4764,7 @@ pd.modules={
 																				{
 																					if (action.transfer.criteria.some((item) => item.external==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;('+app.name+')'});
 																					if (action.transfer.mapping.some((item) => item.external==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;('+app.name+')'});
+																					if (action.transfer.formula.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+action.name+'&nbsp;('+app.name+')'});
 																				}
 																				break;
 																		}
@@ -6513,7 +6532,8 @@ pd.modules={
 																		app:'',
 																		pattern:'insert',
 																		criteria:[],
-																		mapping:[]
+																		mapping:[],
+																		formula:[]
 																	},
 																	mail:{
 																		from:'',
@@ -7016,6 +7036,9 @@ pd.modules={
 															action.transfer.mapping.each((mapping,index) => {
 																if (!(mapping.external in fieldinfos)) res.push('-&nbsp;'+action.name+'&nbsp;('+app.name+')');
 															});
+															action.transfer.formula.each((formula,index) => {
+																if (!(formula.field in fieldinfos)) res.push('-&nbsp;'+action.name+'&nbsp;('+app.name+')');
+															});
 														}
 														break;
 												}
@@ -7220,7 +7243,7 @@ pd.modules={
 							/* get actions */
 							error=(() => {
 								var res=[];
-								var mappings=(() => {
+								var excludes=(() => {
 									var res=[];
 									for (var key in fieldinfos)
 										((fieldinfo) => {
@@ -7236,7 +7259,7 @@ pd.modules={
 								})();
 								app.actions.each((action,index) => {
 									if (['button','value'].includes(action.trigger))
-										if (action.formula.some((item) => mappings.includes(item.field)))
+										if (action.formula.some((item) => excludes.includes(item.field)))
 										{
 											res.push('-&nbsp;'+action.name);
 											return;
@@ -7253,6 +7276,29 @@ pd.modules={
 														return;
 													}
 													if (action.transfer.mapping.some((item) => !(item.external in fields.external)))
+													{
+														res.push('-&nbsp;'+action.name);
+														return;
+													}
+													if (action.transfer.formula.some((item) => !(item.field in fields.external)))
+													{
+														res.push('-&nbsp;'+action.name);
+														return;
+													}
+													if ((() => {
+														var res=[];
+														for (var key in fields.external)
+															((fieldinfo) => {
+																switch (fieldinfo.type)
+																{
+																	case 'address':
+																		for (var key in fieldinfo.mapping)
+																			if (fieldinfo.mapping[key]) res.push(fieldinfo.mapping[key]);
+																		break;
+																}
+															})(fields.external[key]);
+														return action.transfer.formula.some((item) => res.includes(item.field));
+													})())
 													{
 														res.push('-&nbsp;'+action.name);
 														return;
@@ -7911,6 +7957,112 @@ pd.modules={
 							});
 						}
 					},
+					lib:{
+						formula:{
+							rebuild:(fieldinfo) => {
+								return ((field) => {
+									switch (fieldinfo.type)
+									{
+										case 'checkbox':
+											field.addclass('pd-lookup').append(
+												pd.create('button').addclass('pd-icon pd-icon-lookup pd-search').on('click',(e) => {
+													pd.pickupmultiple(
+														fieldinfo.options.map((item) => ({option:{value:item.option.value}})),
+														{option:{align:'left',text:'option'}},
+														(resp) => field.elm('input').val(JSON.stringify(resp.map((item) => item.option.value)))
+													);
+												})
+											);
+											break;
+										case 'color':
+											field.addclass('pd-lookup').append(
+												pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search').on('click',(e) => {
+													pd.pickupcolor((color) => field.elm('input').val('"'+color+'"'));
+												})
+											);
+											break;
+										case 'department':
+										case 'group':
+										case 'user':
+											((picker) => {
+												field.addclass('pd-lookup').append(
+													pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search').on('click',(e) => {
+														picker.show({
+																app:fieldinfo.type+'s',
+																query:(fieldinfo.type=='user')?'available = "available"':'',
+																sort:'__id asc',
+																picker:{
+																	name:{
+																		id:'name',
+																		type:'text',
+																		caption:'name',
+																		required:false,
+																		nocaption:true
+																	}
+																}
+															},
+															((fieldinfo.type=='user')?[{__id:{value:'LOGIN_USER'},account:{value:'LOGIN_USER'},name:{value:'Login user'}}]:[]),
+															(records) => {
+																((value) => {
+																	field.elm('input').val(value.replace(/["']{1}LOGIN_USER["']{1}/g,'LOGIN_USER'));
+																})(JSON.stringify(records.map((item) => item['__id'].value.toString())));
+															}
+														);
+													})
+												);
+											})(new panda_recordpicker(true));
+											break;
+										case 'dropdown':
+										case 'radio':
+											field.addclass('pd-lookup').append(
+												pd.create('button').addclass('pd-icon pd-icon-lookup pd-search').on('click',(e) => {
+													pd.pickupsingle(
+														fieldinfo.options.filter((item) => item.option.value),
+														{option:{align:'left',text:'option'}},
+														(resp) => field.elm('input').val('"'+resp.option.value+'"')
+													);
+												})
+											);
+											break;
+										case 'lookup':
+											((fieldinfo,picker) => {
+												field.addclass('pd-lookup').append(
+													pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search').on('click',(e) => {
+														if (Array.isArray(fieldinfo.picker))
+														{
+															pd.event.call(fieldinfo.app,'pd.fields.call',{fields:{}})
+															.then((param) => {
+																fieldinfo.picker=((picker) => {
+																	var res={};
+																	picker.each((picker,index) => {
+																		if (picker in param.fields) res[picker]=pd.extend({},param.fields[picker]);
+																	});
+																	if (Object.keys(res).length==0)
+																		if (fieldinfo.search in param.fields) res[fieldinfo.search]=pd.extend({},param.fields[fieldinfo.search]);
+																	if (Object.keys(res).length==0) res['__id']={id:'__id',type:'id',caption:'id',required:false,nocaption:false};
+																	return res;
+																})(fieldinfo.picker);
+																picker.show(fieldinfo,[],(record) => {
+																	field.elm('input').val(record['__id'].value);
+																});
+															});
+														}
+														else
+														{
+															picker.show(fieldinfo,[],(record) => {
+																field.elm('input').val(record['__id'].value);
+															});
+														}
+													})
+												);
+											})(pd.extend({},fieldinfo),new panda_recordpicker());
+											break;
+									}
+									return field;
+								})(pd.create('div').addclass('pd-field-value').append(pd.create('input').attr('type','text').attr('data-type','text')))
+							}
+						}
+					},
 					sections:{
 						trigger:{
 							caption:null,
@@ -7936,7 +8088,8 @@ pd.modules={
 							container:null,
 							tables:{
 								criteria:null,
-								mapping:null
+								mapping:null,
+								formula:null
 							}
 						},
 						mail:{
@@ -8004,108 +8157,7 @@ pd.modules={
 								if (cells.field.val())
 								{
 									((fieldinfo) => {
-										cells.formula.append(
-											((field) => {
-												switch (fieldinfo.type)
-												{
-													case 'checkbox':
-														field.addclass('pd-lookup').append(
-															pd.create('button').addclass('pd-icon pd-icon-lookup pd-search').on('click',(e) => {
-																pd.pickupmultiple(
-																	fieldinfo.options.map((item) => ({option:{value:item.option.value}})),
-																	{option:{align:'left',text:'option'}},
-																	(resp) => field.elm('input').val(JSON.stringify(resp.map((item) => item.option.value)))
-																);
-															})
-														);
-														break;
-													case 'color':
-														field.addclass('pd-lookup').append(
-															pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search').on('click',(e) => {
-																pd.pickupcolor((color) => field.elm('input').val('"'+color+'"'));
-															})
-														);
-														break;
-													case 'department':
-													case 'group':
-													case 'user':
-														((picker) => {
-															field.addclass('pd-lookup').append(
-																pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search').on('click',(e) => {
-																	picker.show({
-																			app:fieldinfo.type+'s',
-																			query:(fieldinfo.type=='user')?'available = "available"':'',
-																			sort:'__id asc',
-																			picker:{
-																				name:{
-																					id:'name',
-																					type:'text',
-																					caption:'name',
-																					required:false,
-																					nocaption:true
-																				}
-																			}
-																		},
-																		((fieldinfo.type=='user')?[{__id:{value:'LOGIN_USER'},account:{value:'LOGIN_USER'},name:{value:'Login user'}}]:[]),
-																		(records) => {
-																			((value) => {
-																				field.elm('input').val(value.replace(/["']{1}LOGIN_USER["']{1}/g,'LOGIN_USER'));
-																			})(JSON.stringify(records.map((item) => item['__id'].value.toString())));
-																		}
-																	);
-																})
-															);
-														})(new panda_recordpicker(true));
-														break;
-													case 'dropdown':
-													case 'radio':
-														field.addclass('pd-lookup').append(
-															pd.create('button').addclass('pd-icon pd-icon-lookup pd-search').on('click',(e) => {
-																pd.pickupsingle(
-																	fieldinfo.options.filter((item) => item.option.value),
-																	{option:{align:'left',text:'option'}},
-																	(resp) => field.elm('input').val('"'+resp.option.value+'"')
-																);
-															})
-														);
-														break;
-													case 'lookup':
-														((fieldinfo,picker) => {
-															field.addclass('pd-lookup').append(
-																pd.create('button').addclass('pd-icon pd-icon-'+fieldinfo.type+' pd-search').on('click',(e) => {
-																	if (Array.isArray(fieldinfo.picker))
-																	{
-																		pd.event.call(fieldinfo.app,'pd.fields.call',{fields:{}})
-																		.then((param) => {
-																			fieldinfo.picker=((picker) => {
-																				var res={};
-																				picker.each((picker,index) => {
-																					if (picker in param.fields) res[picker]=pd.extend({},param.fields[picker]);
-																				});
-																				if (Object.keys(res).length==0)
-																					if (fieldinfo.search in param.fields) res[fieldinfo.search]=pd.extend({},param.fields[fieldinfo.search]);
-																				if (Object.keys(res).length==0) res['__id']={id:'__id',type:'id',caption:'id',required:false,nocaption:false};
-																				return res;
-																			})(fieldinfo.picker);
-																			picker.show(fieldinfo,[],(record) => {
-																				field.elm('input').val(record['__id'].value);
-																			});
-																		});
-																	}
-																	else
-																	{
-																		picker.show(fieldinfo,[],(record) => {
-																			field.elm('input').val(record['__id'].value);
-																		});
-																	}
-																})
-															);
-														})(pd.extend({},fieldinfo),new panda_recordpicker());
-														break;
-												}
-												return field;
-											})(pd.create('div').addclass('pd-field-value').append(pd.create('input').attr('type','text').attr('data-type','text')))
-										);
+										cells.formula.append(this.keep.lib.formula.rebuild(fieldinfo));
 									})(pd.ui.field.parallelize(this.keep.fields)[cells.field.val()]);
 								}
 								resolve({});
@@ -8297,6 +8349,59 @@ pd.modules={
 				},(table,index) => {
 					if (table.tr.length==0) table.addrow();
 				},false);
+				this.keep.sections.transfer.tables.formula=pd.ui.table.create({
+					id:'formulas',
+					type:'table',
+					caption:'',
+					nocaption:true,
+					fields:{
+						field:{
+							id:'field',
+							type:'dropdown',
+							caption:'',
+							required:false,
+							nocaption:true,
+							options:[]
+						},
+						formula:{
+							id:'formula',
+							type:'spacer',
+							caption:'',
+							required:false,
+							nocaption:true
+						}
+					}
+				}).spread((row,index) => {
+					/* event */
+					row.elm('.pd-table-row-add').on('click',(e) => {
+						this.keep.sections.transfer.tables.formula.insertrow(row);
+					});
+					row.elm('.pd-table-row-del').on('click',(e) => {
+						pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+							this.keep.sections.transfer.tables.formula.delrow(row);
+						});
+					});
+					/* modify elements */
+					((cells) => {
+						cells.field.on('change',(e) => e.currentTarget.rebuild()).rebuild=() => {
+							return new Promise((resolve,reject) => {
+								cells.formula.empty();
+								if (cells.field.val())
+								{
+									((fieldinfo) => {
+										cells.formula.append(this.keep.lib.formula.rebuild(fieldinfo));
+									})(pd.ui.field.parallelize(this.keep.config.apps.user[this.contents.elm('[field-id=app]').elm('select').val()].fields)[cells.field.val()]);
+								}
+								resolve({});
+							});
+						};
+					})({
+						field:row.elm('[field-id=field]').elm('select'),
+						formula:row.elm('[field-id=formula]')
+					});
+				},(table,index) => {
+					if (table.tr.length==0) table.addrow();
+				},false);
 				this.keep.sections.option.table=pd.ui.table.create({
 					id:'options',
 					type:'table',
@@ -8483,7 +8588,7 @@ pd.modules={
 								)
 								.append(
 									((container) => {
-										container.elm('.pd-field-value').append(this.keep.sections.report.table);
+										container.elm('.pd-field-value').append(this.keep.sections.report.table.addclass('pd-tight'));
 										return container;
 									})(pd.ui.field.create({
 										id:'templates',
@@ -8518,7 +8623,7 @@ pd.modules={
 									((res) => {
 										res.elm('select').on('change',(e) => e.currentTarget.rebuild()).rebuild=() => {
 											return new Promise((resolve,reject) => {
-												((criterias,mappings) => {
+												((criterias,mappings,formulas) => {
 													criterias.clearrows();
 													criterias.template.elm('[field-id=external]').elm('select').empty().append(pd.create('option').attr('value','').html(pd.constants.action.caption.transfer.destination[pd.lang]));
 													criterias.template.elm('[field-id=operator]').elm('select').empty();
@@ -8527,13 +8632,30 @@ pd.modules={
 													mappings.template.elm('[field-id=external]').elm('select').empty().append(pd.create('option'));
 													mappings.template.elm('[field-id=internal]').elm('select').empty().append(pd.create('option'));
 													mappings.template.elm('[field-id=guide]').parentNode.addclass('pd-mapping-guide');
+													formulas.clearrows();
+													formulas.template.elm('[field-id=field]').elm('select').empty().append(pd.create('option'));
 													if (res.elm('select').val())
 													{
 														resolve(((fieldinfos) => {
 															var res={
 																criteria:{},
-																mapping:{}
+																mapping:{},
+																formula:{}
 															};
+															var excludes=(() => {
+																var res=[];
+																for (var key in fieldinfos)
+																	((fieldinfo) => {
+																		switch (fieldinfo.type)
+																		{
+																			case 'address':
+																				for (var key in fieldinfo.mapping)
+																					if (fieldinfo.mapping[key]) res.push(fieldinfo.mapping[key]);
+																				break;
+																		}
+																	})(fieldinfos[key]);
+																return res;
+															})();
 															for (var key in fieldinfos)
 																((fieldinfo) => {
 																	switch (fieldinfo.type)
@@ -8571,11 +8693,20 @@ pd.modules={
 																			);
 																			res.criteria[fieldinfo.id]=fieldinfo;
 																			res.mapping[fieldinfo.id]=fieldinfo;
+																			if (!excludes.includes(fieldinfo.id))
+																			{
+																				formulas.template.elm('[field-id=field]').elm('select')
+																				.append(
+																					pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption)
+																				);
+																				res.formula[fieldinfo.id]=fieldinfo;
+																			}
 																			break;
 																	}
 																})(fieldinfos[key]);
 															criterias.addrow();
 															mappings.addrow();
+															formulas.addrow();
 															return res;
 														})(pd.ui.field.parallelize(this.keep.config.apps.user[res.elm('select').val()].fields)));
 													}
@@ -8583,12 +8714,14 @@ pd.modules={
 													{
 														criterias.addrow();
 														mappings.addrow();
+														formulas.addrow();
 														resolve({
 															criteria:{},
-															mapping:{}
+															mapping:{},
+															formula:{}
 														});
 													}
-												})(this.keep.sections.transfer.tables.criteria,this.keep.sections.transfer.tables.mapping);
+												})(this.keep.sections.transfer.tables.criteria,this.keep.sections.transfer.tables.mapping,this.keep.sections.transfer.tables.formula);
 											});
 										};
 										return res;
@@ -8602,7 +8735,7 @@ pd.modules={
 								})(pd.ui.field.create(this.app.fields.pattern).css({width:'50%'})),this.app))
 								.append(
 									((container) => {
-										container.elm('.pd-field-value').append(this.keep.sections.transfer.tables.criteria);
+										container.elm('.pd-field-value').append(this.keep.sections.transfer.tables.criteria.addclass('pd-tight'));
 										return container;
 									})(pd.ui.field.create({
 										id:'criteria',
@@ -8614,12 +8747,24 @@ pd.modules={
 								)
 								.append(
 									((container) => {
-										container.elm('.pd-field-value').append(this.keep.sections.transfer.tables.mapping);
+										container.elm('.pd-field-value').append(this.keep.sections.transfer.tables.mapping.addclass('pd-tight'));
 										return container;
 									})(pd.ui.field.create({
 										id:'mapping',
 										type:'spacer',
 										caption:pd.constants.action.caption.transfer.mapping[pd.lang],
+										required:false,
+										nocaption:false
+									}))
+								)
+								.append(
+									((container) => {
+										container.elm('.pd-field-value').append(this.keep.sections.transfer.tables.formula);
+										return container;
+									})(pd.ui.field.create({
+										id:'formula',
+										type:'spacer',
+										caption:pd.constants.action.caption.transfer.formula[pd.lang],
 										required:false,
 										nocaption:false
 									}))
@@ -8747,7 +8892,7 @@ pd.modules={
 										if (!res.error)
 											if (current.elm('[field-id=field]').elm('select').val())
 											{
-												if (current.elm('[field-id=formula]').elm('input').val().match(/(class |fetch\(|function\(|XMLHttpRequest\(|=>|var |let |const )/g))
+												if (current.elm('[field-id=formula]').elm('input').val().match(/(class |fetch\(|function\(|=>|var |let |const )/g))
 												{
 													res.error=true;
 													pd.alert(pd.constants.action.message.invalid.formula[pd.lang],() => {
@@ -8860,6 +9005,9 @@ pd.modules={
 															config:[],
 															divide:[],
 															table:{}
+														};
+														var formula={
+															config:[]
 														};
 														((pattern) => {
 															switch (pattern)
@@ -9030,10 +9178,35 @@ pd.modules={
 																			}
 																			if (!res.error)
 																			{
-																				res.action.transfer.app=record.app.value;
-																				res.action.transfer.pattern=pattern;
-																				res.action.transfer.criteria=criteria.config;
-																				res.action.transfer.mapping=mapping.config;
+																				formula.config=this.keep.sections.transfer.tables.formula.tr.reduce((result,current) => {
+																					if (!res.error)
+																						if (current.elm('[field-id=field]').elm('select').val())
+																						{
+																							if (current.elm('[field-id=formula]').elm('input').val().match(/(class |fetch\(|function\(|=>|var |let |const )/g))
+																							{
+																								res.error=true;
+																								pd.alert(pd.constants.action.message.invalid.transfer.formula[pd.lang],() => {
+																									resolve(res);
+																								});
+																							}
+																							else
+																							{
+																								result.push({
+																									field:current.elm('[field-id=field]').elm('select').val(),
+																									formula:current.elm('[field-id=formula]').elm('input').val()
+																								});
+																							}
+																						}
+																					return result;
+																				},[]);
+																				if (!res.error)
+																				{
+																					res.action.transfer.app=record.app.value;
+																					res.action.transfer.pattern=pattern;
+																					res.action.transfer.criteria=criteria.config;
+																					res.action.transfer.mapping=mapping.config;
+																					res.action.transfer.formula=formula.config;
+																				}
 																			}
 																		}
 																	}
@@ -9051,6 +9224,7 @@ pd.modules={
 													res.action.transfer.pattern='insert';
 													res.action.transfer.criteria=[];
 													res.action.transfer.mapping=[];
+													res.action.transfer.formula=[];
 												}
 											}
 											if (!res.error)
@@ -9496,6 +9670,16 @@ pd.modules={
 													})(elements.tables.mapping.addrow());
 											});
 											if (elements.tables.mapping.tr.length==0) elements.tables.mapping.addrow();
+											elements.tables.formula.clearrows();
+											this.keep.action.transfer.formula.each((values,index) => {
+												if (values.field in fields.formula)
+													((row) => {
+														row.elm('[field-id=field]').elm('select').val(values.field).rebuild().then((fields) => {
+															row.elm('[field-id=formula]').elm('input').val(values.formula);
+														});
+													})(elements.tables.formula.addrow());
+											});
+											if (elements.tables.formula.tr.length==0) elements.tables.formula.addrow();
 										});
 										elements.from.empty().assignoption((() => {
 											var res=[];
@@ -17824,6 +18008,10 @@ pd.constants=pd.extend({
 					en:'Destination',
 					ja:'転送先アプリのフィールド'
 				},
+				formula:{
+					en:'Formula',
+					ja:'関数&nbsp;/&nbsp;計算式'
+				},
 				mapping:{
 					en:'Field Mappings',
 					ja:'転送するフィールド'
@@ -17932,6 +18120,10 @@ pd.constants=pd.extend({
 					dividing:{
 						en:'You must specify the fields in the same table when dividing a record based on a table field',
 						ja:'レコードの分割転送を行う場合は、分割転送するフィールドが同じテーブル内に属する必要があります'
+					},
+					formula:{
+						en:'Contains characters that cannot be used in the formula',
+						ja:'計算式に使用出来ない文字が含まれています'
 					},
 					mapping:{
 						en:'Please specify one or more mappings',
