@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.6.2
+* Version: 1.6.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -11993,7 +11993,107 @@ pd.modules={
 						}
 					}
 				};
+				this.builder={
+					alter:class extends panda_dialog{
+						/* constructor */
+						constructor(){
+							super(999996,false,false);
+							/* setup properties */
+							this.app={
+								id:'alterbuilder',
+								fields:{}
+							};
+							this.handler=null;
+							/* modify elements */
+							this.header.css({paddingLeft:'0.25em',textAlign:'left'}).html('Caption Settings');
+							this.container.addclass('pd-kumaneko-main').css({
+								height:'auto',
+								width:'35em'
+							});
+							this.contents.addclass('pd-kumaneko-alterbuilder').css({
+								padding:'0'
+							})
+							.append(pd.create('div').addclass('pd-scope').attr('form-id','form_'+this.app.id));
+							/* resize event */
+							window.on('resize',(e) => {
+								this.contents
+								.css({height:'auto'})
+								.css({height:this.container.innerheight().toString()+'px'});
+							});
+						}
+						/* get configuration */
+						get(){
+							return new Promise((resolve,reject) => {
+								resolve(pd.record.get(this.contents,this.app));
+							});
+						}
+						/* set configuration */
+						set(fieldinfos){
+							return new Promise((resolve,reject) => {
+								pd.record.set(this.contents,this.app,(() => {
+									var res={};
+									for (var key in fieldinfos)
+										res[key]={value:fieldinfos[key].alter.caption};
+									return res;
+								})());
+								resolve();
+							});
+						}
+						/* show */
+						show(fieldinfos,callback){
+							/* setup properties */
+							this.app.fields=((fieldinfos) => {
+								var res={};
+								for (var key in fieldinfos)
+									((fieldinfo) => {
+										res[fieldinfo.id]={
+											id:fieldinfo.id,
+											type:'textarea',
+											caption:fieldinfo.caption,
+											required:false,
+											nocaption:false
+										};
+									})(fieldinfos[key]);
+								return res;
+							})(fieldinfos);
+							/* modify elements */
+							((contents) => {
+								for (var key in this.app.fields)
+									contents.append(pd.ui.field.activate(pd.ui.field.create(this.app.fields[key]).css({width:'100%'}),this.app));
+								contents.elms('input,select,textarea').each((element,index) => element.initialize());
+							})(this.contents.elm('.pd-scope').empty());
+							/* setup handler */
+							if (this.handler)
+							{
+								this.ok.off('click',this.handler);
+								this.cancel.off('click');
+							}
+							this.handler=(e) => {
+								this.get().then((resp) => {
+									if (!resp.error)
+									{
+										callback(resp.record);
+										this.hide();
+									}
+								});
+							};
+							this.ok.on('click',this.handler);
+							this.cancel.on('click',(e) => this.hide());
+							/* set configuration */
+							this.set(fieldinfos).then(() => {
+								/* show */
+								this.contents
+								.css({height:'auto'})
+								.css({height:this.container.innerheight().toString()+'px'});
+								super.show();
+							});
+						}
+					}
+				};
 				this.keep={
+					alter:{
+						builder:null
+					},
 					app:{},
 					fields:{},
 					injector:{},
@@ -12021,7 +12121,8 @@ pd.modules={
 						if (addtrash)
 						{
 							/* modify elements */
-							element.append(
+							element
+							.append(
 								pd.create('button').addclass('pd-icon pd-icon-trash pd-kumaneko-drag-button')
 								.on('touchstart,mousedown',(e) => {
 									e.stopPropagation();
@@ -12033,6 +12134,36 @@ pd.modules={
 										/* remodel */
 										this.lib.remodel();
 									});
+								})
+							)
+							.append(
+								pd.create('button').addclass('pd-icon pd-icon-setting pd-kumaneko-drag-button')
+								.on('touchstart,mousedown',(e) => {
+									e.stopPropagation();
+								})
+								.on('click',(e) => {
+									/* show alterbuilder */
+									this.keep.alter.builder.show(
+										(() => {
+											var res={};
+											res[element.fieldinfo.id]=element.fieldinfo;
+											if (element.fieldinfo.type=='table')
+												for (var key in element.fieldinfo.fields)
+													((alter,fieldinfo) => {
+														fieldinfo.alter={caption:alter.caption};
+														res[fieldinfo.id]=fieldinfo;
+													})(element.fieldinfo.alter.fields[key],pd.extend({},element.fieldinfo.fields[key]));
+											return res;
+										})(),
+										(resp) => {
+											element.fieldinfo.alter.caption=resp[element.fieldinfo.id].value;
+											if (element.fieldinfo.type=='table')
+												for (var key in element.fieldinfo.fields)
+													element.fieldinfo.alter.fields[key].caption=resp[key].value;
+											/* remodel */
+											this.lib.remodel();
+										}
+									);
 								})
 							);
 						}
@@ -12059,6 +12190,15 @@ pd.modules={
 						switch (fieldinfo.type)
 						{
 							case 'table':
+								fieldinfo.alter={
+									caption:((fieldinfo.alter)?fieldinfo.alter.caption:''),
+									fields:Object.keys(fieldinfo.fields).reduce((result,current) => {
+										if (!(current in result)) result[current]={caption:''};
+										return result;
+									},(fieldinfo.alter)?fieldinfo.alter.fields:{})
+								};
+								for (var key in fieldinfo.alter.fields)
+									if (!(key in fieldinfo.fields)) delete fieldinfo.alter.fields[key];
 								res=pd.ui.table.activate(pd.ui.table.create(fieldinfo,true,false,true),pd.extend({id:this.app.id},this.keep.app));
 								if (!this.keep.app.fields[fieldinfo.id].nocaption)
 									((caption) => {
@@ -12066,7 +12206,10 @@ pd.modules={
 									})(pd.create('span').addclass('pd-table-caption').html(this.keep.app.fields[fieldinfo.id].caption));
 								break;
 							default:
-								res=pd.ui.field.create(pd.extend({},fieldinfo));
+								fieldinfo.alter={
+									caption:((fieldinfo.alter)?fieldinfo.alter.caption:'')
+								};
+								res=pd.ui.field.create(fieldinfo);
 								switch (fieldinfo.type)
 								{
 									case 'number':
@@ -12100,13 +12243,34 @@ pd.modules={
 								{
 									case 'number':
 										element.elm('.pd-field-value').dispatchEvent(new Event('show'));
+										if (!element.fieldinfo.nocaption)
+											((caption) => {
+												this.contents.elm('[field-id="'+CSS.escape(element.fieldinfo.id)+'"]').elm('.pd-field-caption').html(caption.replace(/\n/g,'<br>'));
+											})(element.fieldinfo.alter.caption || element.fieldinfo.caption);
 										break;
 									case 'table':
 										if (element.tr.length==0) element.addrow();
+										if (!element.fieldinfo.nocaption)
+											((caption) => {
+												this.contents.elm('[field-id="'+CSS.escape(element.fieldinfo.id)+'"]').elm('.pd-table-caption').html(caption.replace(/\n/g,'<br>'));
+											})(element.fieldinfo.alter.caption || element.fieldinfo.caption);
+										for (var key in element.fieldinfo.alter.fields)
+											((alter,fieldinfo) => {
+												if (!fieldinfo.nocaption)
+													((caption) => {
+														this.contents.elm('[field-id="'+CSS.escape(fieldinfo.id)+'"]').elm('.pd-field-caption').html(caption.replace(/\n/g,'<br>'));
+													})(alter.caption || fieldinfo.caption);
+											})(element.fieldinfo.alter.fields[key],element.fieldinfo.fields[key]);
+										break;
+									default:
+										if (!element.fieldinfo.nocaption)
+											((caption) => {
+												this.contents.elm('[field-id="'+CSS.escape(element.fieldinfo.id)+'"]').elm('.pd-field-caption').html(caption.replace(/\n/g,'<br>'));
+											})(element.fieldinfo.alter.caption || element.fieldinfo.caption);
 										break;
 								}
 								this.keep.nav[element.fieldinfo.id].attr('disabled','disabled');
-								this.keep.injector.fields.push({id:element.fieldinfo.id,type:element.fieldinfo.type});
+								this.keep.injector.fields.push({id:element.fieldinfo.id,type:element.fieldinfo.type,alter:element.fieldinfo.alter});
 							}
 						});
 					}
@@ -12301,6 +12465,8 @@ pd.modules={
 					)
 				);
 				this.contents.elms('input,select,textarea').each((element,index) => element.initialize());
+				/* build alterbuilder */
+				this.keep.alter.builder=new this.builder.alter();
 			}
 			/* get configuration */
 			get(){
@@ -12438,7 +12604,11 @@ pd.modules={
 						})(this.contents.elm('.pd-kumaneko-nav-main').empty());
 						((fields) => {
 							fields.each((field,index) => {
-								if (field.id in this.keep.fields) this.contents.elm('.pd-kumaneko-drag').append(this.lib.create(this.keep.fields[field.id]));
+								if (field.id in this.keep.fields)
+									this.contents.elm('.pd-kumaneko-drag').append(this.lib.create(((fieldinfo) => {
+										fieldinfo.alter=field.alter;
+										return fieldinfo;
+									})(pd.extend({},this.keep.fields[field.id]))));
 							});
 							this.lib.remodel();
 						})(this.keep.injector.fields);
@@ -16035,9 +16205,20 @@ pd.modules={
 							{
 								case 'table':
 									result.push({type:'table',id:current.id});
+									if ('alter' in current)
+									{
+										if (current.alter.caption)
+											app.fields[current.id].caption=current.alter.caption.replace(/\n/g,'<br>');
+										for (var key in current.alter.fields)
+											if (key in app.fields[current.id].fields)
+												if (current.alter.fields[key].caption) app.fields[current.id].fields[key].caption=current.alter.fields[key].caption.replace(/\n/g,'<br>');
+									}
 									break;
 								default:
 									result.push({type:'row',fields:[current.id]});
+									if ('alter' in current)
+										if (current.alter.caption)
+											app.fields[current.id].caption=current.alter.caption.replace(/\n/g,'<br>');
 									break;
 							}
 						return result;

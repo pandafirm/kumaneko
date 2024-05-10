@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.6.2
+* Version: 1.6.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -713,6 +713,12 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 .pd-kumaneko-actionbuilder .pd-table:not(.pd-tight){
 	margin-bottom:0.25em;
 }
+/* Injector Field Caption Alter Builder definition */
+.pd-kumaneko-alterbuilder .pd-field-caption{
+	margin-bottom:0.25em;
+	padding:0;
+	width:100%;
+}
 /* Deduplication Builder definition */
 .pd-kumaneko-deduplicationbuilder :is(.pd-field-caption,.pd-table-caption){
 	margin-bottom:0.25em;
@@ -1102,6 +1108,13 @@ body.dark .pd-kumaneko-actionbuilder :is(.pd-box-caption,.pd-field-caption){
 	border-bottom:1px solid var(--dark-main-shadow-color);
 	box-shadow:0 1px 1px -1px var(--dark-main-highlight-thin-color);
 }
+body.dark .pd-kumaneko-alterbuilder{
+	background-color:var(--dark-main-bg-color) !important;
+}
+body.dark .pd-kumaneko-alterbuilder .pd-field-caption{
+	border-bottom:1px solid var(--dark-main-shadow-color);
+	box-shadow:0 1px 1px -1px var(--dark-main-highlight-thin-color);
+}
 body.dark .pd-kumaneko-deduplicationbuilder{
 	background-color:var(--dark-main-bg-color) !important;
 }
@@ -1467,6 +1480,13 @@ body.light .pd-kumaneko-actionbuilder{
 	background-color:var(--light-main-bg-color) !important;
 }
 body.light .pd-kumaneko-actionbuilder :is(.pd-box-caption,.pd-field-caption){
+	border-bottom:1px solid var(--light-main-shadow-color);
+	box-shadow:0 1px 1px -1px var(--light-main-highlight-thin-color);
+}
+body.light .pd-kumaneko-alterbuilder{
+	background-color:var(--light-main-bg-color) !important;
+}
+body.light .pd-kumaneko-alterbuilder .pd-field-caption{
 	border-bottom:1px solid var(--light-main-shadow-color);
 	box-shadow:0 1px 1px -1px var(--light-main-highlight-thin-color);
 }
