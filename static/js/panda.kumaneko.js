@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.6.3
+* Version: 1.7.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -57,7 +57,12 @@ class panda_kumaneko{
 				return (app in this.apps)?this.apps[app].app.fields:{};
 			},
 			notify:(app,reload,exclude) => {
-				if (app in this.apps) this.apps[app].notify(reload,exclude);
+				if (app in this.apps)
+				{
+					this.apps[app].notify(reload,exclude).then(() => {
+						pd.event.call('0','pd.queue.notify',{source:'app',id:app});
+					});
+				}
 			}
 		};
 		this.record={
@@ -305,6 +310,8 @@ class panda_kumaneko{
 					this.notificationmanager=new pd.modules.manager.notification();
 					/* build storagemanager */
 					this.storagemanager=new pd.modules.manager.storage();
+					/* build trashmanager */
+					this.trashmanager=new pd.modules.manager.trash();
 					/* event */
 					apps.map((item) => item.id).each((id,index) => {
 						pd.event.on(id,'pd.app.activate',(e) => {
@@ -6763,6 +6770,23 @@ pd.modules={
 										id:'truncate',
 										type:'spacer',
 										caption:pd.constants.app.caption.truncate[pd.lang],
+										required:false,
+										nocaption:false
+									}).css({width:'100%'}))
+								)
+								.append(
+									((res) => {
+										res.elm('.pd-field-value')
+										.append(
+											pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.app.caption.button.trash[pd.lang]).on('click',(e) => {
+												pd.kumaneko.trashmanager.show(this.app.id);
+											})
+										);
+										return res;
+									})(pd.ui.field.create({
+										id:'trash',
+										type:'spacer',
+										caption:pd.constants.app.caption.trash[pd.lang],
 										required:false,
 										nocaption:false
 									}).css({width:'100%'}))
@@ -17673,6 +17697,176 @@ pd.modules={
 					super.show();
 				});
 			}
+		},
+		trash:class extends panda_dialog{
+			/* constructor */
+			constructor(){
+				super(999995,false,false);
+				/* setup properties */
+				this.app={
+					id:'trashmanager',
+					fields:{},
+					styles:{},
+					views:[{
+							id:'0',
+							type:'list',
+							fields: []
+					}]
+				};
+				this.keep={
+					app:null
+				};
+				/* modify elements */
+				this.header.css({paddingLeft:'0.25em',textAlign:'left'}).html('Trash Management');
+				this.container.addclass('pd-kumaneko-main').css({
+					height:'calc(100% - 1em)',
+					width:'calc(100% - 1em)'
+				});
+				this.contents.addclass('pd-kumaneko-trashmanager').css({
+					padding:'1px 0px 0px 0px'
+				});
+				this.contents.elms('input,select,textarea').each((element,index) => element.initialize());
+			}
+			/* get configuration */
+			get(){
+				return new Promise((resolve,reject) => {
+					var indexes=[];
+					var records=[];
+					var res={};
+					this.contents.elm('.pd-view').elms('[form-id=form_'+this.app.id+']').each((element,index) => {
+						res=pd.record.get(element,this.app);
+						if (!res.error)
+						{
+							if (res.record['restore'].value.length!=0)
+							{
+								delete res.record['restore'];
+								indexes.push(index);
+								records.push(res.record);
+							}
+						}
+						else return PD_BREAK;
+					});
+					if (!res.error) resolve({error:false,indexes:indexes,records:records});
+					else resolve(res);
+				});
+			}
+			/* set configuration */
+			set(){
+				return new Promise((resolve,reject) => {
+					pd.request(pd.ui.baseuri()+'/trash.php','GET',{},{app:this.keep.app})
+					.then((resp) => {
+						this.contents.empty()
+						.append(
+							pd.create('div').addclass('pd-container')
+							.append(pd.ui.view.create(pd.create('div').addclass('pd-contents'),this.app,this.app.views.first().id))
+						);
+						this.contents.elm('.pd-view').elm('thead').elm('[column-id="'+CSS.escape('restore')+'"]')
+						.append(
+							((res) => {
+								res.elm('input').on('change',(e) => {
+									if (e.currentTarget.checked)
+										this.contents.elm('.pd-view').elms('[field-id="'+CSS.escape('restore')+'"]').each((element,index) => {
+											element.elm('input').checked=true;
+										});
+								});
+								return res;
+							})(pd.ui.field.create({
+								id:'all',
+								type:'checkbox',
+								caption:'',
+								required:false,
+								nocaption:true,
+								options:[
+									{option:{value:''}}
+								]
+							}).css({width:'100%'}))
+						);
+						resp.records.each((record,index) => {
+							record['restore']={value:[]};
+							((row) => {
+								row.elm('[field-id="'+CSS.escape('restore')+'"]').removeclass('pd-readonly');
+								pd.record.set(row.elm('[form-id=form_'+this.app.id+']'),this.app,record);
+							})(this.contents.elm('.pd-view').addrow());
+						});
+						resolve();
+					})
+					.catch((error) => pd.alert(error.message));
+				});
+			}
+			/* show */
+			show(app){
+				this.keep.app=app;
+				pd.request(pd.ui.baseuri()+'/config.php','GET',{},{},true)
+				.then((resp) => {
+					/* setup properties */
+					this.app.fields=pd.extend({restore:{
+						id:'restore',
+						type:'checkbox',
+						caption:'',
+						required:false,
+						nocaption:false,
+						options:[
+							{option:{value:''}}
+						]
+					}},resp.file.apps.user[this.keep.app].fields);
+					/* setup handler */
+					if (this.handler)
+					{
+						this.ok.off('click',this.handler);
+						this.cancel.off('click');
+					}
+					this.handler=(e) => {
+						pd.confirm(pd.constants.common.message.confirm.submit[pd.lang],() => {
+							pd.loadstart();
+							this.get().then((resp) => {
+								if (!resp.error)
+								{
+									if (resp.records.length!=0)
+									{
+										((indexes,records) => {
+											pd.event.call(this.keep.app,'pd.saving.call',{records:records})
+											.then((param) => {
+												pd.request(pd.ui.baseuri()+'/trash.php','POST',{},{app:this.keep.app,indexes:indexes,records:records})
+												.then((resp) => {
+													records.each((record,index) => {
+														record['__id'].value=resp.id-(records.length-index-1);
+														if ('autonumbers' in resp) record['__autonumber'].value=resp.autonumbers[record['__id'].value.toString()];
+													});
+													pd.event.call(this.keep.app,'pd.restore.submit.success',{
+														records:records
+													})
+													.then((param) => {
+														if (!param.error)
+														{
+															pd.loadend();
+															this.set().then(() => pd.kumaneko.app.notify(this.keep.app,true));
+														}
+													});
+												})
+												.catch((error) => pd.alert(error.message));
+											})
+											.catch(() => pd.loadend());
+										})(resp.indexes,resp.records);
+									}
+									else
+									{
+										pd.alert(pd.constants.app.message.invalid.trash[pd.lang]);
+										reject();
+									}
+								}
+							});
+						});
+					};
+					this.ok.on('click',this.handler);
+					this.cancel.on('click',(e) => this.hide());
+					/* set configuration */
+					this.set().then(() => {
+						/* show */
+						super.show();
+					});
+				})
+				.catch((error) => pd.alert(error.message));
+			}
 		}
 	},
 	tab:class{
@@ -18493,6 +18687,10 @@ pd.constants=pd.extend({
 					en:'Discard Changes',
 					ja:'変更を中止'
 				},
+				trash:{
+					en:'Restore Records',
+					ja:'レコードを復旧'
+				},
 				truncate:{
 					en:'Delete all records',
 					ja:'全レコードを削除'
@@ -18573,6 +18771,10 @@ pd.constants=pd.extend({
 					en:'deletion',
 					ja:'削除'
 				}
+			},
+			trash:{
+				en:'Restoration of Deleted Records',
+				ja:'削除レコードの復旧'
 			},
 			truncate:{
 				en:'Bulk deletion of records',
@@ -18736,6 +18938,10 @@ pd.constants=pd.extend({
 				name:{
 					en:'Please enter the application name',
 					ja:'アプリ名を入力して下さい'
+				},
+				trash:{
+					en:'Please select the records you want to restore',
+					ja:'復旧したいレコードを選択して下さい'
 				},
 				view:{
 					en:'There is a defect in some views',
