@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 1.6.3
+* Version: 1.7.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -412,6 +412,14 @@ class clsDriver
 	public function delete($arg_file,$arg_id="")
 	{
 		$file=$this->dir."{$arg_file}.json";
+		$trash=(function($file){
+			$res=[
+				"file"=>$file,
+				"source"=>[]
+			];
+			if (file_exists($file)) $res["source"]=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
+			return $res;
+		})($this->dir."{$arg_file}_trash.json");
 		try
 		{
 			$this->lock($arg_file);
@@ -430,11 +438,16 @@ class clsDriver
 						$source=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
 						if (is_array($source))
 						{
-							if (array_key_exists($arg_id,$source)) unset($source[$arg_id]);
+							if (array_key_exists($arg_id,$source))
+							{
+								array_unshift($trash["source"],$source[$arg_id]);
+								unset($source[$arg_id]);
+							}
 							if (!is_array($source)) $source=[];
 						}
 						else $source=[];
 						file_put_contents($file,json_encode($source));
+						file_put_contents($trash["file"],json_encode($trash["source"]));
 						return true;
 					}
 					else
@@ -463,6 +476,14 @@ class clsDriver
 	public function deletes($arg_file,$arg_query="",$arg_operator="")
 	{
 		$file=$this->dir."{$arg_file}.json";
+		$trash=(function($file){
+			$res=[
+				"file"=>$file,
+				"source"=>[]
+			];
+			if (file_exists($file)) $res["source"]=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
+			return $res;
+		})($this->dir."{$arg_file}_trash.json");
 		try
 		{
 			$this->lock($arg_file);
@@ -479,11 +500,16 @@ class clsDriver
 					if (is_array($source))
 					{
 						$filters=$this->filter($source,$this->fields($arg_file),$arg_query,$arg_operator);
-						foreach ($filters as $key=>$value) unset($source[$key]);
+						foreach ($filters as $key=>$value)
+						{
+							array_unshift($trash["source"],$source[$key]);
+							unset($source[$key]);
+						}
 						if (!is_array($source)) $source=[];
 					}
 					else $source=[];
 					file_put_contents($file,json_encode($source));
+					file_put_contents($trash["file"],json_encode($trash["source"]));
 					return true;
 				}
 				else
@@ -506,12 +532,23 @@ class clsDriver
 	public function truncate($arg_file)
 	{
 		$file=$this->dir."{$arg_file}.json";
+		$trash=(function($file){
+			$res=[
+				"file"=>$file,
+				"source"=>[]
+			];
+			if (file_exists($file)) $res["source"]=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
+			return $res;
+		})($this->dir."{$arg_file}_trash.json");
 		try
 		{
 			$this->lock($arg_file);
 			if (file_exists($file))
 			{
+				$source=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
+				if (is_array($source)) foreach ($source as $key=>$value) array_unshift($trash["source"],$value);
 				file_put_contents($file,json_encode([]));
+				file_put_contents($trash["file"],json_encode($trash["source"]));
 				return true;
 			}
 			else

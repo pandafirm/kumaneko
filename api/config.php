@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.6.3
+* Version: 1.7.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -299,6 +299,7 @@ class clsRequest extends clsBase
 							break;
 						case "del":
 							if (file_exists(dirname(__FILE__)."/storage/json/".$this->body->{"app"}.".json")) unlink(dirname(__FILE__)."/storage/json/".$this->body->{"app"}.".json");
+							if (file_exists(dirname(__FILE__)."/storage/json/".$this->body->{"app"}."_trash.json")) unlink(dirname(__FILE__)."/storage/json/".$this->body->{"app"}."_trash.json");
 							break;
 					}
 				}
