@@ -336,7 +336,8 @@
                         "type": "edit",
                         "fields": [],
                         "query": "",
-                        "sort": ""
+                        "sort": "",
+                        "user": []
                     }
                 ],
                 "linkages": [],
@@ -389,7 +390,8 @@
                         "type": "edit",
                         "fields": [],
                         "query": "",
-                        "sort": ""
+                        "sort": "",
+                        "user": []
                     }
                 ],
                 "linkages": [],
@@ -442,7 +444,8 @@
                         "type": "edit",
                         "fields": [],
                         "query": "",
-                        "sort": ""
+                        "sort": "",
+                        "user": []
                     }
                 ],
                 "linkages": [],
