@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.7.0
+* Version: 1.7.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -123,6 +123,11 @@ class clsRequest extends clsBase
 										}
 										break;
 								}
+								if (!property_exists($item,"user"))
+								{
+									$item->user=[];
+									$update=true;
+								}
 								return $item;
 							},$value->views);
 							if (!property_exists($value,"injectors"))
@@ -179,6 +184,14 @@ class clsRequest extends clsBase
 									}
 									break;
 							}
+							$value->views=array_map(function($item) use (&$update){
+								if (!property_exists($item,"user"))
+								{
+									$item->user=[];
+									$update=true;
+								}
+								return $item;
+							},$value->views);
 							if (!property_exists($value,"injectors"))
 							{
 								$value->injectors=[];
