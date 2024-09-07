@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.7.0
+* Version: 1.7.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -807,11 +807,16 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	margin-top:1px;
 }
 .pd-kumaneko-viewbuilder .pd-kumaneko-filter-monitor{
-	line-height:1.75em;
-	width:calc(100% - 1.75em);
+	font-size:0.95em;
+	line-height:1.8425em;
+	width:calc(100% - 1.8425em);
 }
 .pd-kumaneko-viewbuilder .pd-kumaneko-main{
 	height:calc(100% - (2em + 3px));
+}
+.pd-kumaneko-viewbuilder .pd-kumaneko-main .pd-icon.pd-icon-filter{
+	background-position:center center;
+	background-size:1.75em 1.75em;
 }
 .pd-kumaneko-viewbuilder .pd-kumaneko-main :is(.pd-matrix,.pd-parallel){
 	margin-top:1px;

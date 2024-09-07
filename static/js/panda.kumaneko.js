@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.7.0
+* Version: 1.7.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -315,6 +315,8 @@ class panda_kumaneko{
 					/* event */
 					apps.map((item) => item.id).each((id,index) => {
 						pd.event.on(id,'pd.app.activate',(e) => {
+							if ('viewid' in e)
+								if (!((views) => (e.viewid in views)?(((views[e.viewid].user.length!=0)?(this.permit({admin:views[e.viewid].user})=='admin'):true)):false)(this.apps[id].view.ui)) return e;
 							this.dashboard.hide();
 							for (var key in this.apps)
 								((app) => {
@@ -804,37 +806,42 @@ class panda_kumaneko{
 							this.dashboard=new pd.modules.dashboard(this.config.dashboard.frames.reduce((result,current) => {
 								current.panels=current.panels.reduce((result,current) => {
 									if (this.permit(this.config.apps.user[current.app].permissions)!='denied')
-										result.push(((app) => {
-											current.config={
-												app:app,
-												view:app.views.filter((item) => item.id==current.view).first()
-											};
-											switch (current.config.view.type)
-											{
-												case 'calendar':
-													current.calendar=new panda_calendar(true);
-													break;
-												case 'crosstab':
-													current.crosstab=pd.ui.chart.create(current.config.view.type);
-													break;
-												case 'gantt':
-													current.gantt=pd.ui.gantt.create();
-													break;
-												case 'timeseries':
-													current.timeseries=pd.ui.chart.create(current.config.view.type);
-													break;
-												case 'kanban':
-													current.kanban=pd.ui.kanban.create();
-													break;
-												case 'map':
-													current.map=new panda_map();
-													break;
-												default:
-													pd.event.on(app.id,'pd.edit.call',(e) => pd.event.call(current.app,'pd.edit.call',e));
-													break;
-											}
-											return current;
-										})(pd.extend({id:'dashboard_'+current.app},this.config.apps.user[current.app])));
+										((app) => {
+											((view) => {
+												if ((view.user.length!=0)?(this.permit({admin:view.user})=='admin'):true)
+													result.push((() => {
+														current.config={
+															app:app,
+															view:app.views.filter((item) => item.id==current.view).first()
+														};
+														switch (current.config.view.type)
+														{
+															case 'calendar':
+																current.calendar=new panda_calendar(true);
+																break;
+															case 'crosstab':
+																current.crosstab=pd.ui.chart.create(current.config.view.type);
+																break;
+															case 'gantt':
+																current.gantt=pd.ui.gantt.create();
+																break;
+															case 'timeseries':
+																current.timeseries=pd.ui.chart.create(current.config.view.type);
+																break;
+															case 'kanban':
+																current.kanban=pd.ui.kanban.create();
+																break;
+															case 'map':
+																current.map=new panda_map();
+																break;
+															default:
+																pd.event.on(app.id,'pd.edit.call',(e) => pd.event.call(current.app,'pd.edit.call',e));
+																break;
+														}
+														return current;
+													})());
+											})(app.views.filter((item) => item.id==current.view).first());
+										})(pd.extend({id:'dashboard_'+current.app},this.config.apps.user[current.app]));
 									return result;
 								},[]);
 								if (current.panels.length!=0) result.push(current);
@@ -2388,6 +2395,7 @@ pd.modules={
 							fields:view.fields,
 							query:view.query,
 							sort:view.sort,
+							user:view.user,
 							offset:0,
 							limit:25,
 							loaded:false,
@@ -4067,7 +4075,7 @@ pd.modules={
 				);
 			}
 			this.app.views.each((view,index) => {
-				((viewid,viewname) => {
+				((viewid,viewname,viewuser) => {
 					this.area.contents.append(((view,viewid) => {
 						this.view.ui[viewid]=view;
 						/* modify elements */
@@ -4323,16 +4331,17 @@ pd.modules={
 						return view.contents;
 					})(create(viewid),viewid));
 					if (this.area.nav)
-						this.area.nav.elm('[nav-id=nav_'+this.app.id+']').elm('.pd-kumaneko-nav-button-details')
-						.append(
-							pd.create('span').addclass('pd-kumaneko-nav-button-details-item')
-							.append(pd.create('span').addclass('pd-kumaneko-nav-button-details-item-label').html(viewname))
-							.on('click',(e) => {
-								pd.event.call(this.app.id,'pd.app.activate',{viewid:viewid});
-							})
-						);
+						if ((viewuser.length!=0)?(pd.kumaneko.permit({admin:viewuser})=='admin'):true)
+							this.area.nav.elm('[nav-id=nav_'+this.app.id+']').elm('.pd-kumaneko-nav-button-details')
+							.append(
+								pd.create('span').addclass('pd-kumaneko-nav-button-details-item')
+								.append(pd.create('span').addclass('pd-kumaneko-nav-button-details-item-label').html(viewname))
+								.on('click',(e) => {
+									pd.event.call(this.app.id,'pd.app.activate',{viewid:viewid});
+								})
+							);
 					pd.event.call(this.app.id,'pd.view.build',{header:this.view.ui[viewid].header.elm('.pd-kumaneko-app-header-space'),body:this.view.ui[viewid].body,viewid:viewid});
-				})(view.id,view.name);
+				})(view.id,view.name,view.user);
 			});
 			/* event */
 			pd.event.on(this.app.id,'pd.action.call',(e) => {
@@ -6265,7 +6274,8 @@ pd.modules={
 															type:type,
 															fields:[],
 															query:'',
-															sort:''
+															sort:'',
+															user:[]
 														};
 														switch (type)
 														{
@@ -7214,7 +7224,8 @@ pd.modules={
 									type:'list',
 									fields:[],
 									query:'',
-									sort:''
+									sort:'',
+									user:[]
 								});
 							}
 							/* get linkages */
@@ -13314,28 +13325,52 @@ pd.modules={
 					filter:{
 						monitor:null,
 						show:() => {
-							pd.filter.build({fields:this.keep.fields},this.keep.view.query,this.keep.view.sort,(query,sort) => {
-								this.keep.filter.monitor.html(((query,sort) => {
-									var res=[];
-									res.push(query.split(' and ').filter((item) => item).length.toString()+'&nbsp;Filters');
-									if (!['crosstab','timeseries'].includes(this.keep.view.type)) res.push(sort.split(',').filter((item) => item).length.toString()+'&nbsp;Sorts');
-									return res.join(',&nbsp;');
-								})(query,sort));
-								this.keep.view.query=query;
-								switch (this.keep.view.type)
-								{
-									case 'crosstab':
-									case 'timeseries':
-										this.menus[this.keep.view.type].lib.load();
-										break;
-									case 'gantt':
-									case 'kanban':
-										this.menus[this.keep.view.type].lib.load();
-										this.keep.view.sort=sort;
-										break;
-									default:
-										this.keep.view.sort=sort;
-										break;
+							((app) => {
+								pd.filter.build({fields:this.keep.fields},this.keep.view.query,this.keep.view.sort,(query,sort) => {
+									((user) => {
+										this.keep.filter.monitor.html(((query,sort) => {
+											var res=[];
+											res.push(query.split(' and ').filter((item) => item).length.toString()+'&nbsp;Filters');
+											if (!['crosstab','timeseries'].includes(this.keep.view.type)) res.push(sort.split(',').filter((item) => item).length.toString()+'&nbsp;Sorts');
+											res.push(((user.length!=0)?user.length.toString():'All')+'&nbsp;Users');
+											return res.join(',&nbsp;');
+										})(query,sort));
+										this.keep.view.query=query;
+										switch (this.keep.view.type)
+										{
+											case 'crosstab':
+											case 'timeseries':
+												this.menus[this.keep.view.type].lib.load();
+												break;
+											case 'gantt':
+											case 'kanban':
+												this.menus[this.keep.view.type].lib.load();
+												this.keep.view.sort=sort;
+												break;
+											default:
+												this.keep.view.sort=sort;
+												break;
+										}
+										this.keep.view.user=user;
+									})(pd.record.get(pd.filter.contents.elm('[form-id=form_'+app.id+']'),app,true).record.user.value);
+								});
+								pd.filter.contents.append(
+									pd.create('div').addclass('pd-scope').attr('form-id','form_'+app.id)
+									.append(pd.create('span').addclass('pd-table-caption').html(pd.constants.view.caption.user[pd.lang]))
+									.append(pd.ui.field.activate(pd.ui.field.create(app.fields.user).css({width:'100%'}),app))
+								);
+								pd.record.set(pd.filter.contents.elm('[form-id=form_'+app.id+']'),app,{user:{value:this.keep.view.user}});
+							})({
+								id:'filterbuilder_user',
+								fields:{
+									user:{
+										id:'user',
+										type:'user',
+										caption:'',
+										required:false,
+										nocaption:true,
+										unify:true
+									}
 								}
 							});
 						}
@@ -15920,12 +15955,13 @@ pd.modules={
 							this.keep.filter.monitor=this.menus.list.contents.elm('.pd-kumaneko-filter-monitor');
 							break;
 					}
-					this.keep.filter.monitor.html(((query,sort) => {
+					this.keep.filter.monitor.html(((query,sort,user) => {
 						var res=[];
 						res.push(query.split(' and ').filter((item) => item).length.toString()+'&nbsp;Filters');
 						if (!['crosstab','timeseries'].includes(this.keep.view.type)) res.push(sort.split(',').filter((item) => item).length.toString()+'&nbsp;Sorts');
+						res.push(((user.length!=0)?user.length.toString():'All')+'&nbsp;Users');
 						return res.join(',&nbsp;');
-					})(this.keep.view.query,this.keep.view.sort));
+					})(this.keep.view.query,this.keep.view.sort,this.keep.view.user));
 					resolve();
 				});
 			}
@@ -18411,7 +18447,7 @@ pd.constants=pd.extend({
 				}
 			},
 			user:{
-				en:'You can limit the users who can perform this action.',
+				en:'You can limit the users who can perform this action',
 				ja:'アクション実行可能ユーザーを制限したい場合は、それらのユーザーを指定して下さい'
 			}
 		},
@@ -19815,6 +19851,10 @@ pd.constants=pd.extend({
 					en:'Chart Type',
 					ja:'グラフの種類'
 				}
+			},
+			user:{
+				en:'If you want to restrict users who can access the view, please specify those users',
+				ja:'ビューにアクセス出来るユーザーを制限したい場合は、それらのユーザーを指定して下さい'
 			}
 		},
 		message:{
