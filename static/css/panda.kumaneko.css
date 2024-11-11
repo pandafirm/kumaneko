@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.7.2
+* Version: 1.8.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -842,7 +842,7 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	min-height:auto !important;
 	height:calc(100% - 2em) !important;
 }
-.pd-kumaneko-viewbuilder .pd-kumaneko-main :is(.pd-kumaneko-crosstab,.pd-kumaneko-timeseries){
+.pd-kumaneko-viewbuilder .pd-kumaneko-main :is(.pd-kumaneko-aggregation,.pd-kumaneko-crosstab,.pd-kumaneko-timeseries){
 	min-height:auto !important;
 	height:calc(100% - (3.5em + 2px)) !important;
 }
@@ -1844,6 +1844,9 @@ body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-head
 body .pd-kumaneko-injector .pd-dropdown::after{
 	border-bottom:solid 2px var(--injector-fr-color);
 	border-right:solid 2px var(--injector-fr-color);
+}
+body .pd-kumaneko-injector .pd-field .pd-field-caption{
+	white-space:normal;
 }
 body .pd-kumaneko-injector .pd-field .pd-field-value :is(input:not([type=checkbox]):not([type=radio]),select,textarea){
 	border:1px solid var(--injector-field-border-color) !important;

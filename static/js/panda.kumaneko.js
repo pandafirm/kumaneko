@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.7.2
+* Version: 1.8.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -818,6 +818,9 @@ class panda_kumaneko{
 														{
 															case 'calendar':
 																current.calendar=new panda_calendar(true);
+																break;
+															case 'aggregation':
+																current.aggregation=pd.ui.chart.create(current.config.view.type);
 																break;
 															case 'crosstab':
 																current.crosstab=pd.ui.chart.create(current.config.view.type);
@@ -2236,6 +2239,7 @@ pd.modules={
 											((view) => {
 												switch (view.type)
 												{
+													case 'aggregation':
 													case 'crosstab':
 													case 'gantt':
 													case 'timeseries':
@@ -2400,6 +2404,7 @@ pd.modules={
 							limit:25,
 							loaded:false,
 							calendar:null,
+							aggregation:null,
 							crosstab:null,
 							gantt:null,
 							timeseries:null,
@@ -2444,6 +2449,14 @@ pd.modules={
 									res.header.firstChild
 								);
 								res.calendar=new panda_calendar(true);
+								break;
+							case 'aggregation':
+								res.header.insertBefore(
+									pd.create('div').addclass('pd-kumaneko-app-header-filter')
+									.append(res.lib.conditions.create(res)),
+									res.header.firstChild
+								);
+								res.aggregation=pd.ui.chart.create(view.type);
 								break;
 							case 'crosstab':
 								res.header.insertBefore(
@@ -3484,6 +3497,7 @@ pd.modules={
 								}
 							});
 							break;
+						case 'aggregation':
 						case 'crosstab':
 						case 'timeseries':
 							view[view.type].show(records,view);
@@ -3654,6 +3668,7 @@ pd.modules={
 											});
 										},() => reject({}));
 										break;
+									case 'aggregation':
 									case 'crosstab':
 									case 'gantt':
 									case 'timeseries':
@@ -4083,6 +4098,10 @@ pd.modules={
 						{
 							case 'calendar':
 								view.body.append(view.calendar.calendar.addclass('pd-kumaneko-calendar'));
+								break;
+							case 'aggregation':
+								if (view.chart.type!='table') view.body.addclass('pd-fixed').closest('.pd-contents').addclass('pd-fixed');
+								view.body.append(view.aggregation);
 								break;
 							case 'crosstab':
 								if (view.chart.type!='table') view.body.addclass('pd-fixed').closest('.pd-contents').addclass('pd-fixed');
@@ -4658,6 +4677,10 @@ pd.modules={
 																case 'calendar':
 																	res.push({id:view.fields.date,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	res.push({id:view.fields.title,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
+																	break;
+																case 'aggregation':
+																	if (view.fields.rows.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
+																	if (view.fields.values.some((item) => item.field==fieldinfo.id)) res.push({id:fieldinfo.id,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
 																	break;
 																case 'crosstab':
 																	res.push({id:view.fields.column.field,message:'-&nbsp;'+view.name+'&nbsp;(This app)'});
@@ -6239,6 +6262,7 @@ pd.modules={
 												var res=[
 													{option:{value:'list'}},
 													{option:{value:'calendar'}},
+													{option:{value:'aggregation'}},
 													{option:{value:'crosstab'}},
 													{option:{value:'gantt'}},
 													{option:{value:'timeseries'}},
@@ -6283,6 +6307,16 @@ pd.modules={
 																res.fields={
 																	date:'',
 																	title:''
+																};
+																break;
+															case 'aggregation':
+																delete res.sort;
+																res.chart={
+																	type:'table'
+																};
+																res.fields={
+																	rows:[],
+																	values:[]
 																};
 																break;
 															case 'crosstab':
@@ -7103,6 +7137,18 @@ pd.modules={
 												return res;
 											})()));
 											if (tables.length>1)
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											break;
+										case 'aggregation':
+											if (view.fields.rows.some((item) => (item.field in fieldinfos)?fieldinfos[item.field].tableid:false))
+											{
+												res.push('-&nbsp;'+view.name);
+												return PD_BREAK;
+											}
+											if (view.fields.values.some((item) => (item.field in fieldinfos)?fieldinfos[item.field].tableid:false))
 											{
 												res.push('-&nbsp;'+view.name);
 												return PD_BREAK;
@@ -13331,13 +13377,14 @@ pd.modules={
 										this.keep.filter.monitor.html(((query,sort) => {
 											var res=[];
 											res.push(query.split(' and ').filter((item) => item).length.toString()+'&nbsp;Filters');
-											if (!['crosstab','timeseries'].includes(this.keep.view.type)) res.push(sort.split(',').filter((item) => item).length.toString()+'&nbsp;Sorts');
+											if (!['aggregation','crosstab','timeseries'].includes(this.keep.view.type)) res.push(sort.split(',').filter((item) => item).length.toString()+'&nbsp;Sorts');
 											res.push(((user.length!=0)?user.length.toString():'All')+'&nbsp;Users');
 											return res.join(',&nbsp;');
 										})(query,sort));
 										this.keep.view.query=query;
 										switch (this.keep.view.type)
 										{
+											case 'aggregation':
 											case 'crosstab':
 											case 'timeseries':
 												this.menus[this.keep.view.type].lib.load();
@@ -13509,6 +13556,81 @@ pd.modules={
 						app:{},
 						contents:null,
 						calendar:null
+					},
+					aggregation:{
+						id:'aggregation',
+						app:{},
+						contents:null,
+						preview:null,
+						tables:{
+							row:null,
+							value:null
+						},
+						lib:{
+							load:(view) => {
+								view=pd.extend({},(view instanceof Object)?view:this.menus.aggregation.lib.remodel());
+								if (this.keep.app)
+									if (view.fields.values.length!=0)
+									{
+										pd.request(
+											pd.ui.baseuri()+'/aggregation.php',
+											'POST',
+											{},
+											pd.extend({
+												app:this.keep.app,
+												fields:this.keep.fields,
+												query:this.keep.view.query,
+												limit:10
+											},view.fields)
+										)
+										.then((resp) => {
+											this.menus.aggregation.preview.show(resp,pd.extend({name:this.contents.elm('.pd-kumaneko-viewbuilder-name').elm('input').val()},view));
+										})
+										.catch((error) => {
+											pd.alert(error.message);
+										});
+									}
+							},
+							remodel:() => {
+								var res={
+									chart:{
+										type:''
+									},
+									fields:{
+										rows:[],
+										values:[]
+									}
+								};
+								return ((record) => {
+									res.chart.type=record.charttype.value;
+									res.fields.rows=(() => {
+										var res=[];
+										this.menus.aggregation.tables.row.tr.each((element,index) => {
+											if (element.elm('[field-id=rowfield]').elm('select').val())
+												res.push({
+													field:element.elm('[field-id=rowfield]').elm('select').val(),
+													format:element.elm('[field-id=rowformat]').elm('select').val(),
+													sort:element.elm('[field-id=rowsort]').elm('select').val()
+												});
+										});
+										return res;
+									})();
+									res.fields.values=(() => {
+										var res=[];
+										this.menus.aggregation.tables.value.tr.each((element,index) => {
+											if ((element.elm('[field-id=valuefunc]').elm('select').val()!='CNT')?element.elm('[field-id=valuefield]').elm('select').val():true)
+												res.push({
+													caption:element.elm('[field-id=valuecaption]').elm('input').val(),
+													field:element.elm('[field-id=valuefield]').elm('select').val(),
+													func:element.elm('[field-id=valuefunc]').elm('select').val()
+												});
+										});
+										return res;
+									})();
+									return res;
+								})(pd.record.get(this.menus.aggregation.contents,this.menus.aggregation.app,true).record);
+							}
+						}
 					},
 					crosstab:{
 						id:'crosstab',
@@ -14139,6 +14261,295 @@ pd.modules={
 										return element;
 									})(pd.create('div').addclass('pd-kumaneko-block pd-kumaneko-border-left pd-kumaneko-inset-left'))
 								);
+								break;
+							case 'aggregation':
+								menu.app={
+									id:'viewbuilder_'+menu.id,
+									fields:{
+										charttype:{
+											id:'charttype',
+											type:'dropdown',
+											caption:pd.constants.view.caption.aggregation.type[pd.lang],
+											required:true,
+											nocaption:false,
+											options:pd.ui.chart.types.map((item) => ({option:{value:item}}))
+										}
+									}
+								};
+								menu.preview=pd.ui.chart.create(menu.id);
+								menu.tables.row=pd.ui.table.create({
+									id:'rows',
+									type:'table',
+									caption:'',
+									nocaption:true,
+									fields:{
+										rowfield:{
+											id:'rowfield',
+											type:'dropdown',
+											caption:'',
+											required:true,
+											nocaption:true,
+											options:[]
+										},
+										rowformat:{
+											id:'rowformat',
+											type:'dropdown',
+											caption:'',
+											required:false,
+											nocaption:true,
+											options:[]
+										},
+										rowsort:{
+											id:'rowsort',
+											type:'dropdown',
+											caption:'',
+											required:false,
+											nocaption:true,
+											options:[
+												{option:{value:'asc'}},
+												{option:{value:'desc'}}
+											]
+										}
+									}
+								}).addclass('pd-table-rows').spread((row,index) => {
+									/* event */
+									row.elm('.pd-table-row-add').on('click',(e) => {
+										menu.tables.row.insertrow(row);
+									});
+									row.elm('.pd-table-row-del').on('click',(e) => {
+										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+											menu.tables.row.delrow(row);
+										});
+									});
+									/* modify elements */
+									((cells) => {
+										cells.field.on('change',(e) => e.currentTarget.rebuild().then(() => menu.lib.load())).rebuild=() => {
+											return new Promise((resolve,reject) => {
+												cells.format.empty().append(pd.create('option'));
+												if (cells.field.val())
+												{
+													((fieldinfo) => {
+														switch (fieldinfo.type)
+														{
+															case 'createdtime':
+															case 'date':
+															case 'datetime':
+															case 'modifiedtime':
+																((format) => {
+																	format.closest('td').show();
+																	return format;
+																})(cells.format)
+																.append(pd.create('option').attr('value','year').html(pd.constants.common.caption.grouping.date.year[pd.lang]))
+																.append(pd.create('option').attr('value','month').html(pd.constants.common.caption.grouping.date.month[pd.lang]))
+																.append(pd.create('option').attr('value','day').html(pd.constants.common.caption.grouping.date.day[pd.lang]));
+																break;
+															case 'time':
+																((format) => {
+																	format.closest('td').show();
+																	return format;
+																})(cells.format)
+																.append(pd.create('option').attr('value','hour').html(pd.constants.common.caption.grouping.date.hour[pd.lang]));
+																break;
+															default:
+																cells.format.closest('td').hide();
+																break;
+														}
+													})(this.keep.fields[cells.field.val()]);
+												}
+												else cells.format.closest('td').hide();
+												resolve({});
+											});
+										};
+										cells.format.on('change',(e) => menu.lib.load()).closest('td').hide();
+										cells.sort.on('change',(e) => menu.lib.load());
+									})({
+										field:row.elm('[field-id=rowfield]').elm('select'),
+										format:row.elm('[field-id=rowformat]').elm('select'),
+										sort:row.elm('[field-id=rowsort]').elm('select')
+									});
+								},(table,index) => {
+									if (table.tr.length==0) table.addrow();
+									menu.lib.load();
+								},false);
+								menu.tables.value=pd.ui.table.create({
+									id:'values',
+									type:'table',
+									caption:'',
+									nocaption:true,
+									fields:{
+										valuefunc:{
+											id:'valuefunc',
+											type:'dropdown',
+											caption:'',
+											required:false,
+											nocaption:true,
+											options:[]
+										},
+										valuefield:{
+											id:'valuefield',
+											type:'dropdown',
+											caption:'',
+											required:true,
+											nocaption:true,
+											options:[]
+										},
+										valuecaption:{
+											id:'valuecaption',
+											type:'text',
+											caption:'',
+											required:false,
+											nocaption:true,
+											placeholder:pd.constants.view.prompt.aggregation.caption[pd.lang],
+											format:'text'
+										}
+									}
+								}).spread((row,index) => {
+									/* event */
+									row.elm('.pd-table-row-add').on('click',(e) => {
+										menu.tables.value.insertrow(row);
+									});
+									row.elm('.pd-table-row-del').on('click',(e) => {
+										pd.confirm(pd.constants.common.message.confirm.delete[pd.lang],() => {
+											menu.tables.value.delrow(row);
+										});
+									});
+									/* modify elements */
+									((cells) => {
+										cells.func.elm('select')
+										.append(pd.create('option').attr('value','CNT').html(pd.constants.common.caption.function.count[pd.lang]))
+										.append(pd.create('option').attr('value','SUM').html(pd.constants.common.caption.function.sum[pd.lang]))
+										.append(pd.create('option').attr('value','AVG').html(pd.constants.common.caption.function.average[pd.lang]))
+										.append(pd.create('option').attr('value','MAX').html(pd.constants.common.caption.function.maximum[pd.lang]))
+										.append(pd.create('option').attr('value','MIN').html(pd.constants.common.caption.function.minimum[pd.lang]))
+										.on('change',(e) => e.currentTarget.rebuild().then(() => menu.lib.load())).rebuild=() => {
+											return new Promise((resolve,reject) => {
+												switch (cells.func.elm('select').val().slice(-3))
+												{
+													case 'CNT':
+														resolve(((field) => {
+															field.closest('td').hide().elm('select').empty().append(pd.create('option'));
+															return {};
+														})(cells.field));
+														break;
+													case 'SUM':
+													case 'AVG':
+														resolve(((field) => {
+															var res={};
+															field.closest('td').show().elm('select').empty().append(pd.create('option'));
+															for (var key in this.keep.fields)
+																((fieldinfo) => {
+																	switch (fieldinfo.type)
+																	{
+																		case 'number':
+																			field.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
+																			res[fieldinfo.id]=fieldinfo;
+																			break;
+																	}
+																})(this.keep.fields[key]);
+															return res;
+														})(cells.field));
+														break;
+													case 'MAX':
+													case 'MIN':
+														resolve(((field) => {
+															var res={};
+															field.closest('td').show().elm('select').empty().append(pd.create('option'));
+															for (var key in this.keep.fields)
+																((fieldinfo) => {
+																	switch (fieldinfo.type)
+																	{
+																		case 'autonumber':
+																		case 'createdtime':
+																		case 'date':
+																		case 'datetime':
+																		case 'id':
+																		case 'modifiedtime':
+																		case 'number':
+																		case 'time':
+																			field.elm('select').append(pd.create('option').attr('value',fieldinfo.id).html(fieldinfo.caption));
+																			res[fieldinfo.id]=fieldinfo;
+																			break;
+																	}
+																})(this.keep.fields[key]);
+															return res;
+														})(cells.field));
+														break;
+												}
+											});
+										};
+										cells.field.on('change',(e) => menu.lib.load()).closest('td').hide();
+									})({
+										field:row.elm('[field-id=valuefield]'),
+										func:row.elm('[field-id=valuefunc]')
+									});
+									row.elm('[field-id=valuecaption]').on('change',(e) => menu.lib.load());
+								},(table,index) => {
+									if (table.tr.length==0) table.addrow();
+									menu.lib.load();
+								},false);
+								menu.tables.row.template.elm('[field-id=rowsort]').elms('option').each((element,index) => {
+									if (element.val()) element.html(pd.constants.common.caption.sort[element.val()][pd.lang]);
+								});
+								menu.contents
+								.append(
+									pd.create('nav').addclass('pd-kumaneko-nav pd-kumaneko-nav-extension')
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-main')
+										.append(
+											((container) => {
+												container
+												.append(pd.create('span').addclass('pd-table-caption').html(pd.constants.view.caption.aggregation.function[pd.lang]))
+												.append(menu.tables.value);
+												return container;
+											})(pd.create('div').addclass('pd-kumaneko-section'))
+										)
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-main pd-kumaneko-border-left pd-kumaneko-inset-left')
+										.append(
+											((container) => {
+												container
+												.append(pd.create('span').addclass('pd-table-caption').html(pd.constants.view.caption.aggregation.row[pd.lang]))
+												.append(menu.tables.row);
+												return container;
+											})(pd.create('div').addclass('pd-kumaneko-section'))
+										)
+									)
+									.append(
+										pd.create('div').addclass('pd-kumaneko-nav-footer pd-kumaneko-border-top pd-kumaneko-inset-top')
+										.append(
+											pd.create('button').addclass('pd-icon pd-icon-filter pd-kumaneko-nav-icon').on('click',(e) => {
+												this.keep.filter.show();
+												e.stopPropagation();
+												e.preventDefault();
+											})
+										)
+										.append(pd.create('span').addclass('pd-kumaneko-filter-monitor'))
+									)
+								)
+								.append(
+									((element) => {
+										element.append(
+											pd.create('div').addclass('pd-container')
+											.append(pd.ui.field.activate(((res) => {
+												res.elm('select').elms('option').each((element,index) => {
+													if (element.val()) element.html(pd.constants.view.caption.chart.type[element.val()][pd.lang]);
+												});
+												return res;
+											})(pd.ui.field.create(menu.app.fields.charttype).css({width:'100%'})),menu.app))
+											.append(
+												pd.create('div').addclass('pd-contents pd-kumaneko-'+menu.id)
+												.append(menu.preview)
+											)
+										);
+										return element;
+									})(pd.create('div').addclass('pd-kumaneko-block pd-kumaneko-border-left pd-kumaneko-inset-left'))
+								);
+								/* event */
+								pd.event.on(menu.app.id,'pd.change.charttype',(e) => {
+									this.menus.aggregation.lib.load();
+									return e;
+								});
 								break;
 							case 'crosstab':
 								menu.app={
@@ -15369,6 +15780,25 @@ pd.modules={
 								return res.error;
 							})(pd.record.get(this.menus.calendar.contents,this.menus.calendar.app),res.view);
 							break;
+						case 'aggregation':
+							res.error=((res,view) => {
+								if (!res.error)
+								{
+									var config=this.menus.aggregation.lib.remodel();
+									if (config.fields.values.length==0)
+									{
+										res.error=true;
+										pd.alert(pd.constants.view.message.invalid.aggregation.function[pd.lang]);
+									}
+									else
+									{
+										view.chart=config.chart;
+										view.fields=config.fields;
+									}
+								}
+								return res.error;
+							})(pd.record.get(this.menus.aggregation.contents,this.menus.aggregation.app),res.view);
+							break;
 						case 'crosstab':
 							res.error=((res,view) => {
 								if (!res.error)
@@ -15578,6 +16008,72 @@ pd.modules={
 								else this.menus[key].contents.hide();
 							}
 							this.keep.filter.monitor=this.menus.calendar.contents.elm('.pd-kumaneko-filter-monitor');
+							break;
+						case 'aggregation':
+							pd.record.set(this.menus.aggregation.contents,this.menus.aggregation.app,((elements) => {
+								elements.rows.field.empty().append(pd.create('option'));
+								for (var key in this.keep.fields)
+								{
+									switch (this.keep.fields[key].type)
+									{
+										case 'box':
+										case 'canvas':
+										case 'file':
+										case 'spacer':
+										case 'table':
+										case 'textarea':
+											break;
+										default:
+											elements.rows.field.append(pd.create('option').attr('value',this.keep.fields[key].id).html(this.keep.fields[key].caption));
+											break;
+									}
+								}
+								elements.rows.table.clearrows();
+								this.keep.view.fields.rows.each((values,index) => {
+									if (values.field in this.keep.fields)
+										((row) => {
+											row.elm('[field-id=rowfield]').elm('select').val(values.field).rebuild().then(() => {
+												row.elm('[field-id=rowformat]').elm('select').val(values.format);
+												row.elm('[field-id=rowsort]').elm('select').val(values.sort);
+											});
+										})(elements.rows.table.addrow());
+								});
+								if (elements.rows.table.tr.length==0) elements.rows.table.addrow().elm('[field-id=rowfield]').elm('select').val('').rebuild();
+								elements.values.table.clearrows();
+								this.keep.view.fields.values.each((values,index) => {
+									((row) => {
+										row.elm('[field-id=valuefunc]').elm('select').val(values.func).rebuild().then((fields) => {
+											if (values.field in fields)
+											{
+												row.elm('[field-id=valuecaption]').elm('input').val(values.caption);
+												row.elm('[field-id=valuefield]').elm('select').val(values.field);
+											}
+										});
+									})(elements.values.table.addrow());
+								});
+								if (elements.values.table.tr.length==0) elements.values.table.addrow().elm('[field-id=valuefunc]').elm('select').val('CNT').rebuild();
+								return {charttype:{value:this.keep.view.chart.type}};
+							})({
+								rows:{
+									field:this.menus.aggregation.tables.row.template.elm('[field-id=rowfield]').elm('select'),
+									table:this.menus.aggregation.tables.row
+								},
+								values:{
+									table:this.menus.aggregation.tables.value
+								}
+							}));
+							for (var key in this.menus)
+							{
+								if (key==this.keep.view.type) this.menus[key].contents.show();
+								else this.menus[key].contents.hide();
+							}
+							this.keep.filter.monitor=this.menus.aggregation.contents.elm('.pd-kumaneko-filter-monitor');
+							if (this.keep.view.fields.values.length!=0) this.menus.aggregation.lib.load(this.keep.view);
+							else
+							{
+								this.menus.aggregation.preview.hide();
+								this.menus.aggregation.preview.chart.hide();
+							}
 							break;
 						case 'crosstab':
 							pd.record.set(this.menus.crosstab.contents,this.menus.crosstab.app,((elements) => {
@@ -15958,7 +16454,7 @@ pd.modules={
 					this.keep.filter.monitor.html(((query,sort,user) => {
 						var res=[];
 						res.push(query.split(' and ').filter((item) => item).length.toString()+'&nbsp;Filters');
-						if (!['crosstab','timeseries'].includes(this.keep.view.type)) res.push(sort.split(',').filter((item) => item).length.toString()+'&nbsp;Sorts');
+						if (!['aggregation','crosstab','timeseries'].includes(this.keep.view.type)) res.push(sort.split(',').filter((item) => item).length.toString()+'&nbsp;Sorts');
 						res.push(((user.length!=0)?user.length.toString():'All')+'&nbsp;Users');
 						return res.join(',&nbsp;');
 					})(this.keep.view.query,this.keep.view.sort,this.keep.view.user));
@@ -16056,6 +16552,9 @@ pd.modules={
 								case 'calendar':
 									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({calendar:panel.calendar},view),records:e.records,option:{readonly:true,date:e.month}});
 									break;
+								case 'aggregation':
+									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({aggregation:panel.aggregation},view),records:e.records});
+									break;
 								case 'crosstab':
 									pd.event.call(panel.app,'pd.view.call',{app:app,view:pd.extend({crosstab:panel.crosstab},view),records:e.records});
 									break;
@@ -16093,6 +16592,10 @@ pd.modules={
 											{
 												case 'calendar':
 													panel.body.append(panel.calendar.calendar.addclass('pd-kumaneko-calendar'));
+													break;
+												case 'aggregation':
+													if (panel.config.view.chart.type!='table') panel.body.addclass('pd-fixed');
+													panel.body.append(panel.aggregation);
 													break;
 												case 'crosstab':
 													if (panel.config.view.chart.type!='table') panel.body.addclass('pd-fixed');
@@ -18830,6 +19333,10 @@ pd.constants=pd.extend({
 						en:'calendar',
 						ja:'カレンダー'
 					},
+					aggregation:{
+						en:'agg',
+						ja:'集計'
+					},
 					crosstab:{
 						en:'crosstab',
 						ja:'クロス集計'
@@ -18864,6 +19371,10 @@ pd.constants=pd.extend({
 						en:'Calendar view',
 						ja:'カレンダー'
 					},
+					aggregation:{
+						en:'Aggregation view',
+						ja:'集計'
+					},
 					crosstab:{
 						en:'Crosstab view',
 						ja:'クロス集計'
@@ -18897,6 +19408,10 @@ pd.constants=pd.extend({
 					calendar:{
 						en:'Calendar view',
 						ja:'カレンダー形式'
+					},
+					aggregation:{
+						en:'Aggregation view',
+						ja:'集計形式'
 					},
 					crosstab:{
 						en:'Crosstab view',
@@ -19664,6 +20179,20 @@ pd.constants=pd.extend({
 	},
 	view:{
 		caption:{
+			aggregation:{
+				function:{
+					en:'Function',
+					ja:'集計方法'
+				},
+				row:{
+					en:'Rows',
+					ja:'行'
+				},
+				type:{
+					en:'Chart Type',
+					ja:'グラフの種類'
+				}
+			},
 			calendar:{
 				date:{
 					en:'Date Field',
@@ -19859,6 +20388,12 @@ pd.constants=pd.extend({
 		},
 		message:{
 			invalid:{
+				aggregation:{
+					function:{
+						en:'Please specify one or more functions',
+						ja:'集計方法を指定して下さい'
+					}
+				},
 				calendar:{
 					table:{
 						en:'If any field is designated as a field within a certain table, all other fields must also be within that same table',
@@ -19926,6 +20461,12 @@ pd.constants=pd.extend({
 			}
 		},
 		prompt:{
+			aggregation:{
+				caption:{
+					en:'Title',
+					ja:'列タイトルを入力'
+				}
+			},
 			calendar:{
 				title:{
 					en:'here show a tilte field value',

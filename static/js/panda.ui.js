@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.7.2
+* Version: 1.8.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
