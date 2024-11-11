@@ -1,6 +1,6 @@
 <?php
 /*
-* PandaFirm-PHP-Module "crosstab.php"
+* PandaFirm-PHP-Module "aggregation.php"
 * Version: 1.8.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
@@ -36,24 +36,18 @@ class clsRequest extends clsBase
 		$this->driver=new clsDriver(dirname(__FILE__)."/storage/json/",isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
 		if (!isset($this->body["app"])) $this->callrequesterror(400);
 		if (!isset($this->body["query"])) $this->callrequesterror(400);
-		if (!isset($this->body["column"])) $this->callrequesterror(400);
-		else
-		{
-			if (!is_array($this->body["column"])) $this->callrequesterror(400);
-		}
 		if (!isset($this->body["rows"])) $this->callrequesterror(400);
 		else
 		{
 			if (!is_array($this->body["rows"])) $this->callrequesterror(400);
 		}
-		if (!isset($this->body["value"])) $this->callrequesterror(400);
+		if (!isset($this->body["values"])) $this->callrequesterror(400);
 		else
 		{
-			if (!is_array($this->body["value"])) $this->callrequesterror(400);
+			if (!is_array($this->body["values"])) $this->callrequesterror(400);
 		}
 		$this->fields=(!isset($this->body["fields"]))?$this->driver->fields($this->body["app"]):$this->body["fields"];
 		$this->queries=[
-			"columns"=>[],
 			"rows"=>[]
 		];
 		$this->records=$this->driver->records(
@@ -82,66 +76,57 @@ class clsRequest extends clsBase
 				$this->queries["rows"][]=$this->createquery($row,isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
 			}
 			else $this->callrequesterror(400);
-		if (array_key_exists($this->body["column"]["field"],$this->fields))
+		foreach ($this->body["values"] as $key=>$value)
 		{
-			$departments=$this->driver->records("departments");
-			$groups=$this->driver->records("groups");
-			$users=$this->driver->records("users");
-			$this->queries["columns"]=$this->createquery($this->body["column"],isset($this->body["timezone"])?$this->body["timezone"]:date_default_timezone_get());
-			foreach ($this->queries["columns"] as $key=>$value)
+			$id="agg_".strval($key);
+			if ($value["func"]!="CNT")
 			{
-				$caption=strval($value["caption"]);
-				switch ($value["type"])
+				if (array_key_exists($value["field"],$this->fields))
 				{
-					case "creator":
-					case "modifier":
-					case "user":
-						$filter=array_filter($users,function($values,$key) use ($caption){
-							return $values["__id"]["value"]==$caption;
-						},ARRAY_FILTER_USE_BOTH);
-						if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
-						break;
-					case "department":
-						$filter=array_filter($departments,function($values,$key) use ($caption){
-							return $values["__id"]["value"]==$caption;
-						},ARRAY_FILTER_USE_BOTH);
-						if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
-						break;
-					case "group":
-						$filter=array_filter($groups,function($values,$key) use ($caption){
-							return $values["__id"]["value"]==$caption;
-						},ARRAY_FILTER_USE_BOTH);
-						if (count($filter)!=0) $caption=array_values($filter)[0]["name"]["value"];
-						break;
-				}
-				if (array_key_exists($this->body["value"]["field"],$this->fields))
-				{
-					$this->response["fields"][]=(function($field,$key,$caption){
-						$field["id"]=strval($key);
-						$field["caption"]=$caption;
+					$this->response["fields"][]=(function($field,$id,$caption){
+						$field["id"]=$id;
+						$field["caption"]=(($caption!="")?$caption:$field["caption"]);
 						$field["required"]=false;
 						$field["nocaption"]=true;
 						return $field;
-					})($this->fields[$this->body["value"]["field"]],$key,$caption);
+					})($this->fields[$value["field"]],$id,$value["caption"]);
 				}
 				else
 				{
 					$this->response["fields"][]=[
-						"id"=>strval($key),
-						"type"=>"number",
-						"caption"=>$caption,
+						"id"=>$id,
+						"type"=>"text",
+						"caption"=>(($value["caption"]!="")?$value["caption"]:"unknown"),
 						"required"=>false,
 						"nocaption"=>true,
-						"demiliter"=>true,
-						"decimals"=>"0",
-						"unit"=>"",
-						"unitposition"=>"Suffix"
+						"format"=>"text"
 					];
 				}
 			}
-			$this->response["records"]=$this->createrecords(0,$this->body["value"],$this->records,$users,$departments,$groups);
+			else
+			{
+				$this->response["fields"][]=[
+					"id"=>$id,
+					"type"=>"number",
+					"caption"=>(($value["caption"]!="")?$value["caption"]:"RecCnt"),
+					"required"=>false,
+					"nocaption"=>true,
+					"demiliter"=>true,
+					"decimals"=>"0",
+					"unit"=>"",
+					"unitposition"=>"Suffix"
+				];
+			}
+			$this->body["values"][$key]["id"]=$id;
 		}
-		else $this->callrequesterror(500,"The field specified in the \"Column\" section is not registered with the server.");
+		if (count($this->body["values"])!=0)
+		{
+			$departments=$this->driver->records("departments");
+			$groups=$this->driver->records("groups");
+			$users=$this->driver->records("users");
+			$this->response["records"]=$this->createrecords(0,$this->body["values"],$this->records,$users,$departments,$groups);
+		}
+		else $this->callrequesterror(500,"The field specified in the \"Function\" section is not registered with the server.");
 		header("HTTP/1.1 200 OK");
 		header('Content-Type: application/json; charset=utf-8');
 		echo json_encode($this->response,JSON_UNESCAPED_UNICODE);
@@ -340,34 +325,33 @@ class clsRequest extends clsBase
 		}
 		else
 		{
-			foreach ($this->queries["columns"] as $key=>$value)
+			foreach ($arg_config as $value)
 			{
-				$records=$this->driver->filter($arg_records,$this->fields,$value["query"],"");
-				if ($arg_config["func"]!="CNT")
+				if ($value["func"]!="CNT")
 				{
-					$res[$key]="";
-					if (count($records)!=0)
-						if (array_key_exists($arg_config["field"],$this->fields))
+					$res[$value["id"]]="";
+					if (count($arg_records)!=0)
+						if (array_key_exists($value["field"],$this->fields))
 						{
-							$values=array_column(array_column($records,$arg_config["field"]),"value");
-							switch ($arg_config["func"])
+							$values=array_column(array_column($arg_records,$value["field"]),"value");
+							switch ($value["func"])
 							{
 								case "SUM":
-									$res[$key]=array_sum($values);
+									$res[$value["id"]]=array_sum($values);
 									break;
 								case "AVG":
-									$res[$key]=array_sum($values)/count($records);
+									$res[$value["id"]]=array_sum($values)/count($arg_records);
 									break;
 								case "MAX":
-									$res[$key]=max($values);
+									$res[$value["id"]]=max($values);
 									break;
 								case "MIN":
-									$res[$key]=min($values);
+									$res[$value["id"]]=min($values);
 									break;
 							}
 						}
 				}
-				else $res[$key]=count($records);
+				else $res[$value["id"]]=count($arg_records);
 			}
 		}
 		return $res;
