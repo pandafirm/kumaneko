@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.8.0
+* Version: 1.8.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -673,33 +673,40 @@ class panda_kumaneko{
 								.then((resp) => {
 									pd.create('div')
 									.append(
-										pd.create('div').addclass('pd-kumaneko-about')
-										.append(pd.create('p').addclass('pd-kumaneko-about-title').html('kumaneko'))
-										.append(
-											((container) => {
-												container.append(pd.create('p').html('version:'+resp.my));
-												if (resp.latest) container.append(pd.create('p').html(pd.constants.common.prompt.update[pd.lang].replace(/%version%/g,resp.latest)));
-												return container.append(
-													pd.create('p').html('Copyright '+new Date().format('Y')+' Pandafirm LLC. All rights reserved.')
-												);
-											})(pd.create('p').addclass('pd-kumaneko-about-overview'))
-										)
-										.append(
-											pd.create('p').addclass('pd-kumaneko-about-buttons')
+										((container) => {
+											container
+											.append(pd.create('p').addclass('pd-kumaneko-about-title').html('kumaneko'))
 											.append(
-												pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.update[pd.lang]).on('click',(e) => {
-													pd.confirm(pd.constants.common.message.confirm.update[pd.lang],() => {
-														pd.request(pd.ui.baseuri()+'/version.php','POST',{},{})
-														.then((resp) => {
-															pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
-																window.location.reload(true);
+												((container) => {
+													container.append(pd.create('p').html('version:'+resp.my));
+													if (resp.latest) container.append(pd.create('p').html(pd.constants.common.prompt.update[pd.lang].replace(/%version%/g,resp.latest)));
+													else container.append(pd.create('p').html(pd.constants.common.prompt.latest[pd.lang]));
+													return container.append(
+														pd.create('p').html('Copyright '+new Date().format('Y')+' Pandafirm LLC. All rights reserved.')
+													);
+												})(pd.create('p').addclass('pd-kumaneko-about-overview'))
+											);
+											if (resp.latest)
+											{
+												container.append(
+													pd.create('p').addclass('pd-kumaneko-about-buttons')
+													.append(
+														pd.create('button').addclass('pd-button pd-kumaneko-button').html(pd.constants.common.caption.button.update[pd.lang]).on('click',(e) => {
+															pd.confirm(pd.constants.common.message.confirm.update[pd.lang],() => {
+																pd.request(pd.ui.baseuri()+'/version.php','POST',{},{})
+																.then((resp) => {
+																	pd.alert(pd.constants.common.message.confirm.reboot[pd.lang],() => {
+																		window.location.reload(true);
+																	});
+																})
+																.catch((error) => pd.alert(error.message));
 															});
 														})
-														.catch((error) => pd.alert(error.message));
-													});
-												})
-											)
-										)
+													)
+												);
+											}
+											return container;
+										})(pd.create('div').addclass('pd-kumaneko-about'))
 									)
 									.popup('600','250').show();
 								})
@@ -3615,10 +3622,23 @@ pd.modules={
 										if (!deactivate) pd.loadstart();
 										this.fetch({
 											app:this.app.id,
-											query:((date,query) => {
-												var res=view.fields.date+' >= "'+date.format('Y-m-d')+'" and '+view.fields.date+' <= "'+date.calc('1 month,-1 day').format('Y-m-d')+'"';
-												return res+((query)?' and ('+query+')':'');
-											})(new Date(view.monitor.text()+'-01'),overwrite),
+											query:((date,query,fieldinfos) => {
+												var res=(query)?['('+query+')']:[];
+												switch (fieldinfos[view.fields.date].type)
+												{
+													case 'createdtime':
+													case 'datetime':
+													case 'modifiedtime':
+														res.push(view.fields.date+' >= "'+[date,'00:00:00'].join(' ').parseDateTime().format('ISO')+'"');
+														res.push(view.fields.date+' <= "'+[date,'23:59:00'].join(' ').parseDateTime().calc('1 month,-1 day').format('ISO')+'"');
+														break;
+													case 'date':
+														res.push(view.fields.date+' >= "'+date+'"');
+														res.push(view.fields.date+' <= "'+new Date(date).calc('1 month,-1 day').format('Y-m-d')+'"');
+														break;
+												}
+												return res.join(' and ');
+											})(view.monitor.text()+'-01',overwrite,pd.ui.field.parallelize(this.app.fields)),
 											sort:(typeof sort==='string')?sort:view.sort,
 											offset:0,
 											limit:500
@@ -18718,6 +18738,10 @@ pd.constants=pd.extend({
 			autofill:{
 				en:'Auto filled',
 				ja:'自動入力'
+			},
+			latest:{
+				en:'kumaneko is running the latest version',
+				ja:'kumanekoは最新の状態です'
 			},
 			update:{
 				en:'To update to the new version %version% of kumaneko, click to [Update kumaneko]',

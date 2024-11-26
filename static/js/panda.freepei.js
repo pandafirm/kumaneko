@@ -1,6 +1,6 @@
 /*
 * PandaFirm Photo Editor "panda.freepei.js"
-* Version: 1.8.0
+* Version: 1.8.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
