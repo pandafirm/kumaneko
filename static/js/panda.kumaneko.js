@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.8.2
+* Version: 1.8.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1560,6 +1560,12 @@ class panda_kumaneko_app{
 													var criterias=[];
 													var mappings=[];
 													var tables={};
+													var divide={
+														table:'',
+														index:(fieldinfo) => {
+															return (divide.table && divide.table==fieldinfo.tableid)?increments.progress.record:increments.progress.row;
+														}
+													};
 													var increments={
 														record:1,
 														row:1,
@@ -1626,8 +1632,11 @@ class panda_kumaneko_app{
 																			if (criteria.external.tableid)
 																			{
 																				if (!(criteria.external.tableid in res.rows)) res.rows[criteria.external.tableid]=pd.record.create(target.fields[criteria.external.tableid],false);
-																				res.rows[criteria.external.tableid][criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.row));
-																				res.query.push(pd.filter.query.create(criteria.external,criteria.operator,create.field(criteria.internal,increments.progress.row)));
+																				((field) => {
+																					if (['=','in'].includes(criteria.operator.trim()))
+																						res.rows[criteria.external.tableid][criteria.external.id]=cast(criteria.external,field);
+																					res.query.push(pd.filter.query.create(criteria.external,criteria.operator,field));
+																				})(create.field(criteria.internal,divide.index(criteria.internal)));
 																			}
 																		});
 																		res.query=res.query.join(' and ');
@@ -1648,7 +1657,7 @@ class panda_kumaneko_app{
 																				else
 																				{
 																					record[mapping.external.tableid].value.each((row,index) => {
-																						row[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,increments.progress.row));
+																						row[mapping.external.id]=cast(mapping.external,create.field(mapping.internal,divide.index(mapping.internal)));
 																					});
 																				}
 																			}
@@ -1726,7 +1735,11 @@ class panda_kumaneko_app{
 																					var res=pd.record.create(target);
 																					criterias.each((criteria,index) => {
 																						if (criteria.external.tableid) res[criteria.external.tableid]={value:[]};
-																						else res[criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.record));
+																						else
+																						{
+																							if (['=','in'].includes(criteria.operator.trim()))
+																								res[criteria.external.id]=cast(criteria.external,create.field(criteria.internal,increments.progress.record));
+																						}
 																					});
 																					return res;
 																				})()));
@@ -1764,24 +1777,29 @@ class panda_kumaneko_app{
 														pd.alert(pd.constants.action.message.notfound.transfer.field[pd.lang]);
 														reject();
 													}
+													[...action.transfer.mapping,...action.transfer.criteria].each((mapping,index) => {
+														((external,internal) => {
+															if (!external.tableid)
+																if (internal.tableid)
+																{
+																	divide.table=internal.tableid;
+																	if (result[internal.tableid].value.length==0) increments.record=0;
+																	else increments.record=result[internal.tableid].value.length;
+																	return PD_BREAK;
+																}
+														})(fields.external[mapping.external],fields.internal[mapping.internal]);
+													});
 													action.transfer.mapping.each((mapping,index) => {
 														((external,internal) => {
 															if (external.tableid)
 															{
-																tables[external.tableid]=((rows) => {
-																	var range=(rows)?rows.length:1;
-																	if (internal.tableid)
-																		range=(range<result[internal.tableid].value.length)?result[internal.tableid].value.length:range;
-																	return new Array(range).fill().map(() => pd.record.create(target.fields[external.tableid],false));
-																})(tables[external.tableid]);
-															}
-															else
-															{
-																if (internal.tableid)
-																{
-																	if (result[internal.tableid].value.length==0) increments.record=0;
-																	else increments.record=(increments.record<result[internal.tableid].value.length)?result[internal.tableid].value.length:increments.record;
-																}
+																if (!divide.table || divide.table!=internal.tableid)
+																	tables[external.tableid]=((rows) => {
+																		var range=(rows)?rows.length:1;
+																		if (internal.tableid)
+																			range=(range<result[internal.tableid].value.length)?result[internal.tableid].value.length:range;
+																		return new Array(range).fill().map(() => pd.record.create(target.fields[external.tableid],false));
+																	})(tables[external.tableid]);
 															}
 															mappings.push({
 																external:external,
@@ -1794,16 +1812,8 @@ class panda_kumaneko_app{
 															if (external.tableid)
 															{
 																if (external.tableid in tables) delete tables[external.tableid];
-																if (internal.tableid)
+																if (!divide.table && internal.tableid)
 																	increments.row=(increments.row<result[internal.tableid].value.length)?result[internal.tableid].value.length:increments.row;
-															}
-															else
-															{
-																if (internal.tableid)
-																{
-																	if (result[internal.tableid].value.length==0) increments.record=0;
-																	else increments.record=(increments.record<result[internal.tableid].value.length)?result[internal.tableid].value.length:increments.record;
-																}
 															}
 															criterias.push({
 																external:external,
@@ -7437,7 +7447,7 @@ pd.modules={
 																	if (res.table[key].length>1) return true;
 																	else
 																	{
-																		if (res.table[key].join('')==res.divide.join('')) return true;
+																		if (res.table[key].join('')!=res.divide.join('') && res.divide.join('')) return true;
 																	}
 															}
 														}
@@ -7469,10 +7479,6 @@ pd.modules={
 															{
 																for (var key in res.table)
 																	if (res.table[key].length>1) return true;
-																	else
-																	{
-																		if (res.table[key].join('')==res.divide.join('') || res.table[key].join('')==criteria.divide.join('')) return true;
-																	}
 															}
 															switch (action.transfer.pattern)
 															{
@@ -9169,7 +9175,7 @@ pd.modules={
 																			else
 																			{
 																				for (var key in criteria.table)
-																					if (criteria.table[key].join('')==criteria.divide.join(''))
+																					if (criteria.table[key].join('')!=criteria.divide.join('') && criteria.divide.join(''))
 																					{
 																						res.error=true;
 																						pd.alert(pd.constants.action.message.invalid.transfer.diversion[pd.lang],() => {
@@ -9236,17 +9242,6 @@ pd.modules={
 																					resolve(res);
 																				});
 																				break;
-																			}
-																			else
-																			{
-																				if (mapping.table[key].join('')==mapping.divide.join('') || mapping.table[key].join('')==criteria.divide.join(''))
-																				{
-																					res.error=true;
-																					pd.alert(pd.constants.action.message.invalid.transfer.diversion[pd.lang],() => {
-																						resolve(res);
-																					});
-																					break;
-																				}
 																			}
 																		}
 																		if (!res.error)
@@ -19052,8 +19047,8 @@ pd.constants=pd.extend({
 						ja:'転送するレコードの関連付けを指定して下さい'
 					},
 					diversion:{
-						en:'Field in the table which the field specified for dividing a record belongs cannot be specified for linkage between tables',
-						ja:'レコードの分割転送を行う場合は、分割転送するフィールドが属するテーブル内のフィールドをテーブル同士の転送に指定することは出来ません'
+						en:'When performing record division and transfer, it is not possible to specify fields from tables other than the table to which the field for division and transfer belongs as criteria for associating the records to be transferred',
+						ja:'レコードの分割転送を行う場合は、分割転送するフィールドが属するテーブル以外のテーブル内フィールドを転送するレコードの関連付けに指定することは出来ません'
 					},
 					dividing:{
 						en:'You must specify the fields in the same table when dividing a record based on a table field',
