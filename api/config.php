@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 1.8.3
+* Version: 1.9.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -135,6 +135,11 @@ class clsRequest extends clsBase
 								$value->injectors=[];
 								$update=true;
 							}
+							if (!property_exists($value,"restricted"))
+							{
+								$value->restricted=false;
+								$update=true;
+							}
 						}
 						foreach ($this->response["file"]->apps->system as $key=>$value)
 						{
@@ -195,6 +200,11 @@ class clsRequest extends clsBase
 							if (!property_exists($value,"injectors"))
 							{
 								$value->injectors=[];
+								$update=true;
+							}
+							if (!property_exists($value,"restricted"))
+							{
+								$value->restricted=false;
 								$update=true;
 							}
 						}
