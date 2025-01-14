@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.8.3
+* Version: 1.9.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -316,7 +316,10 @@ class panda_kumaneko{
 					apps.map((item) => item.id).each((id,index) => {
 						pd.event.on(id,'pd.app.activate',(e) => {
 							if ('viewid' in e)
+							{
 								if (!((views) => (e.viewid in views)?(((views[e.viewid].user.length!=0)?(this.permit({admin:views[e.viewid].user})=='admin'):true)):false)(this.apps[id].view.ui)) return e;
+								if (e.viewid=='0' && this.apps[id].app.restricted) return e;
+							}
 							this.dashboard.hide();
 							for (var key in this.apps)
 								((app) => {
@@ -2256,21 +2259,37 @@ pd.modules={
 											((view) => {
 												switch (view.type)
 												{
-													case 'aggregation':
-													case 'crosstab':
-													case 'gantt':
-													case 'timeseries':
-														if (res.body.elm('.pd-matrix')) res.body.elm('.pd-matrix').elm('thead').css({top:res.header.innerheight().toString()+'px'});
-														break;
 													case 'edit':
 													case 'list':
 														if (res.body.elm('.pd-view')) res.body.elm('.pd-view').elm('thead').css({top:res.header.innerheight().toString()+'px'});
 														break;
+													case 'calendar':
+														if (res.calendar) res.calendar.calendar.elm('thead').css({top:res.header.innerheight().toString()+'px'});
+														break;
+													case 'aggregation':
+													case 'crosstab':
+													case 'timeseries':
+														if (res[view.type])
+														{
+															if (view.chart.type!='table')
+															{
+																res.body.css({height:(res.contents.innerheight()-res.header.innerheight()).toString()+'px'});
+																res.contents.show();
+															}
+															else res[view.type].elm('thead').css({top:res.header.innerheight().toString()+'px'});
+														}
+														break;
+													case 'gantt':
+														if (res.gantt) res.gantt.elm('thead').css({top:res.header.innerheight().toString()+'px'});
+														break;
 													case 'kanban':
-														if (res.body.elm('.pd-parallel'))
-															res.body.elm('.pd-parallel').elms('.pd-parallel-head').each((element,index) => {
+														if (res.kanban)
+															res.kanban.elms('.pd-parallel-head').each((element,index) => {
 																element.css({top:res.header.innerheight().toString()+'px'});
 															});
+														break;
+													case 'map':
+														res.body.css({height:(res.contents.innerheight()-res.header.innerheight()).toString()+'px'});
 														break;
 												}
 											})(this.app.views.filter((item) => item.id==viewid).first());
@@ -4380,7 +4399,7 @@ pd.modules={
 						return view.contents;
 					})(create(viewid),viewid));
 					if (this.area.nav)
-						if ((viewuser.length!=0)?(pd.kumaneko.permit({admin:viewuser})=='admin'):true)
+						if ((viewuser.length!=0)?(pd.kumaneko.permit({admin:viewuser})=='admin'):((viewid=='0')?!this.app.restricted:true))
 							this.area.nav.elm('[nav-id=nav_'+this.app.id+']').elm('.pd-kumaneko-nav-button-details')
 							.append(
 								pd.create('span').addclass('pd-kumaneko-nav-button-details-item')
@@ -4392,6 +4411,10 @@ pd.modules={
 					pd.event.call(this.app.id,'pd.view.build',{header:this.view.ui[viewid].header.elm('.pd-kumaneko-app-header-space'),body:this.view.ui[viewid].body,viewid:viewid});
 				})(view.id,view.name,view.user);
 			});
+			if (this.area.nav)
+				((nav) => {
+					if (nav.elms('.pd-kumaneko-nav-button-details-item').length==0) nav.addclass('pd-hidden');
+				})(this.area.nav.elm('[nav-id=nav_'+this.app.id+']'));
 			/* event */
 			pd.event.on(this.app.id,'pd.action.call',(e) => {
 				return new Promise((resolve,reject) => {
@@ -4457,10 +4480,10 @@ pd.modules={
 			});
 			pd.event.on(this.app.id,'pd.preview.call',(e) => {
 				return new Promise((resolve,reject) => {
-					this.notify().then(() => {
+					this.notify(true).then(() => {
 						((view) => {
 							view.offset=0;
-							this.view.load('0','__modifiedtime>="'+e.modifiedtime+'"','__id asc').then(() => {
+							this.view.load('0','__modifiedtime>="'+e.modifiedtime+'"','__id asc',true).then(() => {
 								pd.event.call(this.app.id,'pd.app.activate',{viewid:'0'}).then((param) => resolve({}));
 							})
 							.catch((error) => resolve({}));
@@ -5868,7 +5891,8 @@ pd.modules={
 							{
 								if (key==menu.id)
 								{
-									this.menus[key].contents.show();
+									if (['actions','deduplications','injectors','linkages','views'].includes(menu.id)) this.menus[key].contents.show('flex');
+									else this.menus[key].contents.show();
 									this.menus[key].tab.activate();
 								}
 								else
@@ -6302,11 +6326,21 @@ pd.modules={
 												res.push({option:{value:'customize'}});
 												return res;
 											})(pd.map.loaded)
+										},
+										restricted:{
+											id:'restricted',
+											type:'checkbox',
+											caption:'',
+											required:false,
+											nocaption:true,
+											options:[
+												{option:{value:'restricted'}}
+											]
 										}
 									}
 								};
 								menu.builder=new pd.modules.builder.view();
-								menu.contents.addclass('pd-container')
+								menu.contents.addclass('pd-container pd-flex-vertical')
 								.append(
 									pd.create('div').css({padding:'0.25em 0'})
 									.append(pd.ui.field.activate(((res) => {
@@ -6434,13 +6468,17 @@ pd.modules={
 									)
 								)
 								.append(
-									pd.create('div').addclass('pd-kumaneko-drag-vertical').attr('field-type','form')
+									pd.create('div').addclass('pd-flex-vertical-grow pd-kumaneko-drag-vertical').attr('field-type','form')
 									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
-								);
+								)
+								.append(pd.ui.field.activate(((res) => {
+									res.elm('input').closest('label').elm('span').html(pd.constants.app.caption.view.restricted[pd.lang]);
+									return res;
+								})(pd.ui.field.create(menu.app.fields.restricted).addclass('pd-kumaneko-appbuilder-restricted')),menu.app));
 								break;
 							case 'linkages':
 								menu.builder=new pd.modules.builder.linkage();
-								menu.contents.addclass('pd-container')
+								menu.contents.addclass('pd-container pd-flex-vertical')
 								.append(
 									pd.create('div').css({padding:'0.25em'})
 									.append(
@@ -6473,7 +6511,7 @@ pd.modules={
 									)
 								)
 								.append(
-									pd.create('div').addclass('pd-kumaneko-drag-vertical').attr('field-type','form')
+									pd.create('div').addclass('pd-flex-vertical-grow pd-kumaneko-drag-vertical').attr('field-type','form')
 									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
 								);
 								break;
@@ -6567,7 +6605,7 @@ pd.modules={
 									}
 								};
 								menu.builder=new pd.modules.builder.action();
-								menu.contents.addclass('pd-container')
+								menu.contents.addclass('pd-container pd-flex-vertical')
 								.append(
 									pd.create('div').css({padding:'0.25em 0'})
 									.append(pd.ui.field.activate(((res) => {
@@ -6668,13 +6706,13 @@ pd.modules={
 									)
 								)
 								.append(
-									pd.create('div').addclass('pd-kumaneko-drag-vertical').attr('field-type','form')
+									pd.create('div').addclass('pd-flex-vertical-grow pd-kumaneko-drag-vertical').attr('field-type','form')
 									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
 								);
 								break;
 							case 'injectors':
 								menu.builder=new pd.modules.builder.injector();
-								menu.contents.addclass('pd-container')
+								menu.contents.addclass('pd-container pd-flex-vertical')
 								.append(
 									pd.create('div').css({padding:'0.25em'})
 									.append(
@@ -6708,13 +6746,13 @@ pd.modules={
 									)
 								)
 								.append(
-									pd.create('div').addclass('pd-kumaneko-drag-vertical').attr('field-type','form')
+									pd.create('div').addclass('pd-flex-vertical-grow pd-kumaneko-drag-vertical').attr('field-type','form')
 									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
 								);
 								break;
 							case 'deduplications':
 								menu.builder=new pd.modules.builder.deduplication();
-								menu.contents.addclass('pd-container')
+								menu.contents.addclass('pd-container pd-flex-vertical')
 								.append(
 									pd.create('div').css({padding:'0.25em'})
 									.append(
@@ -6739,7 +6777,7 @@ pd.modules={
 									)
 								)
 								.append(
-									pd.create('div').addclass('pd-kumaneko-drag-vertical').attr('field-type','form')
+									pd.create('div').addclass('pd-flex-vertical-grow pd-kumaneko-drag-vertical').attr('field-type','form')
 									.append(pd.create('div').addclass('pd-hidden pd-kumaneko-drag-guide'))
 								);
 								break;
@@ -6939,6 +6977,7 @@ pd.modules={
 							});
 						}
 						res.app.name=this.contents.elm('.pd-kumaneko-appbuilder-name').elm('input').val();
+						res.app.restricted=this.contents.elm('.pd-kumaneko-appbuilder-restricted').elm('input').checked;
 						((app,fieldinfos) => {
 							var error='';
 							/* get fields */
@@ -7301,7 +7340,8 @@ pd.modules={
 									fields:[],
 									query:'',
 									sort:'',
-									user:[]
+									user:[],
+									skip:false
 								});
 							}
 							/* get linkages */
@@ -7624,6 +7664,7 @@ pd.modules={
 						});
 					});
 					this.contents.elm('.pd-kumaneko-appbuilder-name').elm('input').val(this.app.name);
+					this.contents.elm('.pd-kumaneko-appbuilder-restricted').elm('input').checked=this.app.restricted;
 					/* setup fields */
 					((form,fieldinfos) => {
 						var setup=(index,row,parent,fields) => {
@@ -7710,12 +7751,13 @@ pd.modules={
 							this.app={
 								id:resp.id.toString(),
 								name:'new application',
+								restricted:false,
 								fields:{},
 								styles:{},
 								layout:[],
 								views:[],
 								linkages:[],
-								permissions:{'owner':[pd.operator.__id.value.toString()],'admin':[],'denied':[]},
+								permissions:{owner:[pd.operator.__id.value.toString()],admin:[],denied:[]},
 								customize:[],
 								actions:[],
 								injectors:[],
@@ -16660,6 +16702,9 @@ pd.modules={
 						})(pd.create('div').addclass('pd-flex pd-kumaneko-border-top'))
 					);
 				});
+				window.on('resize',(e) => {
+					if (dashboard.visible()) dashboard.show();
+				});
 				return dashboard;
 			})(this.ui.contents.elm('.pd-kumaneko-dashboard'));
 			pd.event.call('0','pd.dashboard.build',{space:this.ui.space}).then(() => {
@@ -16926,7 +16971,7 @@ pd.modules={
 											this.apps[duplicate.id]=duplicate;
 											this.lib.remodel();
 										});
-									})(pd.extend({id:resp.id.toString(),name:res.app.name+' Copy',permissions:{'owner':[pd.operator.__id.value.toString()]}},res.app));
+									})(pd.extend({id:resp.id.toString(),name:res.app.name+' Copy',permissions:{owner:[pd.operator.__id.value.toString()]}},res.app));
 								})
 								.catch((error) => {
 									pd.alert(error.message);
@@ -19418,6 +19463,10 @@ pd.constants=pd.extend({
 						en:'Customize view',
 						ja:'カスタマイズ'
 					}
+				},
+				restricted:{
+					en:'Disable the "all" view',
+					ja:'「all」ビューを使用しない'
 				},
 				title:{
 					list:{

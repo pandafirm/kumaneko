@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 1.8.3
+* Version: 1.9.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -441,6 +441,9 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	margin:0 0.25em !important;
 	width:calc(100% - 0.5em) !important;
 }
+.pd-kumaneko-main .pd-kumaneko-calendar tbody{
+	z-index:1;
+}
 .pd-kumaneko-main .pd-kumaneko-calendar tbody td:after{
 	content:'';
 	display:block;
@@ -484,6 +487,11 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 }
 .pd-kumaneko-main .pd-kumaneko-calendar tbody td *:hover .pd-kumaneko-calendar-cell-button{
 	display:inline-block;
+}
+.pd-kumaneko-main .pd-kumaneko-calendar thead{
+	position:sticky;
+	top:0;
+	z-index:2;
 }
 .pd-kumaneko-main .pd-kumaneko-calendar thead td{
 	padding:0.25em !important;
@@ -1094,6 +1102,9 @@ body.dark .pd-kumaneko-main .pd-kumaneko-calendar tbody td:after{
 	border-left:1px solid var(--dark-main-shadow-color);
 	box-shadow:inset 1px 0 1px -1px var(--dark-main-highlight-thin-color);
 }
+body.dark .pd-kumaneko-main .pd-kumaneko-calendar thead :is(td,th){
+	background-color:var(--dark-main-bg-color);
+}
 body.dark .pd-kumaneko-main :is(.pd-kumaneko-drag,.pd-kumaneko-drag-vertical) .pd-kumaneko-drag-guide{
 	background-color:var(--dark-field-focus-color);
 	border:1px solid var(--dark-field-border-color);
@@ -1471,6 +1482,9 @@ body.light .pd-kumaneko-main .pd-kumaneko-border-bottom{
 body.light .pd-kumaneko-main .pd-kumaneko-calendar tbody td:after{
 	border-left:1px solid var(--light-main-shadow-color);
 	box-shadow:inset 1px 0 1px -1px var(--light-main-highlight-thin-color);
+}
+body.light .pd-kumaneko-main .pd-kumaneko-calendar thead :is(td,th){
+	background-color:var(--light-main-bg-color);
 }
 body.light .pd-kumaneko-main :is(.pd-kumaneko-drag,.pd-kumaneko-drag-vertical) .pd-kumaneko-drag-guide{
 	background-color:var(--light-field-focus-color);

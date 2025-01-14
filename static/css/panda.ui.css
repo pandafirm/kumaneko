@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.ui.css"
-* Version: 1.8.3
+* Version: 1.9.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -292,6 +292,14 @@
 .pd-flex{
 	display:flex;
 }
+.pd-flex-vertical{
+	display:flex;
+	flex-direction:column;
+}
+.pd-flex-vertical .pd-flex-vertical-grow{
+	flex:1;
+	overflow:auto;
+}
 :is(.pd-hidden,.pd-unuse){
 	display:none !important;
 }
@@ -451,6 +459,7 @@
 	padding:0.25em;
 	position:sticky;
 	text-align:center;
+	top:0;
 	z-index:2;
 }
 .pd-stretch{
