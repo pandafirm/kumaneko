@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.9.0
+* Version: 1.9.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1873,8 +1873,24 @@ class panda_record{
 						{
 							if (value.disabled) field.addclass('pd-disabled');
 							else field.removeclass('pd-disabled');
-							if (value.hidden) field.addclass('pd-hidden');
-							else field.removeclass('pd-hidden');
+							if (value.hidden)
+							{
+								field.addclass('pd-hidden');
+								if (fieldinfo.type=='table')
+									if (!fieldinfo.nocaption)
+										((element) => {
+											if (element && pd.children(element).some((child) => child.hasclass('pd-table-caption'))) element.addclass('pd-hidden');
+										})(field.parentNode.previousElementSibling);
+							}
+							else
+							{
+								field.removeclass('pd-hidden');
+								if (fieldinfo.type=='table')
+									if (!fieldinfo.nocaption)
+										((element) => {
+											if (element && pd.children(element).some((child) => child.hasclass('pd-table-caption'))) element.removeclass('pd-hidden');
+										})(field.parentNode.previousElementSibling);
+							}
 							if (fieldinfo.type!='table')
 							{
 								field=field.elm('.pd-field-value');
@@ -2727,11 +2743,12 @@ class panda_user_interface{
 				return ((table,chart) => {
 					var handler={
 						mousemove:(e) => {
+							var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
 							var element=((res) => {
 								if (!res.hasclass('pd-matrix-row-cell'))
 									res=(res.closest('.pd-matrix-row-cell'))?res.closest('.pd-matrix-row-cell'):null;
 								return res;
-							})(document.elementFromPoint(e.pageX,e.pageY));
+							})(document.elementFromPoint(pointer.pageX,pointer.pageY));
 							if (element)
 							{
 								((rows) => {
@@ -3890,37 +3907,46 @@ class panda_user_interface{
 																					{
 																						((rows) => {
 																							if (rows.internal.value.length>0)
-																								if (!((row) => {
-																									var res=false;
-																									for (var key in row)
+																								((matches) => {
+																									if (field.closest('.pd-skip'))
 																									{
-																										switch (key)
-																										{
-																											case '__row_rel':
-																												if (row[key].value) res=true;
-																												break;
-																											case '__row_uid':
-																												break;
-																											default:
-																												((value) => {
-																													if (value!=null)
-																													{
-																														if (fieldinfos[key].type=='radio')
-																														{
-																															if (value!=fieldinfos[key].options.first().option.value) res=true;
-																														}
-																														else
-																														{
-																															if (value.length!=0) res=true;
-																														}
-																													}
-																												})(row[key].value);
-																												break;
-																										}
-																										if (res) break;
+																										matches=matches.filter((item) => {
+																											return (item.value['__row_cnd'] || {value:''}).value!='skip';
+																										});
 																									}
-																									return res;
-																								})(rows.internal.value.last())) rows.internal.value.pop();
+																									if (!((row) => {
+																										var res=false;
+																										for (var key in row)
+																										{
+																											switch (key)
+																											{
+																												case '__row_cnd':
+																												case '__row_uid':
+																													break;
+																												case '__row_rel':
+																													if (row[key].value) res=true;
+																													break;
+																												default:
+																													((value) => {
+																														if (value!=null)
+																														{
+																															if (fieldinfos[key].type=='radio')
+																															{
+																																if (value!=fieldinfos[key].options.first().option.value) res=true;
+																															}
+																															else
+																															{
+																																if (value.length!=0) res=true;
+																															}
+																														}
+																													})(row[key].value);
+																													break;
+																											}
+																											if (res) break;
+																										}
+																										return res;
+																									})(matches.last().value)) rows.internal.value.splice(matches[matches.length - 1].index,1);
+																								})(rows.internal.value.map((item,index) => ({value:item,index:index})));
 																							rows.internal.value=rows.internal.value.filter((item) => {
 																								return item['__row_rel'].value!=fieldinfo.tableid+uid+'_'+fieldinfo.id;
 																							});
@@ -4377,6 +4403,82 @@ class panda_user_interface{
 					return res;
 				})(pd.extend({},fields));
 			},
+			stringify:(fieldinfo,value,systems,separator=',') => {
+				var res='';
+				if (fieldinfo)
+					switch (fieldinfo.type)
+					{
+						case 'canvas':
+						case 'spacer':
+						case 'table':
+							break;
+						case 'checkbox':
+							if (Array.isArray(value.value)) res=value.value.join(separator);
+							break;
+						case 'creator':
+						case 'modifier':
+						case 'user':
+							res=value.value.shape((item) => {
+								var id=item.toString();
+								var res=systems.user.filter((item) => {
+									return item.__id.value.toString()==id;
+								});
+								return (res.length!=0)?res.first().name.value:PD_THROW;
+							}).join(separator);
+							break;
+						case 'department':
+							res=value.value.shape((item) => {
+								var id=item.toString();
+								var res=systems.department.filter((item) => {
+									return item.__id.value.toString()==id;
+								});
+								return (res.length!=0)?res.first().name.value:PD_THROW;
+							}).join(separator);
+							break;
+						case 'file':
+							res=value.value.shape((item) => {
+								return (item.name)?item.name:PD_THROW;
+							}).join(separator);
+							break;
+						case 'group':
+							res=value.value.shape((item) => {
+								var id=item.toString();
+								var res=systems.group.filter((item) => {
+									return item.__id.value.toString()==id;
+								});
+								return (res.length!=0)?res.first().name.value:PD_THROW;
+							}).join(separator);
+							break;
+						case 'lookup':
+							res=value.search;
+							break;
+						case 'number':
+							if (fieldinfo.demiliter)
+							{
+								if (pd.isnumeric(value.value)) res=Number(value.value).comma(fieldinfo.decimals);
+								else res=value.value;
+							}
+							else
+							{
+								if (fieldinfo.decimals)
+								{
+									if (pd.isnumeric(value.value)) res=Number(value.value).toFixed(parseInt(fieldinfo.decimals));
+									else res=value.value;
+								}
+								else res=value.value;
+							}
+							if (fieldinfo.unit)
+							{
+								if (fieldinfo.unitposition=='prefix') res=fieldinfo.unit+res;
+								else res=res+fieldinfo.unit;
+							}
+							break;
+						default:
+							res=value.value;
+							break;
+					}
+				return res;
+			},
 			typing:(sender,receiver,isfilter=false) => {
 				var res=false;
 				if (receiver.type=='text')
@@ -4685,14 +4787,15 @@ class panda_user_interface{
 					});
 					var handler={
 						mousemove:(e) => {
+							var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
 							var element=((res) => {
 								if (!res.hasclass('pd-matrix-row-cell'))
 									res=(res.closest('.pd-matrix-row-cell'))?res.closest('.pd-matrix-row-cell'):null;
 								return res;
-							})(document.elementFromPoint(e.pageX,e.pageY));
+							})(document.elementFromPoint(pointer.pageX,pointer.pageY));
 							var span=((res) => {
 								return (res.hasAttribute('taskspan'))?res.taskspan:((res.closest('[taskspan]'))?res.closest('[taskspan]').taskspan:1);
-							})(document.elementFromPoint(e.pageX,e.pageY));
+							})(document.elementFromPoint(pointer.pageX,pointer.pageY));
 							if (element)
 							{
 								((rows) => {

@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.9.0
+* Version: 1.9.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -426,7 +426,10 @@ class panda{
 	}
 	/* document loaded */
 	ready(callback){
-		document.on('DOMContentLoaded',(e) => {
+		((handler) => {
+			if (document.readyState!=='loading') handler();
+			else document.on('DOMContentLoaded',handler);
+		})((e) => {
 			if (!this.window.alert)
 			{
 				/* setup properties */

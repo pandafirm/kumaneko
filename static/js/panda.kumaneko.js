@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 1.9.0
+* Version: 1.9.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1230,64 +1230,8 @@ class panda_kumaneko_app{
 												};
 												var assign=(target,record,row) => {
 													if (action.mail.format=='html') target=target.replace(/\r/g,'').replace(/\n/g,'<br>');
-													((handler) => {
-														for (var key in record) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],record[key]));
-														for (var key in row) target=target.replace(new RegExp('%'+key+'%','g'),handler(fieldinfos[key],row[key]));
-													})((fieldinfo,value) => {
-														var res='';
-														if (fieldinfo)
-															switch (fieldinfo.type)
-															{
-																case 'canvas':
-																case 'spacer':
-																case 'table':
-																	break;
-																case 'checkbox':
-																	if (Array.isArray(value.value)) res=value.value.join(',');
-																	break;
-																case 'creator':
-																case 'modifier':
-																case 'user':
-																	res=value.value.shape((item) => {
-																		var id=item.toString();
-																		var res=systems.user.filter((item) => {
-																			return item.__id.value.toString()==id;
-																		});
-																		return (res.length!=0)?res.first().name.value:PD_THROW;
-																	}).join(',');
-																	break;
-																case 'department':
-																	res=value.value.shape((item) => {
-																		var id=item.toString();
-																		var res=systems.department.filter((item) => {
-																			return item.__id.value.toString()==id;
-																		});
-																		return (res.length!=0)?res.first().name.value:PD_THROW;
-																	}).join(',');
-																	break;
-																case 'file':
-																	res=value.value.shape((item) => {
-																		return (item.name)?item.name:PD_THROW;
-																	}).join(',');
-																	break;
-																case 'lookup':
-																	res=value.search;
-																	break;
-																case 'group':
-																	res=value.value.shape((item) => {
-																		var id=item.toString();
-																		var res=systems.group.filter((item) => {
-																			return item.__id.value.toString()==id;
-																		});
-																		return (res.length!=0)?res.first().name.value:PD_THROW;
-																	}).join(',');
-																	break;
-																default:
-																	res=value.value;
-																	break;
-															}
-														return res;
-													});
+													for (var key in record) target=target.replace(new RegExp('%'+key+'%','g'),pd.ui.field.stringify(fieldinfos[key],record[key],systems));
+													for (var key in row) target=target.replace(new RegExp('%'+key+'%','g'),pd.ui.field.stringify(fieldinfos[key],row[key],systems));
 													return target;
 												};
 												pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'departments',query:'',offset:0,limit:0},true)
@@ -1405,115 +1349,127 @@ class panda_kumaneko_app{
 								},
 								report:() => {
 									return new Promise((resolve,reject) => {
-										if (action.report.spreadsheet)
-										{
-											if (action.report.saveas in fieldinfos)
+										pd.event.call(this.app.id,'pd.plugin.report.call',{app:this.app,action:action.id,performed:false,record:result})
+										.then((param) => {
+											if (!param.performed)
 											{
-												pd.request(
-													pd.ui.baseuri()+'/report.php','POST',{},
+												if (action.report.spreadsheet)
+												{
+													if (action.report.saveas in fieldinfos)
 													{
-														app:this.app.id,
-														spreadsheet:action.report.spreadsheet,
-														size:action.report.size,
-														orientation:action.report.orientation,
-														template:action.report.template,
-														record:result
-													},
-													true
-												)
-												.then((resp) => {
-													if ('filekey' in resp)
-													{
-														((filekey) => {
-															var verify=() => {
-																pd.request(pd.ui.baseuri()+'/report.php','GET',{},{verify:filekey},true)
-																.then((resp) => {
-																	if (resp.result=='ok')
-																	{
-																		filekey+='.pdf';
-																		pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'report',filekey:filekey},true)
+														pd.request(
+															pd.ui.baseuri()+'/report.php','POST',{},
+															{
+																app:this.app.id,
+																spreadsheet:action.report.spreadsheet,
+																size:action.report.size,
+																orientation:action.report.orientation,
+																template:action.report.template,
+																record:result
+															},
+															true
+														)
+														.then((resp) => {
+															if ('filekey' in resp)
+															{
+																((filekey) => {
+																	var verify=() => {
+																		pd.request(pd.ui.baseuri()+'/report.php','GET',{},{verify:filekey},true)
 																		.then((resp) => {
-																			var finish=(filename) => {
-																				filename+=(filename)?'.pdf':'report.pdf';
-																				return new Promise((resolve,reject) => {
-																					if (action.report.store in fieldinfos)
-																					{
-																						((files) => {
-																							pd.file(pd.ui.baseuri()+'/file.php','POST',{},{dir:'attachment',files:files})
-																							.then((resp) => {
-																								Array.prototype.push.apply(record[action.report.store].value,resp.files);
-																								actions.call=true;
-																								resolve();
-																							})
-																							.catch((error) => {
-																								pd.alert(error.message);
-																								resolve();
-																							});
-																						})(((data) => {
-																							var datas=atob(data);
-																							var buffer=new Uint8Array(datas.length);
-																							datas.length.each((index) => buffer[index]=datas.charCodeAt(index));
-																							return [new File([buffer.buffer],filename,{type:'application/pdf'})];
-																						})(resp.file));
-																					}
-																					else
-																					{
-																						var a=pd.create('a')
-																						.css({display:'none'})
-																						.attr('href',pd.ui.objecturl(resp.file,'application/pdf'))
-																						.attr('target','_blank')
-																						.attr('download',filename);
-																						pd.elm('body').append(a);
-																						a.click();
-																						document.body.removeChild(a);
-																						resolve();
-																					}
-																				});
-																			};
-																			finish(record[action.report.saveas].value).then(() => {
-																				pd.request(pd.ui.baseuri()+'/report.php','PUT',{},{filekey:filekey},true)
+																			if (resp.result=='ok')
+																			{
+																				filekey+='.pdf';
+																				pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'report',filekey:filekey},true)
 																				.then((resp) => {
-																					resolve();
+																					var finish=(filename) => {
+																						filename+=(filename)?'.pdf':'report.pdf';
+																						return new Promise((resolve,reject) => {
+																							if (action.report.store in fieldinfos)
+																							{
+																								((files) => {
+																									pd.file(pd.ui.baseuri()+'/file.php','POST',{},{dir:'attachment',files:files})
+																									.then((resp) => {
+																										Array.prototype.push.apply(record[action.report.store].value,resp.files);
+																										actions.call=true;
+																										resolve();
+																									})
+																									.catch((error) => {
+																										pd.alert(error.message);
+																										resolve();
+																									});
+																								})(((data) => {
+																									var datas=atob(data);
+																									var buffer=new Uint8Array(datas.length);
+																									datas.length.each((index) => buffer[index]=datas.charCodeAt(index));
+																									return [new File([buffer.buffer],filename,{type:'application/pdf'})];
+																								})(resp.file));
+																							}
+																							else
+																							{
+																								var a=pd.create('a')
+																								.css({display:'none'})
+																								.attr('href',pd.ui.objecturl(resp.file,'application/pdf'))
+																								.attr('target','_blank')
+																								.attr('download',filename);
+																								pd.elm('body').append(a);
+																								a.click();
+																								document.body.removeChild(a);
+																								resolve();
+																							}
+																						});
+																					};
+																					finish(record[action.report.saveas].value).then(() => {
+																						pd.request(pd.ui.baseuri()+'/report.php','PUT',{},{filekey:filekey},true)
+																						.then((resp) => {
+																							resolve();
+																						})
+																						.catch((error) => {
+																							pd.alert(error.message);
+																							reject();
+																						});
+																					});
 																				})
 																				.catch((error) => {
 																					pd.alert(error.message);
 																					reject();
 																				});
-																			});
+																			}
+																			else setTimeout(() => verify(),1000);
 																		})
 																		.catch((error) => {
 																			pd.alert(error.message);
 																			reject();
 																		});
-																	}
-																	else setTimeout(() => verify(),1000);
-																})
-																.catch((error) => {
-																	pd.alert(error.message);
-																	reject();
-																});
-															};
-															setTimeout(() => verify(),1000);
-														})(resp.filekey);
+																	};
+																	setTimeout(() => verify(),1000);
+																})(resp.filekey);
+															}
+															else
+															{
+																pd.alert(pd.constants.action.message.fail.report[pd.lang]);
+																reject();
+															}
+														})
+														.catch((error) => {
+															pd.alert(error.message);
+															reject();
+														});
 													}
 													else
 													{
-														pd.alert(pd.constants.action.message.fail.report[pd.lang]);
+														pd.alert(pd.constants.action.message.notfound.report[pd.lang]);
 														reject();
 													}
-												})
-												.catch((error) => {
-													pd.alert(error.message);
-													reject();
-												});
+												}
+												else resolve();
 											}
 											else
 											{
-												pd.alert(pd.constants.action.message.notfound.report[pd.lang]);
-												reject();
+												actions.call=true;
+												resolve();
 											}
-										}
-										else resolve();
+										})
+										.catch(() => reject());
 									});
 								},
 								rows:() => {
@@ -6138,7 +6094,8 @@ pd.modules={
 									};
 									var handler={
 										move:(e) => {
-											var element=document.elementFromPoint(e.pageX,e.pageY);
+											var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
+											var element=document.elementFromPoint(pointer.pageX,pointer.pageY);
 											if (element)
 											{
 												if (element!=keep.guide)
@@ -6147,7 +6104,7 @@ pd.modules={
 															nesting:(parent) => {
 																var references=pd.children(parent).filter((item) => {
 																	var rect=item.getBoundingClientRect();
-																	return !item.hasclass('pd-kumaneko-drag-guide') && (e.pageY<rect.top+rect.height*0.5);
+																	return !item.hasclass('pd-kumaneko-drag-guide') && (pointer.pageY<rect.top+rect.height*0.5);
 																});
 																if (references.length==0) guide.setup(parent,null);
 																else guide.setup(parent,references.first());
@@ -6195,7 +6152,7 @@ pd.modules={
 																{
 																	if (element.parentNode.attr('field-type')=='table')
 																		if (uniques.includes(keep.fieldinfo.type)) return;
-																	if (e.pageX<rect.left+rect.width*0.5) guide.setup(element.parentNode,element);
+																	if (pointer.pageX<rect.left+rect.width*0.5) guide.setup(element.parentNode,element);
 																	else guide.setup(element.parentNode,element.nextElementSibling);
 																}
 																else
@@ -6917,14 +6874,15 @@ pd.modules={
 					};
 					var handler={
 						move:(e) => {
-							var element=document.elementFromPoint(e.pageX,e.pageY);
+							var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
+							var element=document.elementFromPoint(pointer.pageX,pointer.pageY);
 							if (element)
 								if (element!=keep.guide)
 									((rect) => {
 										switch (element.attr('field-type'))
 										{
 											case 'row':
-												element.parentNode.insertBefore(keep.guide.removeclass('pd-hidden'),(e.pageY<rect.top+rect.height*0.5)?element:element.nextElementSibling);
+												element.parentNode.insertBefore(keep.guide.removeclass('pd-hidden'),(pointer.pageY<rect.top+rect.height*0.5)?element:element.nextElementSibling);
 												break;
 											case 'form':
 												element.insertBefore(keep.guide.removeclass('pd-hidden'),null);
@@ -12536,7 +12494,8 @@ pd.modules={
 								};
 								var handler={
 									move:(e) => {
-										var element=document.elementFromPoint(e.pageX,e.pageY);
+										var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
+										var element=document.elementFromPoint(pointer.pageX,pointer.pageY);
 										if (element)
 										{
 											if (element!=keep.guide)
@@ -12549,7 +12508,7 @@ pd.modules={
 													switch (element.attr('field-type'))
 													{
 														case 'field':
-															if (e.pageY<rect.top+rect.height*0.5) guide.setup(element.parentNode,element);
+															if (pointer.pageY<rect.top+rect.height*0.5) guide.setup(element.parentNode,element);
 															else guide.setup(element.parentNode,element.nextElementSibling);
 															break;
 														case 'form':
@@ -14185,7 +14144,8 @@ pd.modules={
 									};
 									var handler={
 										move:(e) => {
-											var element=document.elementFromPoint(e.pageX,e.pageY);
+											var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
+											var element=document.elementFromPoint(pointer.pageX,pointer.pageY);
 											if (element)
 											{
 												if (element!=keep.guide)
@@ -14204,7 +14164,7 @@ pd.modules={
 														switch (element.attr('field-type'))
 														{
 															case 'field':
-																if (e.pageX<rect.left+rect.width*0.5) guide.setup(element.parentNode,element);
+																if (pointer.pageX<rect.left+rect.width*0.5) guide.setup(element.parentNode,element);
 																else guide.setup(element.parentNode,element.nextElementSibling);
 																break;
 															case 'table':
@@ -17065,14 +17025,15 @@ pd.modules={
 					};
 					var handler={
 						move:(e) => {
-							var element=document.elementFromPoint(e.pageX,e.pageY);
+							var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
+							var element=document.elementFromPoint(pointer.pageX,pointer.pageY);
 							if (element)
 								if (element!=keep.guide)
 									((rect) => {
 										switch (element.attr('field-type'))
 										{
 											case 'row':
-												element.parentNode.insertBefore(keep.guide.removeclass('pd-hidden'),(e.pageY<rect.top+rect.height*0.5)?element:element.nextElementSibling);
+												element.parentNode.insertBefore(keep.guide.removeclass('pd-hidden'),(pointer.pageY<rect.top+rect.height*0.5)?element:element.nextElementSibling);
 												break;
 											case 'form':
 												element.insertBefore(keep.guide.removeclass('pd-hidden'),null);
@@ -17422,7 +17383,8 @@ pd.modules={
 							};
 							var handler={
 								move:(e) => {
-									var element=document.elementFromPoint(e.pageX,e.pageY);
+									var pointer=(e.changedTouches)?Array.from(e.changedTouches).first():e;
+									var element=document.elementFromPoint(pointer.pageX,pointer.pageY);
 									if (element)
 									{
 										if (element!=keep.guide)
@@ -17435,7 +17397,7 @@ pd.modules={
 															if (!item.hasclass('pd-kumaneko-drag-guide'))
 															{
 																if (pd.children(item).filter((item) => item.visible()).length==0) item.addclass('pd-hidden');
-																res=(e.pageY<rect.top+rect.height*0.5);
+																res=(pointer.pageY<rect.top+rect.height*0.5);
 															}
 															return res;
 														});
@@ -17463,7 +17425,7 @@ pd.modules={
 													case 'panel':
 														if (keep.panelinfo.type=='panel')
 														{
-															if (e.pageX<rect.left+rect.width*0.5) guide.setup(element.parentNode,element);
+															if (pointer.pageX<rect.left+rect.width*0.5) guide.setup(element.parentNode,element);
 															else guide.setup(element.parentNode,element.nextElementSibling);
 														}
 														else guide.setup(element.parentNode.parentNode,element.parentNode.nextElementSibling);
