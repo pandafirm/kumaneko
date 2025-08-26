@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 1.9.1
+* Version: 1.9.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -72,7 +72,11 @@ class clsDriver
 								$lookups[$key]=$arg_fields[$key];
 								break;
 							}
-						$arg_destination[$key]=["search"=>$arg_source[$key]["search"],"value"=>($arg_source[$key]["value"]=="")?null:intval($arg_source[$key]["value"])];
+						if (array_key_exists("search",$arg_source[$key]))
+						{
+							$arg_destination[$key]=["search"=>$arg_source[$key]["search"],"value"=>($arg_source[$key]["value"]=="")?null:intval($arg_source[$key]["value"])];
+						}
+						else throw new Exception("Lookup fields require the search attribute");
 					}
 					else
 					{
@@ -1405,7 +1409,7 @@ class clsDriver
 								$time=$now->modify(strval($timezone->getOffset($now)*-1)." second")->format("Y-m-d\TH:i:s")."Z";
 								$this->resultid=intval($record["__id"]["value"]);
 								if (array_key_exists("__modifiedtime",$record))
-									if ($source[strval($this->resultid)]["__modifiedtime"]["value"]>$record["__modifiedtime"]["value"])
+									if ($record["__modifiedtime"]["value"]!="" && $record["__modifiedtime"]["value"]<$source[strval($this->resultid)]["__modifiedtime"]["value"])
 									{
 										$error="Someone has updated the record while you are editing";
 										break;
