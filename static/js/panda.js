@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 1.9.1
+* Version: 1.9.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -401,9 +401,9 @@ class panda{
 		this.window.progress.hide();
 	}
 	/* show progress */
-	progressstart(max){
+	progressstart(max,message){
 		this.loadend();
-		this.window.progress.show(max);
+		this.window.progress.show(max,message);
 	}
 	/* update progress */
 	progressupdate(){
@@ -3179,6 +3179,7 @@ class panda_progress{
 	constructor(){
 		/* setup properties */
 		this.counter=0;
+		this.message='';
 		this.cover=pd.create('div').css({
 			backgroundColor:'rgba(0,0,0,0.5)',
 			boxSizing:'border-box',
@@ -3193,7 +3194,7 @@ class panda_progress{
 		this.container=pd.create('p').css({
 			bottom:'0',
 			fontSize:'0.8em',
-			height:'2em',
+			height:'max-content',
 			left:'0',
 			margin:'auto',
 			maxHeight:'100%',
@@ -3232,15 +3233,16 @@ class panda_progress{
 	/* update */
 	update(){
 		this.counter++;
-		this.monitor.html(Math.ceil((this.counter/this.max)*100).toString()+'% complete');
+		this.monitor.html(this.message+Math.ceil((this.counter/this.max)*100).toString()+'% complete');
 		this.progress.css({width:'calc(100% * '+(this.counter/this.max).toString()+')'});
 		this.cover.css({display:'block'});
 	}
 	/* show */
-	show(max){
+	show(max,message){
 		this.counter=0;
+		this.message=(message)?message+'<br>':'';
 		this.max=(max)?max:1;
-		this.monitor.html('');
+		this.monitor.html(this.message);
 		this.progress.css({width:'0'});
 		this.cover.css({display:'block',zIndex:pd.window.alert.cover.style.zIndex-1});
 	}
