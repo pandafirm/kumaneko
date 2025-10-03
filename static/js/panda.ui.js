@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.9.2
+* Version: 1.9.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1423,6 +1423,70 @@ class panda_formula{
 				}
 				return res;
 			};
+			var PREVROW=(id) => {
+				var res=null;
+				if (id in fieldinfos)
+				{
+					var fieldinfo=fieldinfos[id];
+					switch (fieldinfo.type)
+					{
+						case 'checkbox':
+						case 'creator':
+						case 'department':
+						case 'file':
+						case 'group':
+						case 'modifier':
+						case 'user':
+							res=[];
+							break;
+						default:
+							res='';
+							break;
+					}
+					if (fieldinfo.tableid)
+					{
+						((current) => {
+							var index=record[fieldinfo.tableid].value.findIndex((row) => row===current);
+							if (index>0) res=record[fieldinfo.tableid].value[index-1][id].value;
+						})(row);
+					}
+				}
+				return res;
+			};
+			var PREVROWIF=(id,query='') => {
+				var res=null;
+				if (id in fieldinfos)
+				{
+					((record,fieldinfo) => {
+						switch (fieldinfo.type)
+						{
+							case 'checkbox':
+							case 'creator':
+							case 'department':
+							case 'file':
+							case 'group':
+							case 'modifier':
+							case 'user':
+								res=[];
+								break;
+							default:
+								res='';
+								break;
+						}
+						if (record)
+						{
+							if (fieldinfo.tableid)
+							{
+								((current) => {
+									var index=record[fieldinfo.tableid].value.findIndex((row) => row===current);
+									if (index>0) res=record[fieldinfo.tableid].value[index-1][id].value;
+								})(row);
+							}
+						}
+					})(pd.filter.scan({fields:fieldinfos},origin,query,false),fieldinfos[id]);
+				}
+				return res;
+			};
 			var REPLACE=(value,pattern,replacement) => {
 				return STR(value).replace(new RegExp(STR(pattern),'g'),STR(replacement));
 			};
@@ -1532,11 +1596,11 @@ class panda_formula{
 							return formula;
 						})(
 							formula
-							.replace(new RegExp('(AVG|MIN|MAX|SUM)\\([ ]*('+fieldinfo.id+')[ ]*\\)','g'),(match,functions,field) => {
+							.replace(new RegExp('(AVG|MIN|MAX|SUM|PREVROW)\\([ ]*('+fieldinfo.id+')[ ]*\\)','g'),(match,functions,field) => {
 								reserved.push(functions+'("'+field+'")');
 								return 'calculate_'+reserved.length.toString();
 							})
-							.replace(new RegExp('(AVGIF|MINIF|MAXIF|SUMIF)\\([ ]*('+fieldinfo.id+')[ ]*,[ ]*("[^\\"]*"|\\\'[^\\\']*\\\')\\)','g'),(match,functions,field,query) => {
+							.replace(new RegExp('(AVGIF|MINIF|MAXIF|SUMIF|PREVROWIF)\\([ ]*('+fieldinfo.id+')[ ]*,[ ]*("[^\\"]*"|\\\'[^\\\']*\\\')\\)','g'),(match,functions,field,query) => {
 								reserved.push(functions+'("'+field+'",'+query+')');
 								return 'calculate_'+reserved.length.toString();
 							})
