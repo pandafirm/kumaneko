@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 1.9.3
+* Version: 2.0.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1584,14 +1584,14 @@ class panda_formula{
 				for (var key in fieldinfos)
 					((fieldinfo) => {
 						formula=((formula) => {
-							if (formula.match(new RegExp('(^|[^\'\"]{1})'+fieldinfo.id+'([^\'\"]{1}|$)')))
+							if (formula.match(new RegExp('(?<![\'\"])'+fieldinfo.id+'(?![\'\"])')))
 							{
 								if (fieldinfo.tableid)
 								{
 									if (fieldinfo.id in row)
-										formula=formula.replace(new RegExp('(^|[^\'\"]{1})'+fieldinfo.id+'([^\'\"]{1}|$)','g'),'$1row["'+fieldinfo.id+'"].value$2');
+										formula=formula.replace(new RegExp('(?<![\'\"])'+fieldinfo.id+'(?![\'\"])','g'),'row["'+fieldinfo.id+'"].value');
 								}
-								else formula=formula.replace(new RegExp('(^|[^\'\"]{1})'+fieldinfo.id+'([^\'\"]{1}|$)','g'),'$1record["'+fieldinfo.id+'"].value$2');
+								else formula=formula.replace(new RegExp('(?<![\'\"])'+fieldinfo.id+'(?![\'\"])','g'),'record["'+fieldinfo.id+'"].value');
 							}
 							return formula;
 						})(
