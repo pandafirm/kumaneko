@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "report_processing.php"
-* Version: 2.0.0
+* Version: 2.0.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
