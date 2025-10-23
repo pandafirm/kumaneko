@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 2.0.0
+* Version: 2.0.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -290,7 +290,7 @@ class panda_filter extends panda_dialog{
 		});
 	}
 	/* build */
-	build(app,query,sort,callback){
+	build(app,query,sort,callback,nested=false){
 		var fieldinfos=pd.ui.field.embed(pd.ui.field.parallelize(app.fields));
 		var fields=(exclude) => {
 			var res=[];
@@ -752,7 +752,7 @@ class panda_filter extends panda_dialog{
 				});
 			});
 			/* modify elements */
-			row.elm('[field-id=fields]').elm('select').empty().assignoption(fields(true),'caption','id');
+			row.elm('[field-id=fields]').elm('select').empty().assignoption(fields(!nested),'caption','id');
 		},(table,index) => {
 			if (table.tr.length==0) table.addrow();
 		},false);
@@ -790,7 +790,7 @@ class panda_filter extends panda_dialog{
 							row.elm('[field-id=options]').elm('select').val(sort.order);
 						})(this.tables.sort.addrow());
 				});
-			})(fields(true));
+			})(fields(!nested));
 			if (this.tables.sort.tr.length==0) this.tables.sort.addrow();
 		}
 		else
@@ -2257,6 +2257,63 @@ class panda_record{
 					else resolve();
 				});
 			});
+		});
+	}
+	/* sort records */
+	sort(source,fieldinfos,sortinfos){
+		source.sort((a,b) => {
+			let res=0;
+			sortinfos.each((sortinfo,index) => {
+				let values={
+					a:null,
+					b:null
+				};
+				((fieldinfo) => {
+					switch (fieldinfo.type)
+					{
+						case 'checkbox':
+							values.a='';
+							values.b='';
+							if (Array.isArray(a[fieldinfo.id].value))
+								if (a[fieldinfo.id].value.length!=0) values.a=a[fieldinfo.id].value.first();
+							if (Array.isArray(b[fieldinfo.id].value))
+								if (b[fieldinfo.id].value.length!=0) values.b=b[fieldinfo.id].value.first();
+							break;
+						case 'creator':
+						case 'department':
+						case 'group':
+						case 'modifier':
+						case 'user':
+							values.a=0;
+							values.b=0;
+							if (Array.isArray(a[fieldinfo.id].value))
+								if (a[fieldinfo.id].value.length!=0) values.a=a[fieldinfo.id].value.first();
+							if (Array.isArray(b[fieldinfo.id].value))
+								if (b[fieldinfo.id].value.length!=0) values.b=b[fieldinfo.id].value.first();
+							break;
+						case 'file':
+							values.a='';
+							values.b='';
+							if (Array.isArray(a[fieldinfo.id].value))
+								if (a[fieldinfo.id].value.length!=0) values.a=a[fieldinfo.id].value.first().name;
+							if (Array.isArray(b[fieldinfo.id].value))
+								if (b[fieldinfo.id].value.length!=0) values.b=b[fieldinfo.id].value.first().name;
+							break;
+						case 'lookup':
+							values.a=a[fieldinfo.id].search;
+							values.b=b[fieldinfo.id].search;
+							break;
+						default:
+							values.a=a[fieldinfo.id].value;
+							values.b=b[fieldinfo.id].value;
+							break;
+					}
+					if (values.a<values.b) res=(sortinfo.order=='desc')?1:-1;
+					if (values.a>values.b) res=(sortinfo.order=='desc')?-1:1;
+				})(fieldinfos[sortinfo.field]);
+				if (res) return PD_BREAK;
+			});
+			return res;
 		});
 	}
 }
@@ -5047,54 +5104,11 @@ class panda_user_interface{
 						element.on('click',(e) => {
 							((container,fieldinfo,order) => {
 								((record) => {
-									record[tableid].value.sort((a,b) => {
-										var values={
-											a:null,
-											b:null
-										};
-										switch (fieldinfo.type)
-										{
-											case 'checkbox':
-												values.a='';
-												values.b='';
-												if (Array.isArray(a[fieldinfo.id].value))
-													if (a[fieldinfo.id].value.length!=0) values.a=a[fieldinfo.id].value.first();
-												if (Array.isArray(b[fieldinfo.id].value))
-													if (b[fieldinfo.id].value.length!=0) values.b=b[fieldinfo.id].value.first();
-												break;
-											case 'creator':
-											case 'department':
-											case 'group':
-											case 'modifier':
-											case 'user':
-												values.a=0;
-												values.b=0;
-												if (Array.isArray(a[fieldinfo.id].value))
-													if (a[fieldinfo.id].value.length!=0) values.a=a[fieldinfo.id].value.first();
-												if (Array.isArray(b[fieldinfo.id].value))
-													if (b[fieldinfo.id].value.length!=0) values.b=b[fieldinfo.id].value.first();
-												break;
-											case 'file':
-												values.a='';
-												values.b='';
-												if (Array.isArray(a[fieldinfo.id].value))
-													if (a[fieldinfo.id].value.length!=0) values.a=a[fieldinfo.id].value.first().name;
-												if (Array.isArray(b[fieldinfo.id].value))
-													if (b[fieldinfo.id].value.length!=0) values.b=b[fieldinfo.id].value.first().name;
-												break;
-											case 'lookup':
-												values.a=a[fieldinfo.id].search;
-												values.b=b[fieldinfo.id].search;
-												break;
-											default:
-												values.a=a[fieldinfo.id].value;
-												values.b=b[fieldinfo.id].value;
-												break;
-										}
-										if (values.a<values.b) return (order=='desc')?1:-1;
-										if (values.a>values.b) return (order=='desc')?-1:1;
-										return 0;
-									});
+									pd.record.sort(
+										record[tableid].value,
+										app.fields[tableid].fields,
+										[{field:fieldinfo.id,order:order}]
+									);
 									pd.event.call(app.id,'pd.row.sort.'+tableid,{
 										container:table,
 										record:record,

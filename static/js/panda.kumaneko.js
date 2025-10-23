@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 2.0.0
+* Version: 2.0.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3156,11 +3156,26 @@ pd.modules={
 																if (key in keep.aggregates) keep.aggregates[key].push((cells[key].value)?parseFloat(cells[key].value):0);
 															}
 														keep.records.push(cells);
-														if (!backend) pd.record.set(linkage.contents.elm('.pd-view').addrow().elm('[form-id=form_'+linkage.app.id+']'),linkage.app,cells);
 													});
 													index++;
 													if (index<records.length) setup(index,callback);
-													else callback();
+													else
+													{
+														pd.record.sort(
+															keep.records,
+															linkage.app.fields,
+															((fields) => {
+																return pd.filter.sort.parse(linkage.sort).filter((item) => fields.includes(item.field));
+															})(linkage.display.map((item) => item.external))
+														);
+														if (!backend)
+														{
+															keep.records.each((record,index) => {
+																pd.record.set(linkage.contents.elm('.pd-view').addrow().elm('[form-id=form_'+linkage.app.id+']'),linkage.app,record);
+															});
+														}
+														callback();
+													}
 												})(records[index]);
 											};
 											records=records.shape((item) => {
@@ -3272,7 +3287,7 @@ pd.modules={
 										})(linkage.criteria.map((item) => {
 											return pd.filter.query.create(item.external,item.operator,pd.extend({type:item.internal.type},record[item.internal.id]));
 										})),
-										sort:(linkage.sort)?linkage.sort:'__id asc',
+										sort:'__id asc',
 										offset:0,
 										limit:500
 									});
@@ -13074,7 +13089,7 @@ pd.modules={
 												})(query,sort));
 												this.keep.filter.query=query;
 												this.keep.filter.sort=sort;
-											});
+											},true);
 										}
 										else pd.alert(pd.constants.linkage.message.invalid.app[pd.lang]);
 									})(this.contents.elm('[field-id=app]').elm('select').val());
