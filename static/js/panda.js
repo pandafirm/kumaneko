@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 2.0.1
+* Version: 2.0.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3869,25 +3869,28 @@ HTMLSelectElement.prototype.assignoption=function(records,label,value){
 	return this;
 };
 HTMLSelectElement.prototype.filteroption=function(options){
-	this.elms('option').each((element,index) => {
-		if (element.parentNode.tagName.toLowerCase()=='span')
+	(this.evacuation || []).each((option,index) => {
+		if (option.target.parentNode==this)
 		{
-			((span) => {
-				this.insertBefore(element,span);
-				this.removeChild(span);
-			})(element.parentNode);
+			this.insertBefore(option.element,option.target);
+			this.removeChild(option.target);
 		}
+		else this.append(option.element);
 	});
+	this.evacuation=[];
 	if (((Array.isArray(options))?options:[]).length!=0)
 	{
 		this.elms('option').each((element,index) => {
 			if (!options.includes(element.val()))
 			{
-				if (element.parentNode.tagName.toLowerCase()!='span')
-					((span) => {
-						element.parentNode.insertBefore(span,element);
-						span.append(element);
-					})(pd.create('span').css({display:'none'}));
+				((span) => {
+					element.parentNode.insertBefore(span,element);
+					this.evacuation.push({
+						element:element,
+						target:span
+					});
+					this.removeChild(element);
+				})(pd.create('span').css({display:'none'}));
 			}
 		});
 	}
