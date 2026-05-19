@@ -1150,7 +1150,6 @@ class panda_formula{
 				};
 				return STR(value)
 				.replace(/[\uFF01-\uFF5E]/g,(s) => String.fromCharCode(s.charCodeAt(0)-0xFEE0))
-				.replace(/[\u3041-\u3096]/g,(s) => String.fromCharCode(s.charCodeAt(0)+0x60))
 				.replace(new RegExp('('+Object.keys(map).join('|')+')','g'),(s) => map[s]);
 			};
 			var AVG=(id) => {
@@ -1207,47 +1206,96 @@ class panda_formula{
 			var ROUND=(value) => {
 				return Math.round(NUM(value));
 			};
-			var DIFF=(from,to,format) => {
-				from=STR(from);
-				to=STR(to);
-				if (isNaN(Date.parse(from))) return '';
-				else
+			var DIFF=(from,to,format,type="DATE") => {
+				switch (STR(type).toUpperCase())
 				{
-					return ((from,to,res) => {
-						var year=0;
-						var month=0;
-						var day=0;
-						var days=parseInt(from.format('d'))-1;
-						var keep={
-							from:from.calc('first-of-month'),
-							to:to.calc('first-of-month')
-						};
-						if (keep.from.format('Y-m-d')==keep.to.format('Y-m-d')) day=Math.floor((to.getTime()-from.getTime())/(1000*60*60*24));
+					case 'DATE':
+						from=STR(from);
+						to=STR(to);
+						if (isNaN(Date.parse(from))) return '';
 						else
 						{
-							while (keep.from.getTime()<keep.to.getTime())
-							{
-								if (keep.from.calc('1 month,'+days.toString()+' day')<to)
+							return ((from,to,res) => {
+								var year=0;
+								var month=0;
+								var day=0;
+								var days=parseInt(from.format('d'))-1;
+								var keep={
+									from:from.calc('first-of-month'),
+									to:to.calc('first-of-month')
+								};
+								if (keep.from.format('Y-m-d')==keep.to.format('Y-m-d')) day=Math.floor((to.getTime()-from.getTime())/(1000*60*60*24));
+								else
 								{
-									month++;
-									if (month>11)
+									while (keep.from.getTime()<keep.to.getTime())
 									{
-										year++;
-										month=0;
+										if (keep.from.calc('1 month,'+days.toString()+' day')<to)
+										{
+											month++;
+											if (month>11)
+											{
+												year++;
+												month=0;
+											}
+											day=Math.floor((to.getTime()-keep.from.calc('1 month,'+days.toString()+' day').getTime())/(1000*60*60*24));
+										}
+										else day=Math.floor((to.getTime()-keep.from.calc(days.toString()+' day').getTime())/(1000*60*60*24));
+										keep.from=keep.from.calc('1 month');
 									}
-									day=Math.floor((to.getTime()-keep.from.calc('1 month,'+days.toString()+' day').getTime())/(1000*60*60*24));
 								}
-								else day=Math.floor((to.getTime()-keep.from.calc(days.toString()+' day').getTime())/(1000*60*60*24));
-								keep.from=keep.from.calc('1 month');
-							}
+								return res
+								.replace(/Y/g,year.toString())
+								.replace(/FM/g,((year*12)+month).toString())
+								.replace(/M/g,month.toString())
+								.replace(/FD/g,Math.floor((to.getTime()-from.getTime())/(1000*60*60*24)).toString())
+								.replace(/D/g,day.toString());
+							})(new Date(from),(isNaN(Date.parse(to)))?new Date():new Date(to),STR(format));
 						}
-						return res
-						.replace(/Y/g,year.toString())
-						.replace(/FM/g,((year*12)+month).toString())
-						.replace(/M/g,month.toString())
-						.replace(/FD/g,Math.floor((to.getTime()-from.getTime())/(1000*60*60*24)).toString())
-						.replace(/D/g,day.toString());
-					})(new Date(from),(isNaN(Date.parse(to)))?new Date():new Date(to),STR(format));
+						break;
+					case 'TIME':
+						var parseTime=(value) => {
+							var res={
+								type:((value) => {
+									if (!isNaN(Date.parse(value))) return 'datetime';
+									if (/^(?:[01]?\d|2[0-3]):[0-5]\d$/.test(value)) return 'time';
+									return '';
+								})(value),
+								value:null
+							};
+							switch (res.type)
+							{
+								case 'datetime':
+									res.value=new Date(value);
+									break;
+								case 'time':
+									((time) => {
+										res.value=new Date();
+										res.value.setHours(parseInt(time[0],10));
+										res.value.setMinutes(parseInt(time[1],10));
+										res.value.setSeconds(0);
+										res.value.setMilliseconds(0);
+									})(value.split(':'));
+									break;
+							}
+							return res;
+						};
+						from=parseTime(STR(from));
+						to=parseTime(STR(to));
+						if ((!from.type || !to.type) || (from.type != to.type)) return '';
+						else
+						{
+							var diff=to.value.getTime()-from.value.getTime();
+							var minutes = diff/(1000*60);
+							var hours = minutes/60;
+							return STR(format)
+							.replace(/FH/g,hours.toString())
+							.replace(/H/g,Math.floor(hours).toString())
+							.replace(/FI/g,minutes.toString())
+							.replace(/I/g,(minutes%60).toString());
+						}
+						break;
+					default:
+						return '';
 				}
 			};
 			var FORMAT=(...args) => {
