@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 2.0.2
+* Version: 2.0.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
