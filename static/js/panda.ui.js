@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 2.0.3
+* Version: 2.1.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -2108,7 +2108,7 @@ class panda_record{
 									break;
 								case 'dropdown':
 									field.elm('select').filteroption(value.option).val(value.value);
-									field.elm('.pd-guide').html(value.value);
+									field.elm('.pd-guide').html(field.elm('select').selectedtext());
 									break;
 								case 'lookup':
 									if (value.lookup) res.push({field:field,value:value.value});
