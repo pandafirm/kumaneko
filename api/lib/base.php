@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "base.php"
-* Version: 2.1.0
+* Version: 2.1.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -81,36 +81,76 @@ abstract class clsBase
 				$token=explode(":",base64_decode(isset($_SERVER['HTTP_X_AUTHORIZATION'])?$_SERVER['HTTP_X_AUTHORIZATION']:$_SESSION['PD_AUTH_TOKEN']));
 				if (count($token)==2)
 				{
-					if (file_exists(dirname(__DIR__)."/storage/json/users.json"))
+					$lockout_path=dirname(__FILE__)."/lockout.json";
+					$fp=fopen($lockout_path,file_exists($lockout_path)?"r+":"w+");
+					flock($fp,LOCK_EX);
+					$content=stream_get_contents($fp);
+					$lockouts=$content?json_decode($content,true):[];
+
+					$account=$token[0];
+					$pwd=$token[1];
+
+					if (($lockouts[$account]['count']??0)>=3)
 					{
-						$account=$token[0];
-						$pwd=$token[1];
-						$users=json_decode(mb_convert_encoding(file_get_contents(dirname(__DIR__)."/storage/json/users.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
-						$users=array_filter($users,function($values,$key) use ($account,$pwd){
-							return $values["account"]["value"]==$account && $values["pwd"]["value"]==$pwd && $values["available"]["value"]=="available";
-						},ARRAY_FILTER_USE_BOTH);
-						if (count($users)==1)
-						{
-							$this->operator=array_key_first($users);
-							switch ($_SERVER["REQUEST_METHOD"])
-							{
-								case "GET":
-									$this->GET();
-									break;
-								case "POST":
-									$this->POST();
-									break;
-								case "PUT":
-									$this->PUT();
-									break;
-								case "DELETE":
-									$this->DELETE();
-									break;
-							}
-						}
-						else $this->callrequesterror(500,"Authentication information is incorrect");
+						flock($fp,LOCK_UN);
+						fclose($fp);
+						$this->callrequesterror(500,"Too many failed attempts. This account is locked");
 					}
-					else $this->callrequesterror(500,"User is not registered");
+
+					if (!file_exists(dirname(__DIR__)."/storage/json/users.json"))
+					{
+						flock($fp,LOCK_UN);
+						fclose($fp);
+						$this->callrequesterror(500,"User is not registered");
+					}
+
+					$users=json_decode(mb_convert_encoding(file_get_contents(dirname(__DIR__)."/storage/json/users.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
+					$users=array_filter($users,function($values,$key) use ($account,$pwd){
+						return $values["account"]["value"]==$account && $values["pwd"]["value"]==$pwd && $values["available"]["value"]=="available";
+					},ARRAY_FILTER_USE_BOTH);
+
+					if (count($users)==1)
+					{
+						unset($lockouts[$account]);
+						ftruncate($fp,0);
+						rewind($fp);
+						fwrite($fp,json_encode($lockouts));
+						flock($fp,LOCK_UN);
+						fclose($fp);
+
+						$this->operator=array_key_first($users);
+						switch ($_SERVER["REQUEST_METHOD"])
+						{
+							case "GET":
+								$this->GET();
+								break;
+							case "POST":
+								$this->POST();
+								break;
+							case "PUT":
+								$this->PUT();
+								break;
+							case "DELETE":
+								$this->DELETE();
+								break;
+						}
+					}
+					else
+					{
+						$lockouts[$account]=[
+							"count"=>($lockouts[$account]['count']??0)+1,
+							"last_attempt"=>date('Y-m-d H:i:s'),
+							"last_ip"=>$_SERVER['REMOTE_ADDR'],
+							"user_agent"=>$_SERVER['HTTP_USER_AGENT']??""
+						];
+						ftruncate($fp,0);
+						rewind($fp);
+						fwrite($fp,json_encode($lockouts));
+						flock($fp,LOCK_UN);
+						fclose($fp);
+
+						$this->callrequesterror(500,"Authentication information is incorrect");
+					}
 				}
 				else $this->callrequesterror(500,"Authorization failed");
 			}
