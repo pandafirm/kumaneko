@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 2.1.1
+* Version: 2.1.2
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1627,7 +1627,7 @@ class panda_formula{
 			var LOGIN_USER=pd.operator.__id.value.toString();
 			try
 			{
-				var formula=param.formula.replace(/([^!><]{1})[ ]*=/g,'$1==');
+				var formula=param.formula.replace(/"(?:\\[\s\S]|[^"\\])*"|(?<![!<>=])=(?!=)/g,(match) => match === '=' ? '==' : match);
 				var reserved=[];
 				for (var key in fieldinfos)
 					((fieldinfo) => {
