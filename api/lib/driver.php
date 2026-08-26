@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 2.1.2
+* Version: 2.1.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -9,6 +9,7 @@
 class clsDriver
 {
 	/* valiable */
+	private $config;
 	private $dir;
 	private $operator;
 	private $resulterror;
@@ -396,19 +397,14 @@ class clsDriver
 	/* deduplications */
 	public function deduplications($arg_file)
 	{
-		$file=$this->dir."config.json";
-		if (file_exists($file))
+		if (!isset($this->config)) $this->config=(file_exists($this->dir."config.json"))?(json_decode(mb_convert_encoding(file_get_contents($this->dir."config.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true)??false):false;
+		if (is_array($this->config))
 		{
-			$source=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
-			if (is_array($source))
-			{
-				$deduplications=null;
-				if (array_key_exists($arg_file,$source["apps"]["user"])) $deduplications=$source["apps"]["user"][$arg_file]["deduplications"];
-				if (array_key_exists($arg_file,$source["apps"]["system"])) $deduplications=$source["apps"]["system"][$arg_file]["deduplications"];
-				if (!is_array($deduplications)) throw new Exception("{$arg_file} not found in Configuration file");
-				return $deduplications;
-			}
-			else throw new Exception("Configuration file not found");
+			$deduplications=null;
+			if (array_key_exists($arg_file,$this->config["apps"]["user"])) $deduplications=$this->config["apps"]["user"][$arg_file]["deduplications"];
+			if (array_key_exists($arg_file,$this->config["apps"]["system"])) $deduplications=$this->config["apps"]["system"][$arg_file]["deduplications"];
+			if (!is_array($deduplications)) throw new Exception("{$arg_file} not found in Configuration file");
+			return $deduplications;
 		}
 		else throw new Exception("Configuration file not found");
 	}
@@ -574,19 +570,14 @@ class clsDriver
 	/* fields */
 	public function fields($arg_file)
 	{
-		$file=$this->dir."config.json";
-		if (file_exists($file))
+		if (!isset($this->config)) $this->config=(file_exists($this->dir."config.json"))?(json_decode(mb_convert_encoding(file_get_contents($this->dir."config.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true)??false):false;
+		if (is_array($this->config))
 		{
-			$source=json_decode(mb_convert_encoding(file_get_contents($file),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true);
-			if (is_array($source))
-			{
-				$fields=null;
-				if (array_key_exists($arg_file,$source["apps"]["user"])) $fields=$source["apps"]["user"][$arg_file]["fields"];
-				if (array_key_exists($arg_file,$source["apps"]["system"])) $fields=$source["apps"]["system"][$arg_file]["fields"];
-				if (!is_array($fields)) throw new Exception("{$arg_file} not found in Configuration file");
-				return $fields;
-			}
-			else throw new Exception("Configuration file not found");
+			$fields=null;
+			if (array_key_exists($arg_file,$this->config["apps"]["user"])) $fields=$this->config["apps"]["user"][$arg_file]["fields"];
+			if (array_key_exists($arg_file,$this->config["apps"]["system"])) $fields=$this->config["apps"]["system"][$arg_file]["fields"];
+			if (!is_array($fields)) throw new Exception("{$arg_file} not found in Configuration file");
+			return $fields;
 		}
 		else throw new Exception("Configuration file not found");
 	}
@@ -1104,10 +1095,11 @@ class clsDriver
 			}
 			return (function($records,$query,$me){
 				$res=[];
+				$callback=($query!="")?eval('return function(&$record) use ($me) {return '.$query.';};'):null;
 				foreach ($records as $key=>$record)
 				{
 					$record["__id"]=["value"=>intval($key)];
-					if (($query!="")?eval("return {$query};"):true) $res[$key]=$record;
+					if (($query!="")?$callback($record):true) $res[$key]=$record;
 				}
 				return $res;
 			})($arg_source,$query,$me);
@@ -1344,12 +1336,17 @@ class clsDriver
 				if (is_array($source))
 				{
 					if ($arg_query!="") $source=$this->filter($source,$this->fields($arg_file),$arg_query,$arg_operator);
+					$this->resultcount=count($source);
+					if ($arg_sort=="" && $arg_limit!=0)
+					{
+						$source=array_slice($source,$arg_offset,$arg_limit,true);
+						$arg_limit=0;
+					}
 					foreach ($source as $key=>$value)
 					{
 						$value["__id"]=["value"=>intval($key)];
 						$response[]=$value;
 					}
-					$this->resultcount=count($response);
 					if ($arg_sort!="")
 					{
 						$sorts=explode(",",$arg_sort);
