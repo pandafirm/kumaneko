@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 2.1.2
+* Version: 2.1.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -3488,23 +3488,37 @@ class panda_user_interface{
 							case 'creator':
 							case 'modifier':
 								field.guide=(id) => {
-									pd.request(
-										this.baseuri()+'/records.php',
-										'GET',
-										{},
+									((user) => {
+										if (user.length!=0)
 										{
-											app:'users',
-											id:id
-										},
-										true
-									)
-									.then((resp) => {
-										field.elm('.pd-guide').html('');
-										if (resp.total!=0)
-											if ('name' in resp.record)
-												field.elm('.pd-guide').html(resp.record.name.value);
-									})
-									.catch((error) => pd.alert(error.message));
+											field.elm('.pd-guide').html('');
+											if ('name' in user.first())
+												field.elm('.pd-guide').html(user.first().name.value);
+										}
+										else
+										{
+											pd.request(
+												this.baseuri()+'/records.php',
+												'GET',
+												{},
+												{
+													app:'users',
+													id:id
+												},
+												true
+											)
+											.then((resp) => {
+												field.elm('.pd-guide').html('');
+												if (resp.total!=0)
+													if ('name' in resp.record)
+														field.elm('.pd-guide').html(resp.record.name.value);
+											})
+											.catch((error) => {
+												field.elm('.pd-guide').html('');
+												pd.alert(error.message);
+											});
+										}
+									})(pd.filter.record.user.filter((item) => item['__id'].value==id));
 								};
 								break;
 							case 'date':
@@ -3596,46 +3610,51 @@ class panda_user_interface{
 													if (id=='LOGIN_USER') res.html('Login user');
 													else
 													{
-														pd.request(
-															this.baseuri()+'/records.php',
-															'GET',
-															{},
-															(() => {
-																var res={
-																	app:fieldinfo.type+'s',
-																	id:id
-																};
-																if (fieldinfo.unify)
-																	switch (id.charAt(0))
+														var get=(body) => {
+															pd.request(this.baseuri()+'/records.php','GET',{},body,true)
+															.then((resp) => {
+																if (resp.total!=0)
+																	if ('name' in resp.record) res.html(resp.record.name.value);
+															})
+															.catch((error) => pd.alert(error.message));
+														};
+														if (fieldinfo.unify)
+														{
+															((param) => {
+																((value) => {
+																	if (value.length!=0)
 																	{
-																		case 'd':
-																			res={
-																				app:'departments',
-																				id:id.slice(1)
-																			};
-																			break;
-																		case 'g':
-																			res={
-																				app:'groups',
-																				id:id.slice(1)
-																			};
-																			break;
-																		default:
-																			res={
-																				app:'users',
-																				id:id
-																			};
-																			break;
+																		if ('name' in value.first()) res.html(value.first().name.value);
 																	}
+																	else get(param);
+																})(pd.filter.record[param.app.slice(0,-1)].filter((item) => item['__id'].value==param.id));
+															})((() => {
+																var res={};
+																switch (id.charAt(0))
+																{
+																	case 'd':
+																		res={app:'departments',id:id.slice(1)};
+																		break;
+																	case 'g':
+																		res={app:'groups',id:id.slice(1)};
+																		break;
+																	default:
+																		res={app:'users',id:id};
+																		break;
+																}
 																return res;
-															})(),
-															true
-														)
-														.then((resp) => {
-															if (resp.total!=0)
-																if ('name' in resp.record) res.html(resp.record.name.value);
-														})
-														.catch((error) => pd.alert(error.message));
+															})());
+														}
+														else
+														{
+															((value) => {
+																if (value.length!=0)
+																{
+																	if ('name' in value.first()) res.html(value.first().name.value);
+																}
+																else get({app:fieldinfo.type+'s',id:id});
+															})(pd.filter.record[fieldinfo.type].filter((item) => item['__id'].value==id));
+														}
 													}
 													return res;
 												})(pd.create('span').addclass('pd-'+fieldinfo.type+'guide-label'))

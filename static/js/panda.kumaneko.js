@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 2.1.2
+* Version: 2.1.3
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1224,9 +1224,9 @@ class panda_kumaneko_app{
 											if (action.mail.to in fieldinfos)
 											{
 												var systems={
-													department:[],
-													group:[],
-													user:[]
+													department:pd.filter.record.department,
+													group:pd.filter.record.group,
+													user:pd.filter.record.user
 												};
 												var assign=(target,record,row) => {
 													if (action.mail.format=='html') target=target.replace(/\r/g,'').replace(/\n/g,'<br>');
@@ -1234,109 +1234,89 @@ class panda_kumaneko_app{
 													for (var key in row) target=target.replace(new RegExp('%'+key+'%','g'),pd.ui.field.stringify(fieldinfos[key],row[key],systems));
 													return target;
 												};
-												pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'departments',query:'',offset:0,limit:0},true)
-												.then((resp) => {
-													systems.department=resp.records;
-													pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'groups',query:'',offset:0,limit:0},true)
-													.then((resp) => {
-														systems.group=resp.records;
-														pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:'users',query:'available = "available"',offset:0,limit:0},true)
-														.then((resp) => {
-															systems.user=resp.records;
-															((bodies) => {
-																var send=(index) => {
-																	var body=bodies[index];
-																	var download=(index,callback) => {
-																		if (body.attachment.length!=0)
-																		{
-																			pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'attachment',filekey:body.attachment[index].key},true)
-																			.then((resp) => {
-																				body.attachment[index].data=resp.file;
-																				index++;
-																				if (index<body.attachment.length) download(index,callback);
-																				else callback();
-																			})
-																			.catch((error) => pd.alert(error.message));
-																		}
-																		else callback();
-																	};
-																	download(0,() => {
-																		pd.request(pd.ui.baseuri()+'/limit.php','GET',{},{option:'memory_limit'},true)
+												((bodies) => {
+													var send=(index) => {
+														var body=bodies[index];
+														var download=(index,callback) => {
+															if (body.attachment.length!=0)
+															{
+																pd.file(pd.ui.baseuri()+'/file.php','GET',{},{dir:'attachment',filekey:body.attachment[index].key},true)
+																.then((resp) => {
+																	body.attachment[index].data=resp.file;
+																	index++;
+																	if (index<body.attachment.length) download(index,callback);
+																	else callback();
+																})
+																.catch((error) => {
+																	pd.alert(error.message);
+																	reject();
+																});
+															}
+															else callback();
+														};
+														download(0,() => {
+															pd.request(pd.ui.baseuri()+'/limit.php','GET',{},{option:'memory_limit'},true)
+															.then((resp) => {
+																((size) => {
+																	if (size>resp.size)
+																	{
+																		pd.alert(pd.constants.common.message.invalid.memory[pd.lang].replace(/%value%/g,size.parseByteunit()));
+																		reject();
+																	}
+																	else
+																	{
+																		pd.request(pd.ui.baseuri()+'/mail/'+pd.lang+'.php','POST',{},body,true)
 																		.then((resp) => {
-																			((size) => {
-																				if (size>resp.size)
-																				{
-																					pd.alert(pd.constants.common.message.invalid.memory[pd.lang].replace(/%value%/g,size.parseByteunit()));
-																					reject();
-																				}
-																				else
-																				{
-																					pd.request(pd.ui.baseuri()+'/mail/'+pd.lang+'.php','POST',{},body,true)
-																					.then((resp) => {
-																						index++;
-																						if (index<bodies.length) send(index);
-																						else resolve();
-																					})
-																					.catch((error) => {
-																						pd.alert(error.message);
-																						reject();
-																					});
-																				}
-																			})(new Blob([JSON.stringify(body)],{type:'text/plain'}).size*4);
+																			index++;
+																			if (index<bodies.length) send(index);
+																			else resolve();
 																		})
 																		.catch((error) => {
 																			pd.alert(error.message);
 																			reject();
 																		});
-																	});
-																};
-																if (bodies.length!=0) send(0);
-															})((() => {
-																var res=[];
-																((fieldinfos[action.mail.to].tableid)?result[fieldinfos[action.mail.to].tableid].value:[result]).each((record,index) => {
-																	res.push({
-																		from:action.mail.from,
-																		to:record[action.mail.to].value,
-																		cc:action.mail.cc,
-																		bcc:action.mail.bcc,
-																		subject:assign(action.mail.subject,result,(fieldinfos[action.mail.to].tableid)?record:{}),
-																		body:assign(action.mail.body,result,(fieldinfos[action.mail.to].tableid)?record:{}),
-																		attachment:(() => {
-																			var res=[];
-																			if (action.mail.attachment)
-																				if (action.mail.attachment in fieldinfos)
-																					res=((record) => {
-																						return record[action.mail.attachment].value.map((item) => {
-																							return {
-																								data:'',
-																								key:item.filekey,
-																								name:item.name,
-																								type:item.filetype
-																							};
-																						});
-																					})(((fieldinfos[action.mail.attachment].tableid)?record:result));
-																			return res;
-																		})(),
-																		html:(action.mail.format=='html')
-																	});
-																});
-																return res;
-															})());
-														})
-														.catch((error) => {
-															pd.alert(error.message);
-															reject();
+																	}
+																})(new Blob([JSON.stringify(body)],{type:'text/plain'}).size*4);
+															})
+															.catch((error) => {
+																pd.alert(error.message);
+																reject();
+															});
 														});
-													})
-													.catch((error) => {
-														pd.alert(error.message);
-														reject();
+													};
+													if (bodies.length!=0) send(0);
+													else resolve();
+												})((() => {
+													var res=[];
+													((fieldinfos[action.mail.to].tableid)?result[fieldinfos[action.mail.to].tableid].value:[result]).each((record,index) => {
+														res.push({
+															from:action.mail.from,
+															to:record[action.mail.to].value,
+															cc:action.mail.cc,
+															bcc:action.mail.bcc,
+															subject:assign(action.mail.subject,result,(fieldinfos[action.mail.to].tableid)?record:{}),
+															body:assign(action.mail.body,result,(fieldinfos[action.mail.to].tableid)?record:{}),
+															attachment:(() => {
+																var res=[];
+																if (action.mail.attachment)
+																	if (action.mail.attachment in fieldinfos)
+																		res=((record) => {
+																			return record[action.mail.attachment].value.map((item) => {
+																				return {
+																					data:'',
+																					key:item.filekey,
+																					name:item.name,
+																					type:item.filetype
+																				};
+																			});
+																		})(((fieldinfos[action.mail.attachment].tableid)?record:result));
+																return res;
+															})(),
+															html:(action.mail.format=='html')
+														});
 													});
-												})
-												.catch((error) => {
-													pd.alert(error.message);
-													reject();
-												});
+													return res;
+												})());
 											}
 											else
 											{
@@ -16768,7 +16748,10 @@ pd.modules={
 																		pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:this.app.id,records:[record],notify:true},true)
 																		.then((resp) => {
 																			pd.request(pd.ui.baseuri()+'/records.php','GET',{},{app:this.app.id,id:record['__id'].value},true)
-																			.then((resp) => finish())
+																			.then((resp) => {
+																				record=(resp.total!=0)?resp.record:record;
+																				finish();
+																			})
 																			.catch((error) => pd.alert(error.message));
 																		})
 																		.catch((error) => pd.alert(error.message));
