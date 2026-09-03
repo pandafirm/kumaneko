@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 2.1.3
+* Version: 2.2.0
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1602,6 +1602,7 @@ class panda_formula{
 			};
 			var result=(answer,fieldinfo) => {
 				var res=null;
+				if (typeof answer=='number' && Number.isFinite(answer)) answer=Number(answer.toPrecision(15));
 				switch (fieldinfo.type)
 				{
 					case 'checkbox':
