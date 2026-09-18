@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 2.2.0
+* Version: 2.2.1
 * Copyright (c) 2020 Pandafirm LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1688,9 +1688,9 @@ class panda_kumaneko_app{
 																})(records);
 																pd.event.call(action.transfer.app,'pd.saving.call',{records:records})
 																.then((param) => {
-																	pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:records.filter((item) => !item['__id'].value)},true)
+																	pd.request(pd.ui.baseuri()+'/records.php','POST',{},{app:action.transfer.app,records:param.records.filter((item) => !item['__id'].value)},true)
 																	.then((resp) => {
-																		pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:action.transfer.app,records:records.filter((item) => item['__id'].value),notify:true},true)
+																		pd.request(pd.ui.baseuri()+'/records.php','PUT',{},{app:action.transfer.app,records:param.records.filter((item) => item['__id'].value),notify:true},true)
 																		.then((resp) => finish())
 																		.catch((error) => {
 																			pd.alert(error.message);
