@@ -1,8 +1,8 @@
 <?php
 /*
 * PandaFirm-PHP-Module "mail/ja.php"
-* Version: 2.2.1
-* Copyright (c) 2020 Pandafirm LLC
+* Version: 2.2.2
+* Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
 */
@@ -59,6 +59,25 @@ class clsRequest extends clsBase
 			if ($this->smtp["smtp_port"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
 			if ($this->smtp["smtp_user"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
 			if ($this->smtp["smtp_pwd"]["value"]=="") $this->callrequesterror(500,"EMail settings are not made.");
+		}
+		$limit=(isset($this->smtp["smtp_limit"]["value"]) && is_numeric($this->smtp["smtp_limit"]["value"]))?intval($this->smtp["smtp_limit"]["value"]):0;
+		if ($limit>0)
+		{
+			$exceeded=(function($fp,$key,$now) use ($limit){
+				$res=0;
+				flock($fp,LOCK_EX);
+				$counts=array_filter(array_map(function($times) use ($now){
+					return array_values(array_filter($times,function($time) use ($now){return $time>$now-3600;}));
+				},json_decode(stream_get_contents($fp),true)?:[]));
+				$res=count($counts[$key]??[])>=$limit;
+				if (!$res) $counts[$key][]=$now;
+				ftruncate($fp,0);
+				rewind($fp);
+				fwrite($fp,json_encode($counts));
+				fclose($fp);
+				return $res;
+			})(fopen(dirname(__FILE__)."/mailcount.json","c+"),$this->body["from"]."|".$_SERVER["REMOTE_ADDR"],time());
+			if ($exceeded) $this->callrequesterror(503,"Too many requests. Please try again later.");
 		}
 		try
 		{
