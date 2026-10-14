@@ -139,6 +139,17 @@
                                         }
                                     }
                                 ]
+                            },
+                            "smtp_limit": {
+                                "id": "smtp_limit",
+                                "type": "number",
+                                "caption": "Hourly Send Limit",
+                                "required": false,
+                                "nocaption": false,
+                                "demiliter": false,
+                                "decimals": "0",
+                                "unit": "",
+                                "unitposition": "suffix"
                             }
                         }
                     }

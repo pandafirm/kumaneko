@@ -1,8 +1,8 @@
 <?php
 /*
 * PandaFirm-PHP-Module "config.php"
-* Version: 2.2.1
-* Copyright (c) 2020 Pandafirm LLC
+* Version: 2.2.2
+* Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
 */
@@ -177,6 +177,27 @@ class clsRequest extends clsBase
 										$update=true;
 										file_put_contents(dirname(__FILE__)."/storage/json/project.json",json_encode((function($project){
 											$project["1"]["mapid"]=["value"=>""];
+											return $project;
+										})(json_decode(mb_convert_encoding(file_get_contents(dirname(__FILE__)."/storage/json/project.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true))));
+									}
+									if (!property_exists($value->fields->smtp->fields,"smtp_limit"))
+									{
+										$value->fields->smtp->fields->smtp_limit=[
+											"id"=>"smtp_limit",
+											"type"=>"number",
+											"caption"=>"Hourly Send Limit",
+											"required"=>false,
+											"nocaption"=>false,
+											"demiliter"=>false,
+											"decimals"=>"0",
+											"unit"=>"",
+											"unitposition"=>"suffix"
+										];
+										$update=true;
+										file_put_contents(dirname(__FILE__)."/storage/json/project.json",json_encode((function($project){
+											if (isset($project["1"]["smtp"]["value"]) && is_array($project["1"]["smtp"]["value"]))
+												foreach ($project["1"]["smtp"]["value"] as $index=>$row)
+													if (!isset($row["smtp_limit"])) $project["1"]["smtp"]["value"][$index]["smtp_limit"]=["value"=>null];
 											return $project;
 										})(json_decode(mb_convert_encoding(file_get_contents(dirname(__FILE__)."/storage/json/project.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true))));
 									}

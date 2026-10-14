@@ -1,8 +1,8 @@
 <?php
 /*
 * PandaFirm-PHP-Module "base.php"
-* Version: 2.2.1
-* Copyright (c) 2020 Pandafirm LLC
+* Version: 2.2.2
+* Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
 */
@@ -32,7 +32,8 @@ set_exception_handler(function($arg_exception){
 	exit(0);
 });
 set_error_handler(function($arg_errno,$arg_errstr,$arg_errfile,$arg_errline){
-	header("HTTP/1.1 {$arg_errno} Fatal Error");
+	if (!(error_reporting() & $arg_errno)) return false;
+	header("HTTP/1.1 500 Internal Server Error");
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode(["message"=>$arg_errstr,"error"=>["message"=>$arg_errstr]],JSON_UNESCAPED_UNICODE);
 	exit(0);
