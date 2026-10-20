@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 2.2.2
+* Version: 2.2.3
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -2394,14 +2394,14 @@ pd.modules={
 									.append(res.lib.conditions.create(res))
 									.append((() => {
 										res.prev=pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-left').on('click',(e) => {
-											res.monitor.html(new Date(res.monitor.text()+'-01').calc('-1 month').format('Y-m'));
+											res.monitor.html((res.monitor.text()+'-01').parseDateTime().calc('-1 month').format('Y-m'));
 											this.view.load(viewid).catch(() => {});
 										});
 										return res.prev;
 									})())
 									.append((() => {
 										res.next=pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-right').on('click',(e) => {
-											res.monitor.html(new Date(res.monitor.text()+'-01').calc('1 month').format('Y-m'));
+											res.monitor.html((res.monitor.text()+'-01').parseDateTime().calc('1 month').format('Y-m'));
 											this.view.load(viewid).catch(() => {});
 										});
 										return res.next;
@@ -2413,7 +2413,7 @@ pd.modules={
 									.append(
 										pd.create('button').addclass('pd-icon pd-icon-date').on('click',(e) => {
 											pd.pickupdate(res.monitor.text()+'-01',(date) => {
-												res.monitor.html(new Date(date).format('Y-m'));
+												res.monitor.html(date.parseDateTime().format('Y-m'));
 												this.view.load(viewid).catch(() => {});
 											});
 										})
@@ -2464,13 +2464,13 @@ pd.modules={
 											{
 												case 'day':
 													pd.pickupdate(res.monitor.text(),(date) => {
-														res.monitor.html(new Date(date).format('Y-m-d'));
+														res.monitor.html(date.parseDateTime().format('Y-m-d'));
 														this.view.load(viewid).catch(() => {});
 													});
 													break;
 												case 'month':
 													pd.pickupdate(res.monitor.text()+'-01',(date) => {
-														res.monitor.html(new Date(date).format('Y-m'));
+														res.monitor.html(date.parseDateTime().format('Y-m'));
 														this.view.load(viewid).catch(() => {});
 													});
 													break;
@@ -2539,7 +2539,7 @@ pd.modules={
 									.append(
 										pd.create('button').addclass('pd-icon pd-icon-date').on('click',(e) => {
 											pd.pickupdate(res.monitor.text(),(date) => {
-												res.monitor.html(new Date(date).format('Y-m-d'));
+												res.monitor.html(date.parseDateTime().format('Y-m-d'));
 												this.view.load(viewid).catch(() => {});
 											});
 										})
@@ -2556,14 +2556,14 @@ pd.modules={
 										.append(res.lib.conditions.create(res))
 										.append((() => {
 											res.prev=pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-left').on('click',(e) => {
-												res.monitor.html(new Date(res.monitor.text()).calc('-1 day').format('Y-m-d'));
+												res.monitor.html(res.monitor.text().parseDateTime().calc('-1 day').format('Y-m-d'));
 												this.view.load(viewid).catch(() => {});
 											});
 											return res.prev;
 										})())
 										.append((() => {
 											res.next=pd.create('button').addclass('pd-icon pd-icon-arrow pd-icon-arrow-right').on('click',(e) => {
-												res.monitor.html(new Date(res.monitor.text()).calc('1 day').format('Y-m-d'));
+												res.monitor.html(res.monitor.text().parseDateTime().calc('1 day').format('Y-m-d'));
 												this.view.load(viewid).catch(() => {});
 											});
 											return res.next;
@@ -2575,7 +2575,7 @@ pd.modules={
 										.append(
 											pd.create('button').addclass('pd-icon pd-icon-date').on('click',(e) => {
 												pd.pickupdate(res.monitor.text(),(date) => {
-													res.monitor.html(new Date(date).format('Y-m-d'));
+													res.monitor.html(date.parseDateTime().format('Y-m-d'));
 													this.view.load(viewid).catch(() => {});
 												});
 											})
@@ -3428,7 +3428,7 @@ pd.modules={
 					switch (view.type)
 					{
 						case 'calendar':
-							view.calendar.show(new Date(option.date),null,{
+							view.calendar.show(option.date.parseDateTime(),null,{
 								create:(cell,date,style) => {
 									cell.append(
 										((cell) => {
@@ -3458,7 +3458,7 @@ pd.modules={
 															})()
 														});
 													});
-												})(pd.extend({},app.fields[view.fields.title]),records.filter((item) => new Date(item[view.fields.date].value).getDate()==date.getDate()));
+												})(pd.extend({},app.fields[view.fields.title]),records.filter((item) => item[view.fields.date].value.parseDateTime().getDate()==date.getDate()));
 											if (!option.readonly)
 												cell.append(
 													pd.create('button').addclass('pd-icon pd-icon-add pd-kumaneko-calendar-cell-button').on('click',(e) => {
@@ -3614,7 +3614,7 @@ pd.modules={
 														break;
 													case 'date':
 														res.push(view.fields.date+' >= "'+date+'"');
-														res.push(view.fields.date+' <= "'+new Date(date).calc('1 month,-1 day').format('Y-m-d')+'"');
+														res.push(view.fields.date+' <= "'+date.parseDateTime().calc('1 month,-1 day').format('Y-m-d')+'"');
 														break;
 												}
 												return res.join(' and ');
@@ -3640,7 +3640,7 @@ pd.modules={
 															{
 																result=result.concat(res[fieldinfos[view.fields.title].tableid].value.reduce((result,current) => {
 																	if (current[view.fields.date].value)
-																		if (new Date(current[view.fields.date].value).format('Y-m')==view.monitor.text())
+																		if (current[view.fields.date].value.parseDateTime().format('Y-m')==view.monitor.text())
 																		{
 																			current['__id']={value:res['__id'].value};
 																			result.push(current);
@@ -3769,7 +3769,7 @@ pd.modules={
 																			if (date)
 																			{
 																				if (current[view.fields.task.date].value)
-																					if (new Date(current[view.fields.task.date].value).format('Y-m-d')==date)
+																					if (current[view.fields.task.date].value.parseDateTime().format('Y-m-d')==date)
 																					{
 																						current['__id']={value:res['__id'].value};
 																						result.push(current);
@@ -13950,7 +13950,7 @@ pd.modules={
 																		{
 																			if (view.fields.task.date in current)
 																				if (current[view.fields.task.date].value)
-																					if (new Date(current[view.fields.task.date].value).format('Y-m-d')==date)
+																					if (current[view.fields.task.date].value.parseDateTime().format('Y-m-d')==date)
 																					{
 																						current['__id']={value:res['__id'].value};
 																						result.push(current);
@@ -14258,7 +14258,7 @@ pd.modules={
 											pd.create('div').addclass('pd-container')
 											.append(menu.calendar.calendar.addclass('pd-kumaneko-'+menu.id))
 										);
-										menu.calendar.show(new Date(new Date().format('Y-m')+'-01'),null,{
+										menu.calendar.show(new Date().format('Y-m-01').parseDateTime(),null,{
 											create:(cell,date,style) => {
 												cell.append(
 													((cell) => {

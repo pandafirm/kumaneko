@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 2.2.2
+* Version: 2.2.3
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -4120,7 +4120,7 @@ String.prototype.parseCSV=function(separator=','){
 	return rows;
 };
 String.prototype.parseDateTime=function(){
-	var format=this;
+	var format=this.replace(/^([0-9]{4}-[0-9]{2}-[0-9]{2})$/g,'$1T00:00:00');
 	if (isNaN(Date.parse(format)))
 	{
 		if (format.match(/T/g))
