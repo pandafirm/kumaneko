@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "aggregation.php"
-* Version: 2.2.2
+* Version: 2.2.3
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
