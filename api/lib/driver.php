@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "driver.php"
-* Version: 2.2.3
+* Version: 2.2.4
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -16,6 +16,7 @@ class clsDriver
 	private $resultid;
 	private $resultcount;
 	private $resultnumbers;
+	private $rowfocus;
 	private $timezone;
 	private $users;
 	/* constructor */
@@ -23,6 +24,7 @@ class clsDriver
 	{
 		$this->dir=$arg_dir;
 		chmod($this->dir,0755);
+		$this->rowfocus=[];
 		$this->timezone=$arg_timezone;
 		$this->users=(file_exists($this->dir."users.json"))?json_decode(mb_convert_encoding(file_get_contents($this->dir."users.json"),'UTF8','ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN'),true):[];
 	}
@@ -751,7 +753,7 @@ class clsDriver
 										$replacement='$me->FILTER_MULTIPLE($row["'.$key.'"]["value"],"$1",[$2])';
 										$query=preg_replace(
 											"/{$key}[ ]+(not in|in)[ ]+\(([^\)]*)\)/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return '.$replacement.';})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return '.$replacement.';})',
 											$query
 										);
 										break;
@@ -760,7 +762,7 @@ class clsDriver
 										{
 											$query=preg_replace(
 												"/{$key}[ ]*([!><=]+)[ ]*TODAY\(\)/u",
-												'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1TODAY();})',
+												'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1TODAY();})',
 												$query
 											);
 										}
@@ -770,7 +772,7 @@ class clsDriver
 											{
 												$query=preg_replace(
 													"/{$key}[ ]*([!><=]+)[ ]*FROM_([^\(]+)\(([^\)]+)\)/u",
-													'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1FROM_$2($3);})',
+													'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1FROM_$2($3);})',
 													$query
 												);
 											}
@@ -778,7 +780,7 @@ class clsDriver
 											{
 												$query=preg_replace(
 													"/{$key}[ ]*([!><=]+)[ ]*([^ \)]+)/u",
-													'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1$2;})',
+													'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1$2;})',
 													$query
 												);
 											}
@@ -791,32 +793,32 @@ class clsDriver
 										{
 											$query=preg_replace(
 												"/{$key}[ ]*>[ ]*TODAY\(\)/u",
-												'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' >= FROM_TODAY("1","day","datetime");})',
+												'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' >= FROM_TODAY("1","day","datetime");})',
 												$query
 											);
 											$query=preg_replace(
 												"/{$key}[ ]*>=[ ]*TODAY\(\)/u",
-												'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' >= TODAY("datetime");})',
+												'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' >= TODAY("datetime");})',
 												$query
 											);
 											$query=preg_replace(
 												"/{$key}[ ]*<[ ]*TODAY\(\)/u",
-												'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' < TODAY("datetime");})',
+												'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' < TODAY("datetime");})',
 												$query
 											);
 											$query=preg_replace(
 												"/{$key}[ ]*<=[ ]*TODAY\(\)/u",
-												'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' < FROM_TODAY("1","day","datetime");})',
+												'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' < FROM_TODAY("1","day","datetime");})',
 												$query
 											);
 											$query=preg_replace(
 												"/{$key}[ ]*!=[ ]*TODAY\(\)/u",
-												'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return ('.$fieldvalue.' < TODAY("datetime") or '.$fieldvalue.' >= FROM_TODAY("1","day","datetime"));})',
+												'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return ('.$fieldvalue.' < TODAY("datetime") or '.$fieldvalue.' >= FROM_TODAY("1","day","datetime"));})',
 												$query
 											);
 											$query=preg_replace(
 												"/{$key}[ ]*=[ ]*TODAY\(\)/u",
-												'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return ('.$fieldvalue.' >= TODAY("datetime") and '.$fieldvalue.' < FROM_TODAY("1","day","datetime"));})',
+												'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return ('.$fieldvalue.' >= TODAY("datetime") and '.$fieldvalue.' < FROM_TODAY("1","day","datetime"));})',
 												$query
 											);
 										}
@@ -826,32 +828,32 @@ class clsDriver
 											{
 												$query=preg_replace(
 													"/{$key}[ ]*>[ ]*FROM_([^\(]+)\(([^\)]+)\)/u",
-													'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' >= FROM_$1($2,"datetime","1");})',
+													'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' >= FROM_$1($2,"datetime","1");})',
 													$query
 												);
 												$query=preg_replace(
 													"/{$key}[ ]*>=[ ]*FROM_([^\(]+)\(([^\)]+)\)/u",
-													'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' >= FROM_$1($2,"datetime");})',
+													'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' >= FROM_$1($2,"datetime");})',
 													$query
 												);
 												$query=preg_replace(
 													"/{$key}[ ]*<[ ]*FROM_([^\(]+)\(([^\)]+)\)/u",
-													'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' < FROM_$1($2,"datetime");})',
+													'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' < FROM_$1($2,"datetime");})',
 													$query
 												);
 												$query=preg_replace(
 													"/{$key}[ ]*<=[ ]*FROM_([^\(]+)\(([^\)]+)\)/u",
-													'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' < FROM_$1($2,"datetime","1");})',
+													'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return '.$fieldvalue.' < FROM_$1($2,"datetime","1");})',
 													$query
 												);
 												$query=preg_replace(
 													"/{$key}[ ]*!=[ ]*FROM_([^\(]+)\(([^\)]+)\)/u",
-													'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return ('.$fieldvalue.' < FROM_$1($2,"datetime") or '.$fieldvalue.' >= FROM_$1($2,"datetime","1"));})',
+													'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return ('.$fieldvalue.' < FROM_$1($2,"datetime") or '.$fieldvalue.' >= FROM_$1($2,"datetime","1"));})',
 													$query
 												);
 												$query=preg_replace(
 													"/{$key}[ ]*=[ ]*FROM_([^\(]+)\(([^\)]+)\)/u",
-													'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return ('.$fieldvalue.' >= FROM_$1($2,"datetime") and '.$fieldvalue.' < FROM_$1($2,"datetime","1"));})',
+													'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return ('.$fieldvalue.' >= FROM_$1($2,"datetime") and '.$fieldvalue.' < FROM_$1($2,"datetime","1"));})',
 													$query
 												);
 											}
@@ -859,7 +861,7 @@ class clsDriver
 											{
 												$query=preg_replace(
 													"/{$key}[ ]*([!><=]+)[ ]*([^ \)]+)/u",
-													'$me->FILTER_ROW('.$tablevalue.',function($row) use ($me){return '.$fieldvalue.'$1$2;})',
+													'$me->FILTER_ROW("'.$table.'",'.$tablevalue.',function($row) use ($me){return '.$fieldvalue.'$1$2;})',
 													$query
 												);
 											}
@@ -873,7 +875,7 @@ class clsDriver
 										);
 										$query=preg_replace(
 											"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1($2);})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1($2);})',
 											$query
 										);
 										break;
@@ -881,7 +883,7 @@ class clsDriver
 										$replacement='$me->FILTER_FILE($row["'.$key.'"]["value"],"$1",$2)';
 										$query=preg_replace(
 											"/{$key}[ ]+(not like|like)[ ]+(\"[^\"]*\"|'[^']*')/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return '.$replacement.';})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return '.$replacement.';})',
 											$query
 										);
 										break;
@@ -904,17 +906,17 @@ class clsDriver
 										}
 										$query=preg_replace(
 											"/{$key}[ ]*( not match )[ ]*([^ \)]+)/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"] != $2;})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"] != $2;})',
 											$query
 										);
 										$query=preg_replace(
 											"/{$key}[ ]*( match )[ ]*([^ \)]+)/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"] = $2;})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"] = $2;})',
 											$query
 										);
 										$query=preg_replace(
 											"/{$key}[ ]*([!><=]+| not like | like )[ ]*([^ \)]+)/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["search"]$1$2;})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["search"]$1$2;})',
 											$query
 										);
 										break;
@@ -937,7 +939,7 @@ class clsDriver
 										}
 										$query=preg_replace(
 											"/{$key}[ ]*([!><=]+)[ ]*([^ \)]+)/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1$2;})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1$2;})',
 											$query
 										);
 										break;
@@ -945,19 +947,19 @@ class clsDriver
 										$replacement='$me->FILTER_USER($row["'.$key.'"]["value"],"$1",[$2])';
 										$query=preg_replace(
 											"/{$key}[ ]+(not in|in)[ ]+\(([^\)]*)\)/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return '.$replacement.';})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return '.$replacement.';})',
 											$query
 										);
 										break;
 									default:
 										$query=preg_replace(
 											"/{$key}[ ]*([!><=]+| not like | like )[ ]*([^ \)]+)/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1$2;})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1$2;})',
 											$query
 										);
 										$query=preg_replace(
 											"/{$key}[ ]*( not in | in )[ ]*\(([^\)]*)\)/u",
-											'$me->FILTER_ROW($record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1($2);})',
+											'$me->FILTER_ROW("'.$table.'",$record["'.$table.'"]["value"],function($row) use ($me){return $row["'.$key.'"]["value"]$1($2);})',
 											$query
 										);
 										break;
@@ -1096,10 +1098,57 @@ class clsDriver
 			return (function($records,$query,$me){
 				$res=[];
 				$callback=($query!="")?eval('return function(&$record) use ($me) {return '.$query.';};'):null;
+				$tables=(preg_match_all('/FILTER_ROW\("([^"]+)"/u',$query,$matches))?array_unique($matches[1]):[];
 				foreach ($records as $key=>$record)
 				{
 					$record["__id"]=["value"=>intval($key)];
-					if (($query!="")?$callback($record):true) $res[$key]=$record;
+					$me->rowfocus=[];
+					if (($query!="")?$callback($record):true)
+					{
+						if (count($tables)==0) $res[$key]=$record;
+						else
+						{
+							$counts=[];
+							$kept=[];
+							$indexes=[];
+							foreach ($tables as $table)
+							{
+								$counts[$table]=count($record[$table]["value"]??[]);
+								$kept[$table]=[];
+								$indexes[$table]=($counts[$table]==0)?-1:0;
+							}
+							$matched=false;
+							do
+							{
+								$me->rowfocus=$indexes;
+								if ($callback($record))
+								{
+									$matched=true;
+									foreach ($indexes as $table=>$index) $kept[$table][$index]=true;
+								}
+								/* the next combination */
+								$next=false;
+								foreach ($tables as $table)
+								{
+									if ($indexes[$table]+1<$counts[$table])
+									{
+										$indexes[$table]++;
+										$next=true;
+										break;
+									}
+									$indexes[$table]=($counts[$table]==0)?-1:0;
+								}
+							} while ($next);
+							$me->rowfocus=[];
+							if ($matched)
+							{
+								foreach ($tables as $table)
+									foreach (($record[$table]["value"]??[]) as $index=>$row)
+										if (!isset($kept[$table][$index])) $record[$table]["value"][$index]["__row_cnd"]=["value"=>"skip"];
+								$res[$key]=$record;
+							}
+						}
+					}
 				}
 				return $res;
 			})($arg_source,$query,$me);
@@ -1514,15 +1563,12 @@ class clsDriver
 	{
 		return count(array_filter($arg_field,function($value) use ($arg_value){return in_array(strval($value),$arg_value,true);}));
 	}
-	public function FILTER_ROW(&$arg_table,$arg_callback)
+	public function FILTER_ROW($arg_table,$arg_rows,$arg_callback)
 	{
-		$res=0;
-		foreach ($arg_table as &$row)
-		{
-			if ($arg_callback($row)) $res++;
-			else $row["__row_cnd"]=["value"=>"skip"];
-		}
-		return $res>0;
+		if (array_key_exists($arg_table,$this->rowfocus)) return ($this->rowfocus[$arg_table]<0)?false:(bool)$arg_callback($arg_rows[$this->rowfocus[$arg_table]]);
+		foreach ($arg_rows as $row)
+			if ($arg_callback($row)) return true;
+		return false;
 	}
 	public function FILTER_USER($arg_field,$arg_operator,$arg_value)
 	{

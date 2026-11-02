@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "unlock.php"
-* Version: 2.2.3
+* Version: 2.2.4
 * Copyright (c) 2026 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
