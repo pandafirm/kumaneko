@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 2.2.4
+* Version: 2.2.5
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -296,8 +296,8 @@ class panda{
 								});
 								break;
 							default:
-								if (body[key] instanceof Object) param.push(key+'='+JSON.stringify(body[key]));
-								else param.push(key+'='+body[key]);
+								if (body[key] instanceof Object) param.push(key+'='+encodeURIComponent(JSON.stringify(body[key])));
+								else param.push(key+'='+encodeURIComponent(body[key]));
 								break;
 						}
 					}
