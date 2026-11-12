@@ -1,7 +1,7 @@
 <?php
 /*
 * PandaFirm-PHP-Module "records.php"
-* Version: 2.2.4
+* Version: 2.2.5
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
