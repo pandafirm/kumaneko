@@ -1,6 +1,6 @@
 /*
 * FileName "panda.kumaneko.js"
-* Version: 2.2.5
+* Version: 2.2.6
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1065,6 +1065,7 @@ class panda_kumaneko{
 							return res;
 						})());
 					};
+					pd.elm('body').addclass('surface');
 					pd.operator={__id:{value:setting.operator.id},department:{value:setting.operator.department},group:{value:setting.operator.group}};
 					pd.filter.record.load().then((config) => {
 						this.config=config;

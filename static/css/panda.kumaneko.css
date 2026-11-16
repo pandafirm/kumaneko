@@ -1,7 +1,7 @@
 @charset "utf-8";
 /*
 * FileName "panda.kumaneko.css"
-* Version: 2.2.5
+* Version: 2.2.6
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1000,12 +1000,23 @@ _::-webkit-full-page-media, _:future, :root .pd-kumaneko-main .pd-kumaneko-tab::
 	--light-tab-shadow-color:rgba(120,144,156,1);
 	--light-task-color:rgba(204,222,230,1);
 	--injector-emphasis-color:rgba(66,165,245,1);
-	--injector-bg-color:rgba(240,240,240,1);
+	--injector-bg-color:rgba(255,255,255,1);
 	--injector-fr-color:rgba(38,50,56,1);
 	--injector-placeholder-color:rgba(38,50,56,0.5);
-	--injector-field-bg-color:rgba(247,250,252,0.75);
-	--injector-field-border-color:rgba(207,216,220,1);
+	--injector-field-bg-color:rgba(38,50,56,0.05);
+	--injector-field-border-color:rgba(38,50,56,0.25);
 	--injector-field-focus-color:rgba(66,165,245,0.75);
+	--injector-muted-color:rgba(38,50,56,0.55);
+	--injector-shadow-color:rgba(0,0,0,0.05);
+	--surface-emphasis-color:rgba(66,165,245,1);
+	--surface-bg-color:rgba(255,255,255,1);
+	--surface-fr-color:rgba(38,50,56,1);
+	--surface-cell-color:rgba(38,50,56,0.05);
+	--surface-field-border-color:rgba(38,50,56,0.25);
+	--surface-field-focus-color:rgba(66,165,245,0.75);
+	--surface-line-color:rgba(38,50,56,0.15);
+	--surface-muted-color:rgba(38,50,56,0.55);
+	--surface-shadow-color:rgba(0,0,0,0.15);
 }
 _:lang(x)::-moz-placeholder,:root{
 	--dark-main-highlight-color:rgba(255,255,255,0.5);
@@ -1786,7 +1797,7 @@ body .pd-kumaneko-injector{
 }
 body .pd-kumaneko-injector *{
 	color:var(--injector-fr-color);
-	font-size:21px;
+	font-size:18px;
 }
 body .pd-kumaneko-injector ::-webkit-input-placeholder{
 	color:var(--injector-placeholder-color);
@@ -1796,9 +1807,12 @@ body .pd-kumaneko-injector ::placeholder{
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-button{
 	background-color:var(--injector-emphasis-color);
-	border:1px solid var(--injector-bg-color);
+	border:none;
+	border-radius:1.5em;
 	color:var(--injector-bg-color);
-	padding:0.5em 1.5em;
+	font-weight:700;
+	letter-spacing:0.15em;
+	padding:0.75em 2.5em;
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-button:is(:focus,:hover){
 	opacity:0.75;
@@ -1807,18 +1821,19 @@ body .pd-kumaneko-injector .pd-kumaneko-injector-main{
 	margin:auto;
 	max-width:100%;
 	min-height:100%;
-	width:640px;
+	width:960px;
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body{
 	background-color:var(--injector-bg-color);
-	border-radius:1em;
-	margin:1em 0;
-	padding:1em;
+	border-radius:1.25em;
+	box-shadow:0 0.15em 0.5em var(--injector-shadow-color);
+	margin:1.5em 0;
+	padding:1.75em 1.75em 1.25em 1.75em;
 	text-align:left;
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body .pd-field{
 	display:block;
-	padding-bottom:1em;
+	padding-bottom:1.25em;
 	width:100% !important;
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body .pd-field .pd-field-value.pd-lookup input{
@@ -1846,27 +1861,45 @@ body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-body
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-header{
 	background-color:var(--injector-bg-color);
-	border-radius:1em;
-	padding:1em;
+	border-radius:1.25em;
+	box-shadow:0 0.15em 0.5em var(--injector-shadow-color);
+	padding:2em;
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-header-title{
 	font-size:1.5em;
+	font-weight:700;
+	letter-spacing:0.05em;
 }
 body .pd-kumaneko-injector .pd-kumaneko-injector-main .pd-kumaneko-injector-header-description{
-	padding-top:0.5em;
+	color:var(--injector-muted-color);
+	font-size:0.95em;
+	padding-top:0.75em;
 }
 body .pd-kumaneko-injector .pd-dropdown::after{
 	border-bottom:solid 2px var(--injector-fr-color);
 	border-right:solid 2px var(--injector-fr-color);
 }
+body .pd-kumaneko-injector .pd-dropdown:is(.pd-hour,.pd-minute){
+	width:calc(4.5em + 2px);
+}
 body .pd-kumaneko-injector .pd-field .pd-field-caption{
+	color:var(--injector-muted-color);
+	font-size:0.85em;
+	font-weight:700;
+	letter-spacing:0.05em;
+	padding-bottom:0.5em;
 	white-space:normal;
 }
 body .pd-kumaneko-injector .pd-field .pd-field-value :is(input:not([type=checkbox]):not([type=radio]),select,textarea){
-	border:1px solid var(--injector-field-border-color) !important;
+	border:1px solid transparent !important;
+	border-radius:0.5em;
+	padding:0.5em 0.75em;
 }
 body .pd-kumaneko-injector .pd-field .pd-field-value :is(input:not([type=checkbox]):not([type=radio]),select,textarea):focus{
 	border-color:var(--injector-field-focus-color) !important;
+}
+body .pd-kumaneko-injector .pd-field .pd-field-value :is(input[type=checkbox],input[type=radio])+span{
+	padding-right:0.5em;
 }
 body .pd-kumaneko-injector .pd-field .pd-field-value :is(input[type=checkbox],input[type=radio])+span:after{
 	background-color:var(--injector-field-bg-color);
@@ -1878,6 +1911,22 @@ body .pd-kumaneko-injector .pd-field .pd-field-value :is(input[type=checkbox],in
 }
 body .pd-kumaneko-injector .pd-field .pd-field-value:not(.pd-force-backcolor) :is(input:not([type=checkbox]):not([type=radio]),select,textarea){
 	background-color:var(--injector-field-bg-color) !important;
+}
+body .pd-kumaneko-injector .pd-field .pd-field-value:not(.pd-force-backcolor) :is(input:not([type=checkbox]):not([type=radio]),select,textarea):focus{
+	background-color:var(--injector-bg-color) !important;
+}
+body .pd-kumaneko-injector .pd-field .pd-field-value.pd-datetime{
+	margin-bottom:-0.5em;
+}
+body .pd-kumaneko-injector .pd-field .pd-field-value.pd-datetime > :is(input,.pd-dropdown,.pd-icon){
+	margin-bottom:0.5em;
+}
+body .pd-kumaneko-injector .pd-field .pd-field-value:is(.pd-date,.pd-datetime) input{
+	width:calc(8.5em + 2px) !important;
+}
+body .pd-kumaneko-injector .pd-field .pd-field-value:not(.pd-department,.pd-file,.pd-group,.pd-user) .pd-icon:is(.pd-open,.pd-search){
+	background-position:center center;
+	height:2.5em;
 }
 body .pd-kumaneko-injector .pd-icon.pd-icon-arrow.pd-icon-arrow-left::after{
 	border-bottom:solid 2px var(--injector-fr-color);
@@ -2002,6 +2051,205 @@ body .pd-kumaneko-injector .pd-icon.pd-icon-trash{
 }
 body .pd-kumaneko-injector .pd-icon.pd-icon-user{
 	background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAFN++nkAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAsZJREFUeNpiYKAqKJy15j8II4sxUWwqI5LxAkDqPYzfnxbCiG7Fe7KsAAggGvmfiSp+Rg5OQaCfP+AylrDfAQKIOvGAxdsJQGo+lJsIdOMCdDX4gmI+DjZRmhNxsPE7G+jkACC1Hk04EOj0DXg1oydvdABLkxQDgAAaoghfIvlPKJAYCWnEZwBFBQ3TgPmZ+qFNbICRlLbRDaBeaANtdSBQqDoMjrQNEECjuZmUmrAASIGq6w/ApDOBphZDU8h+PEocgY44QIuCYD+F8lRsJ9Gp6DOkUJ4qiQvU3lAA4gfY2hpUtxhoIahdkoBFagHQAYlUtRitNUUMSCQUCoxEWPoeml9JBaD8LUhW4oK25wXITAYCUP1YAQshzUDcSEGuAZdsoxUECAAE0CgaBYOrBQIsGBSQymtQGf2AHpXEf2r0CBmpYSk5ljORYGkANdSQ0wLpp5Iaki1WoJIaki2+QCU1JFtcSCU1QyRVIxn8AUczh5GmBQhSk6gAyp0AGu4bnmU1tIw+j6UBCPKxISllNiMJlhLTzMXbpCWnQf+fjERIWaoGWnqfjMR3nyIfow/QkwgE8aV2Qj6eT0HCnU9JUAdQYHHAoBwRINR3amQYBaOATAAQoF0rOkIYhKHVCTpC3aAj1FGYRJ2AEewmdISO4giSu3jnh4qXNAlo3vUTUt4lJI+Afw6H4/e7EAT5NeLpdfowbIGhWSmtzRImdLgfCJR+vylhFNUDwwRcchy2XtdeiOyVSRYwoJ36CXevb4Us7difH6wgRXiuzI5K0kqFMlTCkpPWsZmQxsUG4vQgQVZTeEDGPhWSEITvhXKV4rD28JO8HN/UZ/DqKi0rxQhj5zEy6+iM2vpWLWGGdlbT1ruNiEL5SQo74+vHYWJlKZM9K5EFJPyfjYcFQ1gsxLkejp0NonpI477tjQj31OfCf3dacjgcjqZwB+/P7PjxwlMeAAAAAElFTkSuQmCC");
+}
+/* Surface Dialog definition */
+body.surface .pd-dialog{
+	background-color:var(--surface-bg-color) !important;
+	border-radius:1em !important;
+	box-shadow:0 0.5em 2em var(--surface-shadow-color) !important;
+	color:var(--surface-fr-color) !important;
+}
+body.surface .pd-dialog:has(> .pd-dialog-footer){
+	padding-bottom:4em !important;
+}
+body.surface .pd-dialog:has(> .pd-dialog-header){
+	padding-top:2.5em !important;
+}
+body.surface .pd-dialog:has(> .pd-dialog-header > input){
+	padding-top:3em !important;
+}
+body.surface .pd-dialog:not(:has(> .pd-dialog-header)) .pd-dialog-contents{
+	border-radius:1em 1em 0 0;
+}
+body.surface .pd-dialog .pd-dialog-close{
+	right:0.5em !important;
+	top:0.5em !important;
+}
+body.surface .pd-dialog .pd-dialog-contents .pd-dropdown::after{
+	border-bottom:solid 2px var(--surface-fr-color);
+	border-right:solid 2px var(--surface-fr-color);
+}
+body.surface .pd-dialog .pd-dialog-contents .pd-field .pd-field-caption{
+	color:var(--surface-muted-color);
+	font-size:0.85em;
+	font-weight:700;
+	letter-spacing:0.05em;
+	padding-bottom:0.5em;
+	white-space:normal;
+}
+body.surface .pd-dialog .pd-dialog-contents .pd-field .pd-field-value :is(input:not([type=checkbox]):not([type=radio]),select,textarea){
+	background-color:var(--surface-cell-color) !important;
+	border:1px solid transparent !important;
+	border-radius:0.5em;
+	padding:0.5em 0.75em;
+}
+body.surface .pd-dialog .pd-dialog-contents .pd-field .pd-field-value :is(input:not([type=checkbox]):not([type=radio]),select,textarea):focus{
+	background-color:var(--surface-bg-color) !important;
+	border-color:var(--surface-field-focus-color) !important;
+}
+body.surface .pd-dialog .pd-dialog-contents .pd-field .pd-field-value :is(input[type=checkbox],input[type=radio])+span{
+	padding-right:0.5em;
+}
+body.surface .pd-dialog .pd-dialog-contents .pd-field .pd-field-value :is(input[type=checkbox],input[type=radio])+span:after{
+	background-color:var(--surface-cell-color);
+	border:1px solid var(--surface-field-border-color);
+}
+body.surface .pd-dialog .pd-dialog-contents .pd-field .pd-field-value :is(input[type=checkbox],input[type=radio]):checked+span:after{
+	border:none;
+}
+body.surface .pd-dialog .pd-dialog-contents > input{
+	background-color:var(--surface-cell-color) !important;
+	border:none !important;
+	border-radius:0.5em !important;
+	height:2.5em !important;
+	margin-top:0.5em !important;
+	padding:0.5em !important;
+}
+body.surface .pd-dialog .pd-dialog-contents table :is(td,th > div){
+	border-color:var(--surface-line-color) !important;
+}
+body.surface .pd-dialog .pd-dialog-contents table th{
+	background-color:var(--surface-bg-color) !important;
+}
+body.surface .pd-dialog .pd-dialog-footer{
+	border-top:none !important;
+	display:flex;
+	gap:0.5em;
+	padding:0 1em 1em 1em;
+}
+body.surface .pd-dialog .pd-dialog-footer:has(> input) > .pd_dialog_button{
+	flex:0 0 5em;
+}
+body.surface .pd-dialog .pd-dialog-footer > .pd_dialog_button{
+	background-color:var(--surface-cell-color) !important;
+	border:none !important;
+	border-radius:0.5em !important;
+	color:var(--surface-fr-color) !important;
+	flex:1 1 0;
+	font-weight:700;
+	height:2.5em !important;
+	line-height:2.5em !important;
+	width:auto !important;
+}
+body.surface .pd-dialog .pd-dialog-footer > .pd_dialog_button:hover{
+	opacity:0.85;
+}
+body.surface .pd-dialog .pd-dialog-footer > .pd_dialog_button.pd-dialog-ok{
+	background-color:var(--surface-emphasis-color) !important;
+	color:var(--surface-bg-color) !important;
+}
+body.surface .pd-dialog .pd-dialog-footer > input{
+	background-color:var(--surface-cell-color) !important;
+	border-radius:0.5em !important;
+	flex:1 1 0;
+	height:2.5em !important;
+	min-width:0;
+	width:auto !important;
+}
+body.surface .pd-dialog .pd-dialog-header{
+	border-radius:1em 1em 0 0 !important;
+	box-shadow:none !important;
+	font-weight:700;
+	height:2.5em !important;
+	line-height:2.5em !important;
+	padding-left:1em !important;
+	padding-right:2.5em !important;
+}
+body.surface .pd-dialog .pd-dialog-header:has(> input){
+	height:3em !important;
+	padding:0.5em !important;
+}
+body.surface .pd-dialog .pd-dialog-header > img{
+	top:0.5em !important;
+}
+body.surface .pd-dialog .pd-dialog-header > img:last-of-type{
+	left:0.5em !important;
+}
+body.surface .pd-dialog .pd-dialog-header > input{
+	background-color:var(--surface-cell-color) !important;
+	border-radius:0.5em !important;
+	font-weight:400;
+	padding-right:6em !important;
+}
+body.surface .pd-dialog .pd-dialog-header > select{
+	background-color:var(--surface-bg-color) !important;
+	height:2.5em !important;
+	width:100% !important;
+}
+body.surface .pd-dialog.pd-dialog-addresspicker{
+	padding-top:7em !important;
+}
+body.surface .pd-dialog.pd-dialog-addresspicker .pd-dialog-close{
+	top:1em !important;
+}
+body.surface .pd-dialog.pd-dialog-addresspicker > select{
+	background-color:var(--surface-cell-color) !important;
+	border:none !important;
+	border-radius:0.5em !important;
+	height:2.5em !important;
+	left:0.75em !important;
+	padding:0.5em 0.75em !important;
+	width:calc(100% - 1.5em) !important;
+}
+body.surface .pd-dialog.pd-dialog-addresspicker > select:first-of-type{
+	top:0.75em !important;
+	width:calc(100% - 3.5em) !important;
+}
+body.surface .pd-dialog.pd-dialog-addresspicker > select:last-of-type{
+	top:3.75em !important;
+}
+body.surface .pd-dialog.pd-dialog-datepicker{
+	height:auto !important;
+}
+body.surface .pd-dialog.pd-dialog-datepicker .pd-dialog-contents{
+	height:auto !important;
+	padding:0 0.75em 0.75em 0.75em !important;
+}
+body.surface .pd-dialog.pd-dialog-datepicker .pd-dialog-contents > table{
+	border-collapse:separate !important;
+	border-spacing:0.25em;
+	margin:0 !important;
+	width:auto !important;
+}
+body.surface .pd-dialog.pd-dialog-datepicker .pd-dialog-contents > table td{
+	border:none !important;
+	border-radius:0.5em;
+}
+body.surface .pd-dialog.pd-dialog-datepicker .pd-dialog-contents > table tbody td{
+	background-color:var(--surface-cell-color);
+}
+body.surface .pd-dialog.pd-dialog-datepicker .pd-dialog-contents > table tbody td:hover{
+	box-shadow:inset 0 0 0 1px var(--surface-emphasis-color);
+}
+body.surface .pd-dialog.pd-dialog-datepicker .pd-dialog-contents > table thead td{
+	font-size:0.85em;
+	font-weight:700;
+}
+body.surface .pd-dialog.pd-dialog-unifiedpicker:has(> .pd-dialog-header > input){
+	padding-top:5.5em !important;
+}
+body.surface .pd-dialog.pd-dialog-unifiedpicker > div:not([class]){
+	box-shadow:0 1px 0 var(--surface-line-color) !important;
+	display:flex;
+	gap:0.25em;
+	padding:0 0.5em 0.5em 0.5em !important;
+	top:3em !important;
+}
+body.surface .pd-dialog.pd-dialog-unifiedpicker > div:not([class]) > .pd_dialog_button{
+	border-radius:0.5em !important;
+	flex:1 1 0;
+	font-weight:700;
+	width:auto !important;
 }
 /* Platform definition */
 body.mac .pd-field .pd-field-value:is(.pd-date,.pd-datetime,.pd-time) :is(input,select){

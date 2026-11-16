@@ -1,6 +1,6 @@
 /*
 * FileName "panda.js"
-* Version: 2.2.5
+* Version: 2.2.6
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -755,7 +755,7 @@ class panda_dialog{
 			width:'100%',
 			zIndex:zIndex
 		});
-		this.container=this.parts.div.clone().css({
+		this.container=this.parts.div.clone().addclass('pd-dialog').css({
 			borderRadius:'0.25em',
 			boxShadow:'0 0 3px rgba(0,0,0,0.35)',
 			cursor:'default',
@@ -805,6 +805,8 @@ class panda_dialog{
 			e.stopPropagation();
 			e.preventDefault();
 		});
+		['contents','header','footer','ok','cancel','close'].each((key,index) => this[key].addclass('pd-dialog-'+key));
+		if (this.constructor.name.match(/^panda_/g)) this.container.addclass(this.constructor.name.replace(/^panda_/g,'pd-dialog-'));
 		/* integrate elements */
 		pd.elm('body')
 		.append(
