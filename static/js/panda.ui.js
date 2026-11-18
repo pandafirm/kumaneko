@@ -1,6 +1,6 @@
 /*
 * FileName "panda.ui.js"
-* Version: 2.2.6
+* Version: 2.2.7
 * Copyright (c) 2020 PANDASHOKAI LLC
 * Distributed under the terms of the GNU Lesser General Public License.
 * https://opensource.org/licenses/LGPL-2.1
@@ -1650,7 +1650,7 @@ class panda_formula{
 						);
 					})(fieldinfos[key]);
 				reserved.each((reserved,index) => {
-					formula=formula.replace(new RegExp('calculate_'+(index+1).toString(),'g'),reserved);
+					formula=formula.replace(new RegExp('calculate_'+(index+1).toString()+'(?![0-9])','g'),() => reserved);
 				});
 				return result(eval(formula),fieldinfos[param.field]);
 			}
